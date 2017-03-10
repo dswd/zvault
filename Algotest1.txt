@@ -1,0 +1,68 @@
+~/shared
+
+
+Algorithm comparison on file test.tar
+
+Reading input file... done. 2175416320 bytes
+
+Chunker algorithms
+  Chunk size: 4 KiB
+    AE:         avg chunk size 2756.5   ± 543.6 bytes,  12.1% saved,    speed 748.9 MB/s
+    Rabin:      avg chunk size 4902.3   ± 3826.2 bytes,         11.7% saved,    speed 336.7 MB/s
+    FastCdc:    avg chunk size 4783.3   ± 1940.5 bytes,         12.1% saved,    speed 544.1 MB/s
+  Chunk size: 8 KiB
+    AE:         avg chunk size 5245.1   ± 890.8 bytes,  10.0% saved,    speed 756.3 MB/s
+    Rabin:      avg chunk size 9774.2   ± 7636.0 bytes,         10.3% saved,    speed 344.9 MB/s
+    FastCdc:    avg chunk size 9583.2   ± 3933.2 bytes,         10.7% saved,    speed 541.6 MB/s
+  Chunk size: 16 KiB
+    AE:         avg chunk size 10169.5  ± 1485.8 bytes,         7.4% saved,     speed 781.5 MB/s
+    Rabin:      avg chunk size 19641.7  ± 15292.5 bytes,        9.0% saved,     speed 345.9 MB/s
+    FastCdc:    avg chunk size 19262.9  ± 7697.4 bytes,         9.0% saved,     speed 548.1 MB/s
+  Chunk size: 32 KiB
+    AE:         avg chunk size 20004.6  ± 2705.6 bytes,         5.6% saved,     speed 787.0 MB/s
+    Rabin:      avg chunk size 38963.6  ± 30218.2 bytes,        7.6% saved,     speed 345.7 MB/s
+    FastCdc:    avg chunk size 39159.3  ± 16834.6 bytes,        7.7% saved,     speed 547.1 MB/s
+  Chunk size: 64 KiB
+    AE:         avg chunk size 39627.2  ± 5310.6 bytes,         3.8% saved,     speed 788.2 MB/s
+    Rabin:      avg chunk size 78339.7  ± 60963.7 bytes,        6.4% saved,     speed 345.6 MB/s
+    FastCdc:    avg chunk size 76981.4  ± 30784.6 bytes,        6.1% saved,     speed 548.4 MB/s
+
+Hash algorithms
+  Blake2: 724.2 MB/s
+  Murmur3: 5358.3 MB/s
+
+Compression algorithms
+  Snappy:       ratio: 83.6%,   compress: 301.7 MB/s,   decompress: 876.2 MB/s
+fatal runtime error: out of memory
+
+
+  ZStd/1:       ratio: 77.2%,   compress: 493.9 MB/s,   decompress: 0.0 MB/s
+  ZStd/2:       ratio: 76.7%,   compress: 420.6 MB/s,   decompress: 0.0 MB/s
+  ZStd/3:       ratio: 75.4%,   compress: 314.6 MB/s,   decompress: 0.0 MB/s
+  ZStd/4:       ratio: 75.3%,   compress: 273.0 MB/s,   decompress: 0.0 MB/s
+  ZStd/5:       ratio: 74.9%,   compress: 131.4 MB/s,   decompress: 0.0 MB/s
+  ZStd/6:       ratio: 73.6%,   compress: 121.4 MB/s,   decompress: 0.0 MB/s
+  ZStd/7:       ratio: 73.5%,   compress: 88.7 MB/s,    decompress: 0.0 MB/s
+  ZStd/8:       ratio: 73.4%,   compress: 76.8 MB/s,    decompress: 0.0 MB/s
+  ZStd/9:       ratio: 73.3%,   compress: 51.8 MB/s,    decompress: 0.0 MB/s
+  Deflate/1:    ratio: 78.3%,   compress: 95.7 MB/s,    decompress: 0.0 MB/s
+  Deflate/2:    ratio: 78.2%,   compress: 94.7 MB/s,    decompress: 0.0 MB/s
+  Deflate/3:    ratio: 78.1%,   compress: 92.5 MB/s,    decompress: 0.0 MB/s
+  Deflate/4:    ratio: 78.0%,   compress: 87.9 MB/s,    decompress: 0.0 MB/s
+  Deflate/5:    ratio: 77.8%,   compress: 86.5 MB/s,    decompress: 0.0 MB/s
+  Deflate/6:    ratio: 77.7%,   compress: 83.8 MB/s,    decompress: 0.0 MB/s
+  Deflate/7:    ratio: 77.7%,   compress: 73.4 MB/s,    decompress: 0.0 MB/s
+  Deflate/8:    ratio: 77.6%,   compress: 31.6 MB/s,    decompress: 0.0 MB/s
+  Deflate/9:    ratio: 77.4%,   compress: 25.8 MB/s,    decompress: 0.0 MB/s
+  Brotli/1:     ratio: 77.6%,   compress: 433.1 MB/s,   decompress: 0.0 MB/s
+  Brotli/2:     ratio: 75.4%,   compress: 242.2 MB/s,   decompress: 0.0 MB/s
+  Brotli/3:     ratio: 75.3%,   compress: 195.5 MB/s,   decompress: 0.0 MB/s
+  Brotli/4:     ratio: 72.4%,   compress: 81.6 MB/s,    decompress: 0.0 MB/s
+  Brotli/5:     ratio: 73.9%,   compress: 62.4 MB/s,    decompress: 0.0 MB/s
+  Brotli/6:     ratio: 72.9%,   compress: 46.6 MB/s,    decompress: 0.0 MB/s
+  Brotli/7:     ratio: 71.5%,   compress: 23.4 MB/s,    decompress: 0.0 MB/s
+  Brotli/8:     ratio: 71.5%,   compress: 20.7 MB/s,    decompress: 0.0 MB/s
+  Brotli/9:     ratio: 71.2%,   compress: 11.2 MB/s,    decompress: 0.0 MB/s
+  Lzma2/1:      ratio: 69.8%,   compress: 4.2 MB/s,     decompress: 0.0 MB/s
+
+

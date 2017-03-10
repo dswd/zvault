@@ -1,0 +1,16 @@
+[package]
+name = "zvault"
+version = "0.1.0"
+authors = ["Dennis Schwerdel <schwerdel@informatik.uni-kl.de>"]
+
+[dependencies]
+serde = "0.9"
+rmp-serde = "0.12"
+serde_yaml = "0.6"
+serde_utils = "0.5.1"
+rust-crypto = "0.2"
+squash-sys = "0.9"
+mmap = "*"
+quick-error = "1.1"
+blake2-rfc = "*"
+murmurhash3 = "*"
