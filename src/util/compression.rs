@@ -1,6 +1,7 @@
 use std::ptr;
 use std::ffi::{CStr, CString};
 use std::io::Write;
+use std::str::FromStr;
 
 use squash::*;
 
@@ -23,6 +24,34 @@ serde_impl!(Compression(u64) {
 
 
 impl Compression {
+    #[inline]
+    pub fn to_string(&self) -> String {
+        if let Some(level) = self.level() {
+            format!("{}/{}", self.name(), level)
+        } else {
+            self.name().to_string()
+        }
+    }
+
+    #[inline]
+    pub fn from_string(name: &str) -> Result<Self, &'static str> {
+        let (name, level) = if let Some(pos) = name.find("/") {
+            let level = try!(u8::from_str(&name[pos+1..]).map_err(|_| "Level must be a number"));
+            let name = &name[..pos];
+            (name, level)
+        } else {
+            (name, 5)
+        };
+        match name {
+            "snappy" => Ok(Compression::Snappy(())),
+            "zstd" => Ok(Compression::ZStd(level)),
+            "deflate" | "zlib" | "gzip" => Ok(Compression::Deflate(level)),
+            "brotli" => Ok(Compression::Brotli(level)),
+            "lzma2" => Ok(Compression::Lzma2(level)),
+            _ => Err("Unsupported codec")
+        }
+    }
+
     #[inline]
     pub fn name(&self) -> &'static str {
         match *self {

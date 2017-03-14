@@ -67,47 +67,22 @@ impl ChunkerType {
 
 
 
-struct CompressionYaml {
-    codec: String,
-    level: Option<u8>
-}
-impl Default for CompressionYaml {
-    fn default() -> Self {
-        CompressionYaml {
-            codec: "brotli".to_string(),
-            level: None
-        }
-    }
-}
-serde_impl!(CompressionYaml(String) {
-    codec: String => "codec",
-    level: Option<u8> => "level"
-});
-
 impl Compression {
-    fn from_yaml(yaml: CompressionYaml) -> Result<Self, &'static str> {
-        match &yaml.codec as &str {
-            "snappy" => Ok(Compression::Snappy(())),
-            "zstd" => Ok(Compression::ZStd(yaml.level.unwrap_or(5))),
-            "deflate" | "zlib" | "gzip" => Ok(Compression::Deflate(yaml.level.unwrap_or(5))),
-            "brotli" => Ok(Compression::Brotli(yaml.level.unwrap_or(5))),
-            "lzma2" => Ok(Compression::Lzma2(yaml.level.unwrap_or(5))),
-            _ => Err("Unsupported codec")
-        }
+    #[inline]
+    fn from_yaml(yaml: String) -> Result<Self, &'static str> {
+        Compression::from_string(&yaml)
     }
 
-    fn to_yaml(&self) -> CompressionYaml {
-        CompressionYaml {
-            codec: self.name().to_string(),
-            level: self.level()
-        }
+    #[inline]
+    fn to_yaml(&self) -> String {
+        self.to_string()
     }
 }
 
 
 
 struct ConfigYaml {
-    compression: Option<CompressionYaml>,
+    compression: Option<String>,
     bundle_size: usize,
     chunker: ChunkerYaml,
     checksum: String,
@@ -116,7 +91,7 @@ struct ConfigYaml {
 impl Default for ConfigYaml {
     fn default() -> Self {
         ConfigYaml {
-            compression: Some(CompressionYaml { codec: "brotli".to_string(), level: Some(5) }),
+            compression: Some("brotli/5".to_string()),
             bundle_size: 25*1024*1024,
             chunker: ChunkerYaml::default(),
             checksum: "blake2_256".to_string(),
@@ -125,7 +100,7 @@ impl Default for ConfigYaml {
     }
 }
 serde_impl!(ConfigYaml(String) {
-    compression: Option<CompressionYaml> => "compression",
+    compression: Option<String> => "compression",
     bundle_size: usize => "bundle_size",
     chunker: ChunkerYaml => "chunker",
     checksum: String => "checksum",
