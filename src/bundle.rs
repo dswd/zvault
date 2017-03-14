@@ -42,7 +42,7 @@ impl BundleId {
     fn to_string(&self) -> String {
         let mut buf = String::with_capacity(self.0.len()*2);
         for b in &self.0 {
-            write!(&mut buf, "{:2x}", b).unwrap()
+            write!(&mut buf, "{:02x}", b).unwrap()
         }
         buf
     }
@@ -92,7 +92,7 @@ impl Default for BundleHeader {
             id: BundleId(vec![]),
             compression: None,
             encryption: None,
-            checksum: (ChecksumType::Sha3_256, ByteBuf::new()),
+            checksum: (ChecksumType::Blake2_256, ByteBuf::new()),
             raw_size: 0,
             encoded_size: 0,
             chunk_count: 0,

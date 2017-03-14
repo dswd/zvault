@@ -1,7 +1,6 @@
 extern crate serde;
 extern crate rmp_serde;
 #[macro_use] extern crate serde_utils;
-extern crate crypto;
 extern crate squash_sys as squash;
 extern crate mmap;
 extern crate blake2_rfc as blake2;
@@ -34,10 +33,10 @@ fn main() {
         Repository::open(path).unwrap()
     } else {
         Repository::create(path, Config {
-            bundle_size: 1024*1024,
-            checksum: ChecksumType::Sha3_256,
+            bundle_size: 25*1024*1024,
+            checksum: ChecksumType::Blake2_256,
             chunker: ChunkerType::FastCdc((8*1024, 0)),
-            compression: Some(Compression::Brotli(5)),
+            compression: Some(Compression::Brotli(1)),
             hash: HashMethod::Blake2
         }).unwrap()
     };

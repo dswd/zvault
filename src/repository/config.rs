@@ -119,7 +119,7 @@ impl Default for ConfigYaml {
             compression: Some(CompressionYaml { codec: "brotli".to_string(), level: Some(5) }),
             bundle_size: 25*1024*1024,
             chunker: ChunkerYaml::default(),
-            checksum: "sha3-256".to_string(),
+            checksum: "blake2_256".to_string(),
             hash: "blake2".to_string()
         }
     }
