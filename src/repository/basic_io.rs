@@ -8,6 +8,9 @@ use ::util::Hash;
 use ::chunker::{IChunker, ChunkerStatus};
 
 
+pub type Chunk = (Hash, usize);
+
+
 impl Repository {
     pub fn get_chunk(&mut self, hash: Hash) -> Result<Option<Vec<u8>>, &'static str> {
         // Find bundle and chunk id in index
@@ -81,12 +84,12 @@ impl Repository {
     }
 
     #[inline]
-    pub fn put_data(&mut self, mode: Mode, data: &[u8]) -> Result<Vec<(Hash, usize)>, &'static str> {
+    pub fn put_data(&mut self, mode: Mode, data: &[u8]) -> Result<Vec<Chunk>, &'static str> {
         let mut input = Cursor::new(data);
         self.put_stream(mode, &mut input)
     }
 
-    pub fn put_stream<R: Read>(&mut self, mode: Mode, data: &mut R) -> Result<Vec<(Hash, usize)>, &'static str> {
+    pub fn put_stream<R: Read>(&mut self, mode: Mode, data: &mut R) -> Result<Vec<Chunk>, &'static str> {
         let avg_size = self.config.chunker.avg_size();
         let mut chunks = Vec::new();
         let mut chunk = Vec::with_capacity(avg_size * 2);
@@ -106,14 +109,14 @@ impl Repository {
     }
 
     #[inline]
-    pub fn get_data(&mut self, chunks: &[(Hash, usize)]) -> Result<Vec<u8>, &'static str> {
+    pub fn get_data(&mut self, chunks: &[Chunk]) -> Result<Vec<u8>, &'static str> {
         let mut data = Vec::with_capacity(chunks.iter().map(|&(_, size)| size).sum());
         try!(self.get_stream(chunks, &mut data));
         Ok(data)
     }
 
     #[inline]
-    pub fn get_stream<W: Write>(&mut self, chunks: &[(Hash, usize)], w: &mut W) -> Result<(), &'static str> {
+    pub fn get_stream<W: Write>(&mut self, chunks: &[Chunk], w: &mut W) -> Result<(), &'static str> {
         for &(ref hash, len) in chunks {
             let data = try!(try!(self.get_chunk(*hash).map_err(|_| "Failed to load chunk")).ok_or("Chunk missing"));
             debug_assert_eq!(data.len(), len);

@@ -3,6 +3,7 @@ mod bundle_map;
 mod integrity;
 mod basic_io;
 mod info;
+mod metadata;
 
 use std::mem;
 use std::cmp::max;
@@ -14,6 +15,8 @@ use super::bundle::{BundleDb, BundleWriter};
 use super::chunker::Chunker;
 
 pub use self::config::Config;
+pub use self::metadata::Inode;
+pub use self::basic_io::Chunk;
 use self::bundle_map::BundleMap;
 
 

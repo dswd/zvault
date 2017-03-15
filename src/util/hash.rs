@@ -12,7 +12,7 @@ use std::u64;
 
 
 #[repr(packed)]
-#[derive(Clone, Copy, PartialEq, Debug, Hash, Eq)]
+#[derive(Clone, Copy, PartialEq, Hash, Eq)]
 pub struct Hash {
     pub high: u64,
     pub low: u64
@@ -36,6 +36,14 @@ impl fmt::Display for Hash {
         write!(fmt, "{:16x}{:16x}", self.high, self.low)
     }
 }
+
+impl fmt::Debug for Hash {
+    #[inline]
+    fn fmt(&self, fmt: &mut fmt::Formatter) -> Result<(), fmt::Error> {
+        write!(fmt, "{:16x}{:16x}", self.high, self.low)
+    }
+}
+
 
 impl Serialize for Hash {
     fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error> where S: serde::Serializer {

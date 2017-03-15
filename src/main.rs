@@ -19,7 +19,7 @@ mod repository;
 mod algotest;
 
 use chunker::ChunkerType;
-use repository::{Repository, Config, Mode};
+use repository::{Repository, Config, Mode, Inode};
 use util::{ChecksumType, Compression, HashMethod, to_file_size};
 
 use std::fs::File;
@@ -37,6 +37,8 @@ Usage:
     zvault check [--full] <repo>
     zvault algotest <path>
     zvault test <repo> <path>
+    zvault stat <path>
+    zvault put <repo> <path>
 
 Options:
     --full                     Whether to verify the repository by loading all bundles
@@ -53,8 +55,10 @@ struct Args {
     cmd_info: bool,
     cmd_algotest: bool,
     cmd_test: bool,
+    cmd_stat: bool,
     cmd_check: bool,
     cmd_bundles: bool,
+    cmd_put: bool,
     arg_repo: Option<String>,
     arg_path: Option<String>,
     flag_full: bool,
@@ -91,6 +95,11 @@ fn main() {
         return
     }
 
+    if args.cmd_stat {
+        println!("{:?}", Inode::get_from(&args.arg_path.unwrap()).unwrap());
+        return
+    }
+
     let mut repo = Repository::open(&args.arg_repo.unwrap()).unwrap();
 
     if args.cmd_check {
@@ -124,6 +133,12 @@ fn main() {
             println!("  - Compression: {}, ratio: {:.1}%", compression, ratio * 100.0);
             println!();
         }
+        return
+    }
+
+    if args.cmd_put {
+        let chunks = repo.put_inode(&args.arg_path.unwrap()).unwrap();
+        println!("done. {} chunks, total size: {}", chunks.len(), to_file_size(chunks.iter().map(|&(_,s)| s).sum::<usize>() as u64));
         return
     }
 
