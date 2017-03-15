@@ -33,14 +33,14 @@ impl Hash {
 impl fmt::Display for Hash {
     #[inline]
     fn fmt(&self, fmt: &mut fmt::Formatter) -> Result<(), fmt::Error> {
-        write!(fmt, "{:16x}{:16x}", self.high, self.low)
+        write!(fmt, "{:016x}{:016x}", self.high, self.low)
     }
 }
 
 impl fmt::Debug for Hash {
     #[inline]
     fn fmt(&self, fmt: &mut fmt::Formatter) -> Result<(), fmt::Error> {
-        write!(fmt, "{:16x}{:16x}", self.high, self.low)
+        write!(fmt, "{:016x}{:016x}", self.high, self.low)
     }
 }
 

@@ -4,11 +4,11 @@ use rmp_serde;
 
 use std::collections::HashMap;
 use std::path::Path;
-use std::fs::{self, Metadata, File};
+use std::fs::{self, Metadata, File, Permissions};
 use std::os::linux::fs::MetadataExt;
-use std::io::{Cursor, Read};
+use std::os::unix::fs::{PermissionsExt, symlink};
+use std::io::{Cursor, Read, Write};
 
-use ::util::Hash;
 use super::{Repository, Mode, Chunk};
 
 
@@ -118,25 +118,29 @@ impl Inode {
     }
 
     #[allow(dead_code)]
-    pub fn create_at<P: AsRef<Path>>(&self, path: P) -> Result<(), &'static str> {
+    pub fn create_at<P: AsRef<Path>>(&self, path: P) -> Result<Option<File>, &'static str> {
         let full_path = path.as_ref().join(&self.name);
+        let mut file = None;
         match self.file_type {
             FileType::File => {
-                try!(File::create(&full_path).map_err(|_| "Failed to create file"));
+                file = Some(try!(File::create(&full_path).map_err(|_| "Failed to create file")));
             },
             FileType::Directory => {
                 try!(fs::create_dir(&full_path).map_err(|_| "Failed to create directory"));
             },
             FileType::Symlink => {
                 if let Some(ref src) = self.symlink_target {
-                    try!(fs::soft_link(src, &full_path).map_err(|_| "Failed to create symlink"));
+
+                    try!(symlink(src, &full_path).map_err(|_| "Failed to create symlink"));
                 } else {
                     return Err("Symlink without destination")
                 }
             }
         }
-        //FIXME: set times and permissions
-        Ok(())
+        try!(fs::set_permissions(&full_path, Permissions::from_mode(self.mode)).map_err(|_| "Failed to set permissions"));
+        //FIXME: set times and gid/uid
+        // https://crates.io/crates/filetime
+        Ok(file)
     }
 }
 
@@ -158,7 +162,7 @@ impl Repository {
         let mut inode_data = Vec::new();
         {
             let mut writer = rmp_serde::Serializer::new(&mut inode_data);
-            inode.serialize(&mut writer).map_err(|_| "Failed to write inode data");
+            try!(inode.serialize(&mut writer).map_err(|_| "Failed to write inode data"));
         }
         self.put_data(Mode::Meta, &inode_data)
     }
@@ -168,5 +172,22 @@ impl Repository {
         let data = Cursor::new(try!(self.get_data(chunks)));
         let mut reader = rmp_serde::Deserializer::new(data);
         Inode::deserialize(&mut reader).map_err(|_| "Failed to read inode data")
+    }
+
+    #[inline]
+    pub fn save_inode_at<P: AsRef<Path>>(&mut self, inode: &Inode, path: P) -> Result<(), &'static str> {
+        if let Some(mut file) = try!(inode.create_at(path.as_ref())) {
+            if let Some(ref contents) = inode.contents {
+                match *contents {
+                    FileContents::Inline(ref data) => {
+                        try!(file.write_all(&data).map_err(|_| "Failed to write data to file"));
+                    },
+                    FileContents::Chunked(ref chunks) => {
+                        try!(self.get_stream(chunks, &mut file));
+                    }
+                }
+            }
+        }
+        Ok(())
     }
 }

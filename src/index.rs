@@ -484,6 +484,11 @@ impl Index {
     }
 
     #[inline]
+    pub fn size(&self) -> usize {
+        self.mmap.len() 
+    }
+
+    #[inline]
     pub fn is_empty(&self) -> bool {
         self.entries == 0
     }

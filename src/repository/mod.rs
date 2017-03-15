@@ -4,6 +4,7 @@ mod integrity;
 mod basic_io;
 mod info;
 mod metadata;
+mod backup;
 
 use std::mem;
 use std::cmp::max;
@@ -17,6 +18,7 @@ use super::chunker::Chunker;
 pub use self::config::Config;
 pub use self::metadata::Inode;
 pub use self::basic_io::Chunk;
+pub use self::backup::Backup;
 use self::bundle_map::BundleMap;
 
 
@@ -53,6 +55,7 @@ impl Repository {
         try!(config.save(path.join("config.yaml")).map_err(|_| "Failed to save config"));
         let bundle_map = BundleMap::create();
         try!(bundle_map.save(path.join("bundles.map")).map_err(|_| "Failed to save bundle map"));
+        try!(fs::create_dir(&path.join("backups")).map_err(|_| "Failed to create backup directory"));
         Ok(Repository{
             path: path,
             chunker: config.chunker.create(),

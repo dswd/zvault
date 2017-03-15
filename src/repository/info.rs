@@ -7,7 +7,10 @@ pub struct RepositoryInfo {
     pub raw_data_size: u64,
     pub compression_ratio: f32,
     pub chunk_count: usize,
-    pub avg_chunk_size: f32
+    pub avg_chunk_size: f32,
+    pub index_size: usize,
+    pub index_capacity: usize,
+    pub index_entries: usize
 }
 
 
@@ -28,7 +31,10 @@ impl Repository {
             encoded_data_size: encoded_data_size,
             raw_data_size: raw_data_size,
             compression_ratio: encoded_data_size as f32 / raw_data_size as f32,
-            avg_chunk_size: raw_data_size as f32 / chunk_count as f32
+            avg_chunk_size: raw_data_size as f32 / chunk_count as f32,
+            index_size: self.index.size(),
+            index_capacity: self.index.capacity(),
+            index_entries: self.index.len()
         }
     }
 }

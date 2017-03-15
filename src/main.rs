@@ -11,16 +11,12 @@ extern crate docopt;
 extern crate rustc_serialize;
 
 mod errors;
-mod util;
-mod bundle;
-mod index;
+pub mod util;
+pub mod bundle;
+pub mod index;
 mod chunker;
 mod repository;
 mod algotest;
-
-use chunker::ChunkerType;
-use repository::{Repository, Config, Mode, Inode};
-use util::{ChecksumType, Compression, HashMethod, to_file_size};
 
 use std::fs::File;
 use std::io::Read;
@@ -28,39 +24,57 @@ use std::time;
 
 use docopt::Docopt;
 
+use chunker::ChunkerType;
+use repository::{Repository, Config, Mode, Inode, Backup};
+use util::{ChecksumType, Compression, HashMethod, to_file_size};
+
 
 static USAGE: &'static str = "
 Usage:
-    zvault init <repo>
-    zvault info <repo>
-    zvault bundles <repo>
+    zvault init [--bundle-size SIZE] [--chunker METHOD] [--chunk-size SIZE] [--compression COMPRESSION] <repo>
+    zvault backup [--full] <backup> <path>
+    zvault restore <backup> <path>
     zvault check [--full] <repo>
+    zvault list <repo>
+    zvault info <backup>
+    zvault stats <repo>
+    zvault bundles <repo>
     zvault algotest <path>
     zvault test <repo> <path>
     zvault stat <path>
-    zvault put <repo> <path>
+    zvault put <backup> <path>
 
 Options:
-    --full                     Whether to verify the repository by loading all bundles
-    --bundle-size SIZE         The target size of a full bundle in MiB [default: 25]
-    --chunker METHOD           The chunking algorithm to use [default: fastcdc]
-    --chunk-size SIZE          The target average chunk size in KiB [default: 8]
-    --compression COMPRESSION  The compression to use [default: brotli/3]
+    --full                         Whether to verify the repository by loading all bundles
+    --bundle-size SIZE             The target size of a full bundle in MiB [default: 25]
+    --chunker METHOD               The chunking algorithm to use [default: fastcdc]
+    --chunk-size SIZE              The target average chunk size in KiB [default: 8]
+    --compression COMPRESSION      The compression to use [default: brotli/3]
 ";
 
 
 #[derive(RustcDecodable, Debug)]
 struct Args {
     cmd_init: bool,
+    cmd_backup: bool,
+    cmd_restore: bool,
+    cmd_check: bool,
+
+    cmd_list: bool,
     cmd_info: bool,
+
+    cmd_stats: bool,
+    cmd_bundles: bool,
+
     cmd_algotest: bool,
     cmd_test: bool,
     cmd_stat: bool,
-    cmd_check: bool,
-    cmd_bundles: bool,
     cmd_put: bool,
+
     arg_repo: Option<String>,
     arg_path: Option<String>,
+    arg_backup: Option<String>,
+
     flag_full: bool,
     flag_bundle_size: usize,
     flag_chunker: String,
@@ -100,14 +114,23 @@ fn main() {
         return
     }
 
-    let mut repo = Repository::open(&args.arg_repo.unwrap()).unwrap();
+
+    let mut repo;
+    if let Some(path) = args.arg_repo {
+        repo = Repository::open(path).unwrap();
+    } else if let Some(ref backup) = args.arg_backup {
+        let path = backup.splitn(2, "::").nth(0).unwrap();
+        repo = Repository::open(path).unwrap();
+    } else {
+        panic!("Repository is needed");
+    }
 
     if args.cmd_check {
         repo.check(args.flag_full).unwrap();
         return
     }
 
-    if args.cmd_info {
+    if args.cmd_stats {
         let info = repo.info();
         println!("Bundles: {}", info.bundle_count);
         println!("Total size: {}", to_file_size(info.encoded_data_size));
@@ -115,6 +138,15 @@ fn main() {
         println!("Compression ratio: {:.1}", info.compression_ratio * 100.0);
         println!("Chunk count: {}", info.chunk_count);
         println!("Average chunk size: {}", to_file_size(info.avg_chunk_size as u64));
+        let index_usage = info.index_entries as f32 / info.index_capacity as f32;
+        println!("Index: {}, {}% full", to_file_size(info.index_size as u64), index_usage * 100.0);
+        return
+    }
+
+    if args.cmd_list {
+        for backup in repo.list_backups().unwrap() {
+            println!("{}", backup);
+        }
         return
     }
 
@@ -133,12 +165,6 @@ fn main() {
             println!("  - Compression: {}, ratio: {:.1}%", compression, ratio * 100.0);
             println!();
         }
-        return
-    }
-
-    if args.cmd_put {
-        let chunks = repo.put_inode(&args.arg_path.unwrap()).unwrap();
-        println!("done. {} chunks, total size: {}", chunks.len(), to_file_size(chunks.iter().map(|&(_,s)| s).sum::<usize>() as u64));
         return
     }
 
@@ -175,5 +201,29 @@ fn main() {
         let read_speed = data.len() as f64 / duration;
         assert_eq!(data.len(), data2.len());
         println!(" done. {:.1} MB/s", read_speed / 1_000_000.0);
+        return
+    }
+
+    let backup_name = args.arg_backup.unwrap().splitn(2, "::").nth(1).unwrap().to_string();
+
+    if args.cmd_put {
+        let chunks = repo.put_inode(&args.arg_path.unwrap()).unwrap();
+        repo.save_backup(&Backup{root: chunks, ..Default::default()}, &backup_name).unwrap();
+        return
+    }
+
+    if args.cmd_backup {
+        unimplemented!()
+    }
+
+    let backup = repo.get_backup(&backup_name).unwrap();
+
+    if args.cmd_info {
+        println!("{:?}", backup.root);
+        return
+    }
+
+    if args.cmd_restore {
+        repo.restore_backup(&backup, &args.arg_path.unwrap()).unwrap();
     }
 }

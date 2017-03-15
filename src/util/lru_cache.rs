@@ -45,9 +45,9 @@ impl<K: Eq+Hash, V> LruCache<K, V> {
     fn shrink(&mut self) {
         let mut tags: Vec<u64> = self.items.values().map(|&(_, n)| n).collect();
         tags.sort();
-        let bar = tags[tags.len()-self.min_size];
+        let min = tags[tags.len()-self.min_size];
         let mut new = HashMap::with_capacity(self.min_size);
-        new.extend(self.items.drain().filter(|&(_,(_, n))| n>=bar));
+        new.extend(self.items.drain().filter(|&(_,(_, n))| n>=min));
         self.items = new;
     }
 }
