@@ -76,4 +76,15 @@ impl Repository {
         try!(self.save_inode_at(&inode, path));
         Ok(())
     }
+
+    pub fn create_full_backup<P: AsRef<Path>>(&mut self, path: P) -> Result<Backup, &'static str> {
+        // Maintain a stack of folders still todo
+        // Maintain a map of path->inode entries
+        // Work on topmost stack entry
+        //   If it is a file, create inode for it and put it in the map
+        //   If it is a folder, list contents and put entries not in the map on the stack, folders last
+        //   If it is a folder with no missing entries, create a directory inode, add it to the map, and remove all children from the map
+        // If stack is empty create a backup with the last inode as root
+        unimplemented!()
+    }
 }

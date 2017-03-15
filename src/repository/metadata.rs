@@ -29,6 +29,7 @@ serde_impl!(FileType(u8) {
 pub enum FileContents {
     Inline(ByteBuf),
     Chunked(Vec<Chunk>)
+    //TODO: ChunkedIndirect
 }
 serde_impl!(FileContents(u8) {
     Inline(ByteBuf) => 0,
