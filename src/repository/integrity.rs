@@ -13,7 +13,7 @@ impl Repository {
         };
         // Lookup bundle id from map
         let bundle_id = if let Some(bundle_info) = self.bundle_map.get(found.bundle) {
-            bundle_info.id.clone()
+            bundle_info.id()
         } else {
             return Err("Bundle id not found in map")
         };
@@ -24,7 +24,7 @@ impl Repository {
             return Err("Bundle not found in bundledb")
         };
         // Get chunk from bundle
-        if bundle.chunk_count > found.chunk as usize {
+        if bundle.info.chunk_count > found.chunk as usize {
             Ok(())
         } else {
             Err("Bundle does not contain that chunk")

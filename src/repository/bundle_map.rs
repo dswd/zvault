@@ -7,7 +7,7 @@ use rmp_serde;
 use serde::Deserialize;
 use serde::Serialize;
 
-use ::bundle::BundleId;
+use ::bundle::{Bundle, BundleId, BundleInfo};
 
 
 static HEADER_STRING: [u8; 7] = *b"zbunmap";
@@ -15,15 +15,22 @@ static HEADER_VERSION: u8 = 1;
 
 
 #[derive(Default)]
-pub struct BundleInfo {
-    pub id: BundleId
+pub struct BundleData {
+    pub info: BundleInfo
 }
-serde_impl!(BundleInfo(u64) {
-    id: BundleId => 0
+serde_impl!(BundleData(u64) {
+    info: BundleInfo => 0
 });
 
+impl BundleData {
+    #[inline]
+    pub fn id(&self) -> BundleId {
+        self.info.id.clone()
+    }
+}
 
-pub struct BundleMap(HashMap<u32, BundleInfo>);
+
+pub struct BundleMap(HashMap<u32, BundleData>);
 
 impl BundleMap {
     pub fn create() -> Self {
@@ -63,12 +70,18 @@ impl BundleMap {
     }
 
     #[inline]
-    pub fn get(&self, id: u32) -> Option<&BundleInfo> {
+    pub fn get(&self, id: u32) -> Option<&BundleData> {
         self.0.get(&id)
     }
 
     #[inline]
-    pub fn set(&mut self, id: u32, info: BundleInfo) {
-        self.0.insert(id, info);
+    pub fn set(&mut self, id: u32, bundle: &Bundle) {
+        let data = BundleData { info: bundle.info.clone() };
+        self.0.insert(id, data);
+    }
+
+    #[inline]
+    pub fn bundles(&self) -> Vec<&BundleData> {
+        self.0.values().collect()
     }
 }

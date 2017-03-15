@@ -20,7 +20,7 @@ mod algotest;
 
 use chunker::ChunkerType;
 use repository::{Repository, Config, Mode};
-use util::{ChecksumType, Compression, HashMethod};
+use util::{ChecksumType, Compression, HashMethod, to_file_size};
 
 use std::fs::File;
 use std::io::Read;
@@ -32,8 +32,10 @@ use docopt::Docopt;
 static USAGE: &'static str = "
 Usage:
     zvault init <repo>
-    zvault algotest <path>
+    zvault info <repo>
+    zvault bundles <repo>
     zvault check [--full] <repo>
+    zvault algotest <path>
     zvault test <repo> <path>
 
 Options:
@@ -48,9 +50,11 @@ Options:
 #[derive(RustcDecodable, Debug)]
 struct Args {
     cmd_init: bool,
+    cmd_info: bool,
     cmd_algotest: bool,
     cmd_test: bool,
     cmd_check: bool,
+    cmd_bundles: bool,
     arg_repo: Option<String>,
     arg_path: Option<String>,
     flag_full: bool,
@@ -63,7 +67,7 @@ struct Args {
 
 fn main() {
     let args: Args = Docopt::new(USAGE).and_then(|d| d.decode()).unwrap_or_else(|e| e.exit());
-    println!("{:?}", args);
+    //println!("{:?}", args);
 
     if args.cmd_algotest {
         algotest::run(&args.arg_path.unwrap());
@@ -71,7 +75,7 @@ fn main() {
     }
 
     if args.cmd_init {
-        let chunker = ChunkerType::from(&args.flag_chunker, args.flag_chunk_size, 0).expect("No such chunk algorithm");
+        let chunker = ChunkerType::from(&args.flag_chunker, args.flag_chunk_size*1024, 0).expect("No such chunk algorithm");
         let compression = if args.flag_compression == "none" {
             None
         } else {
@@ -91,6 +95,35 @@ fn main() {
 
     if args.cmd_check {
         repo.check(args.flag_full).unwrap();
+        return
+    }
+
+    if args.cmd_info {
+        let info = repo.info();
+        println!("Bundles: {}", info.bundle_count);
+        println!("Total size: {}", to_file_size(info.encoded_data_size));
+        println!("Uncompressed size: {}", to_file_size(info.raw_data_size));
+        println!("Compression ratio: {:.1}", info.compression_ratio * 100.0);
+        println!("Chunk count: {}", info.chunk_count);
+        println!("Average chunk size: {}", to_file_size(info.avg_chunk_size as u64));
+        return
+    }
+
+    if args.cmd_bundles {
+        for bundle in repo.list_bundles() {
+            println!("Bundle {}", bundle.id);
+            println!("  - Chunks: {}", bundle.chunk_count);
+            println!("  - Size: {}", to_file_size(bundle.encoded_size as u64));
+            println!("  - Data size: {}", to_file_size(bundle.raw_size as u64));
+            let ratio = bundle.encoded_size as f32 / bundle.raw_size as f32;
+            let compression = if let Some(ref c) = bundle.compression {
+                c.to_string()
+            } else {
+                "none".to_string()
+            };
+            println!("  - Compression: {}, ratio: {:.1}%", compression, ratio * 100.0);
+            println!();
+        }
         return
     }
 

@@ -65,7 +65,7 @@ impl fmt::Debug for BundleId {
 
 
 #[derive(Clone)]
-pub struct BundleHeader {
+pub struct BundleInfo {
     pub id: BundleId,
     pub compression: Option<Compression>,
     pub encryption: Option<Encryption>,
@@ -75,7 +75,7 @@ pub struct BundleHeader {
     pub chunk_count: usize,
     pub chunk_sizes: Vec<usize>
 }
-serde_impl!(BundleHeader(u64) {
+serde_impl!(BundleInfo(u64) {
     id: BundleId => 0,
     compression: Option<Compression> => 1,
     encryption: Option<Encryption> => 2,
@@ -86,9 +86,9 @@ serde_impl!(BundleHeader(u64) {
     chunk_sizes: Vec<usize> => 7
 });
 
-impl Default for BundleHeader {
+impl Default for BundleInfo {
     fn default() -> Self {
-        BundleHeader {
+        BundleInfo {
             id: BundleId(vec![]),
             compression: None,
             encryption: None,
@@ -103,44 +103,35 @@ impl Default for BundleHeader {
 
 
 pub struct Bundle {
-    pub id: BundleId,
+    pub info: BundleInfo,
     pub version: u8,
     pub path: PathBuf,
     crypto: Arc<Mutex<Crypto>>,
-    pub compression: Option<Compression>,
-    pub encryption: Option<Encryption>,
-    pub raw_size: usize,
-    pub encoded_size: usize,
-    pub checksum: Checksum,
     pub content_start: usize,
-    pub chunk_count: usize,
-    pub chunk_sizes: Vec<usize>,
     pub chunk_positions: Vec<usize>
 }
 
 impl Bundle {
-    fn new(path: PathBuf, version: u8, content_start: usize, crypto: Arc<Mutex<Crypto>>, header: BundleHeader) -> Self {
-        let mut chunk_positions = Vec::with_capacity(header.chunk_sizes.len());
+    fn new(path: PathBuf, version: u8, content_start: usize, crypto: Arc<Mutex<Crypto>>, info: BundleInfo) -> Self {
+        let mut chunk_positions = Vec::with_capacity(info.chunk_sizes.len());
         let mut pos = 0;
-        for len in &header.chunk_sizes {
+        for len in &info.chunk_sizes {
             chunk_positions.push(pos);
             pos += *len;
         }
         Bundle {
-            id: header.id,
+            info: info,
             version: version,
             path: path,
             crypto: crypto,
-            compression: header.compression,
-            encryption: header.encryption,
-            raw_size: header.raw_size,
-            encoded_size: header.encoded_size,
-            chunk_count: header.chunk_count,
-            checksum: header.checksum,
             content_start: content_start,
-            chunk_sizes: header.chunk_sizes,
             chunk_positions: chunk_positions
         }
+    }
+
+    #[inline]
+    pub fn id(&self) -> BundleId {
+        self.info.id.clone()
     }
 
     pub fn load(path: PathBuf, crypto: Arc<Mutex<Crypto>>) -> Result<Self, BundleError> {
@@ -157,7 +148,7 @@ impl Bundle {
             return Err(BundleError::Format(path.clone(), "Unsupported bundle file version"))
         }
         let mut reader = rmp_serde::Deserializer::new(file);
-        let header = try!(BundleHeader::deserialize(&mut reader)
+        let header = try!(BundleInfo::deserialize(&mut reader)
             .map_err(|e| BundleError::Decode(e, path.clone())));
         file = reader.into_inner();
         let content_start = file.seek(SeekFrom::Current(0)).unwrap() as usize;
@@ -170,17 +161,17 @@ impl Bundle {
             .map_err(|e| BundleError::Read(e, self.path.clone(), "Failed to open bundle file"))));
         try!(file.seek(SeekFrom::Start(self.content_start as u64))
             .map_err(|e| BundleError::Read(e, self.path.clone(), "Failed to seek to data")));
-        let mut data = Vec::with_capacity(max(self.encoded_size, self.raw_size)+1024);
+        let mut data = Vec::with_capacity(max(self.info.encoded_size, self.info.raw_size)+1024);
         try!(file.read_to_end(&mut data).map_err(|_| "Failed to read data"));
         Ok(data)
     }
 
     #[inline]
     fn decode_contents(&self, mut data: Vec<u8>) -> Result<Vec<u8>, BundleError> {
-        if let Some(ref encryption) = self.encryption {
+        if let Some(ref encryption) = self.info.encryption {
             data = try!(self.crypto.lock().unwrap().decrypt(encryption.clone(), &data));
         }
-        if let Some(ref compression) = self.compression {
+        if let Some(ref compression) = self.info.compression {
             data = try!(compression.decompress(&data));
         }
         Ok(data)
@@ -193,39 +184,39 @@ impl Bundle {
 
     #[inline]
     pub fn get_chunk_position(&self, id: usize) -> Result<(usize, usize), BundleError> {
-        if id >= self.chunk_count {
+        if id >= self.info.chunk_count {
             return Err("Invalid chunk id".into())
         }
-        Ok((self.chunk_positions[id], self.chunk_sizes[id]))
+        Ok((self.chunk_positions[id], self.info.chunk_sizes[id]))
     }
 
     pub fn check(&self, full: bool) -> Result<(), BundleError> {
-        if self.chunk_count != self.chunk_sizes.len() {
-            return Err(BundleError::Integrity(self.id.clone(),
+        if self.info.chunk_count != self.info.chunk_sizes.len() {
+            return Err(BundleError::Integrity(self.id(),
                 "Chunk list size does not match chunk count"))
         }
-        if self.chunk_sizes.iter().sum::<usize>() != self.raw_size {
-            return Err(BundleError::Integrity(self.id.clone(),
+        if self.info.chunk_sizes.iter().sum::<usize>() != self.info.raw_size {
+            return Err(BundleError::Integrity(self.id(),
                 "Individual chunk sizes do not add up to total size"))
         }
         if !full {
             let size = try!(fs::metadata(&self.path)
                 .map_err(|e| BundleError::Read(e, self.path.clone(), "Failed to get size of file"))
             ).len();
-            if size as usize != self.encoded_size + self.content_start {
-                return Err(BundleError::Integrity(self.id.clone(),
+            if size as usize != self.info.encoded_size + self.content_start {
+                return Err(BundleError::Integrity(self.id(),
                     "File size does not match size in header, truncated file"))
             }
             return Ok(())
         }
         let encoded_contents = try!(self.load_encoded_contents());
-        if self.encoded_size != encoded_contents.len() {
-            return Err(BundleError::Integrity(self.id.clone(),
+        if self.info.encoded_size != encoded_contents.len() {
+            return Err(BundleError::Integrity(self.id(),
                 "Encoded data size does not match size in header, truncated bundle"))
         }
         let contents = try!(self.decode_contents(encoded_contents));
-        if self.raw_size != contents.len() {
-            return Err(BundleError::Integrity(self.id.clone(),
+        if self.info.raw_size != contents.len() {
+            return Err(BundleError::Integrity(self.id(),
                 "Raw data size does not match size in header, truncated bundle"))
         }
         //TODO: verify checksum
@@ -236,7 +227,8 @@ impl Bundle {
 impl Debug for Bundle {
     fn fmt(&self, fmt: &mut fmt::Formatter) -> Result<(), fmt::Error> {
         write!(fmt, "Bundle(\n\tid: {}\n\tpath: {:?}\n\tchunks: {}\n\tsize: {}, encoded: {}\n\tcompression: {:?}\n)",
-        self.id.to_string(), self.path, self.chunk_count, self.raw_size, self.encoded_size, self.compression)
+            self.info.id.to_string(), self.path, self.info.chunk_count, self.info.raw_size,
+            self.info.encoded_size, self.info.compression)
     }
 }
 
@@ -306,7 +298,7 @@ impl BundleWriter {
             .map_err(|e| BundleError::Write(e, path.clone(), "Failed to write bundle header")));
         try!(file.write_all(&[HEADER_VERSION])
             .map_err(|e| BundleError::Write(e, path.clone(), "Failed to write bundle header")));
-        let header = BundleHeader {
+        let header = BundleInfo {
             checksum: checksum,
             compression: self.compression,
             encryption: self.encryption,
@@ -330,6 +322,11 @@ impl BundleWriter {
     #[inline]
     pub fn size(&self) -> usize {
         self.data.len()
+    }
+
+    #[inline]
+    pub fn raw_size(&self) -> usize {
+        self.raw_size
     }
 }
 
@@ -361,15 +358,15 @@ impl BundleDb {
 
     fn bundle_path(&self, bundle: &BundleId) -> (PathBuf, PathBuf) {
         let mut folder = self.path.clone();
-        let mut file = bundle.to_string() + ".bundle";
+        let mut file = bundle.to_string()[0..32].to_owned() + ".bundle";
         let mut count = self.bundles.len();
-        while count >= 1000 {
+        while count >= 100 {
             if file.len() < 10 {
                 break
             }
-            folder = folder.join(&file[0..3]);
-            file = file[3..].to_string();
-            count /= 1000;
+            folder = folder.join(&file[0..2]);
+            file = file[2..].to_string();
+            count /= 100;
         }
         (folder, file.into())
     }
@@ -386,7 +383,7 @@ impl BundleDb {
                     paths.push(path);
                 } else {
                     let bundle = try!(Bundle::load(path, self.crypto.clone()));
-                    self.bundles.insert(bundle.id.clone(), bundle);
+                    self.bundles.insert(bundle.id(), bundle);
                 }
             }
         }
@@ -440,7 +437,7 @@ impl BundleDb {
     #[inline]
     pub fn add_bundle(&mut self, bundle: BundleWriter) -> Result<&Bundle, BundleError> {
         let bundle = try!(bundle.finish(&self));
-        let id = bundle.id.clone();
+        let id = bundle.id();
         self.bundles.insert(id.clone(), bundle);
         Ok(self.get_bundle(&id).unwrap())
     }
@@ -458,7 +455,7 @@ impl BundleDb {
     #[inline]
     pub fn delete_bundle(&mut self, bundle: &BundleId) -> Result<(), BundleError> {
         if let Some(bundle) = self.bundles.remove(bundle) {
-            fs::remove_file(&bundle.path).map_err(|e| BundleError::Remove(e, bundle.id.clone()))
+            fs::remove_file(&bundle.path).map_err(|e| BundleError::Remove(e, bundle.id()))
         } else {
             Err("No such bundle".into())
         }

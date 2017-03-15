@@ -1,0 +1,133 @@
+Algorithm comparison on file test_data/ubuntu-16.04.1.tar
+
+Reading input file... done. 183869440 bytes
+
+Chunker algorithms
+  Chunk size: 4 KiB
+    AE:         avg chunk size 4424.2   ± 1270.2 bytes,         3.4% saved,     speed 713.7 MB/s
+    Rabin:      avg chunk size 5091.2   ± 3985.7 bytes,         4.1% saved,     speed 214.1 MB/s
+    FastCdc:    avg chunk size 4881.7   ± 2044.4 bytes,         3.4% saved,     speed 485.2 MB/s
+  Chunk size: 8 KiB
+    AE:         avg chunk size 8924.8   ± 2215.3 bytes,         2.6% saved,     speed 721.6 MB/s
+    Rabin:      avg chunk size 10406.9  ± 7996.2 bytes,         3.0% saved,     speed 215.6 MB/s
+    FastCdc:    avg chunk size 9704.4   ± 3740.6 bytes,         2.9% saved,     speed 481.8 MB/s
+  Chunk size: 16 KiB
+    AE:         avg chunk size 17828.9  ± 4205.5 bytes,         2.0% saved,     speed 719.3 MB/s
+    Rabin:      avg chunk size 21402.6  ± 16330.5 bytes,        2.1% saved,     speed 215.5 MB/s
+    FastCdc:    avg chunk size 18938.0  ± 6924.2 bytes,         2.2% saved,     speed 502.7 MB/s
+  Chunk size: 32 KiB
+    AE:         avg chunk size 35530.3  ± 8760.8 bytes,         1.2% saved,     speed 711.5 MB/s
+    Rabin:      avg chunk size 42601.8  ± 32150.9 bytes,        1.2% saved,     speed 213.5 MB/s
+    FastCdc:    avg chunk size 41356.1  ± 20308.1 bytes,        1.2% saved,     speed 443.1 MB/s
+  Chunk size: 64 KiB
+    AE:         avg chunk size 70746.2  ± 16942.6 bytes,        0.9% saved,     speed 715.8 MB/s
+    Rabin:      avg chunk size 83729.3  ± 63880.7 bytes,        1.2% saved,     speed 199.6 MB/s
+    FastCdc:    avg chunk size 77811.9  ± 29836.2 bytes,        0.8% saved,     speed 492.3 MB/s
+
+Hash algorithms
+  Blake2: 536.4 MB/s
+  Murmur3: 3771.8 MB/s
+
+Compression algorithms
+  Snappy:       ratio: 63.9%,   compress: 417.8 MB/s,   decompress: 839.9 MB/s
+  ZStd/1:       ratio: 48.3%,   compress: 206.7 MB/s,   decompress: 320.4 MB/s
+  ZStd/2:       ratio: 45.7%,   compress: 147.5 MB/s,   decompress: 346.0 MB/s
+  ZStd/3:       ratio: 43.4%,   compress: 89.9 MB/s,    decompress: 342.2 MB/s
+  ZStd/4:       ratio: 41.9%,   compress: 79.3 MB/s,    decompress: 350.4 MB/s
+  ZStd/5:       ratio: 42.3%,   compress: 55.8 MB/s,    decompress: 268.3 MB/s
+  ZStd/6:       ratio: 41.5%,   compress: 42.9 MB/s,    decompress: 310.0 MB/s
+  ZStd/7:       ratio: 39.7%,   compress: 33.3 MB/s,    decompress: 313.7 MB/s
+  ZStd/8:       ratio: 39.4%,   compress: 26.3 MB/s,    decompress: 281.4 MB/s
+  ZStd/9:       ratio: 39.0%,   compress: 17.5 MB/s,    decompress: 308.5 MB/s
+  Deflate/1:    ratio: 48.4%,   compress: 83.9 MB/s,    decompress: 306.9 MB/s
+  Deflate/2:    ratio: 48.0%,   compress: 81.8 MB/s,    decompress: 311.2 MB/s
+  Deflate/3:    ratio: 47.7%,   compress: 76.7 MB/s,    decompress: 314.5 MB/s
+  Deflate/4:    ratio: 47.6%,   compress: 74.9 MB/s,    decompress: 317.5 MB/s
+  Deflate/5:    ratio: 46.9%,   compress: 63.6 MB/s,    decompress: 319.8 MB/s
+  Deflate/6:    ratio: 46.8%,   compress: 55.2 MB/s,    decompress: 309.0 MB/s
+  Deflate/7:    ratio: 46.7%,   compress: 50.8 MB/s,    decompress: 326.3 MB/s
+  Deflate/8:    ratio: 45.8%,   compress: 18.4 MB/s,    decompress: 301.8 MB/s
+  Deflate/9:    ratio: 45.4%,   compress: 13.3 MB/s,    decompress: 278.0 MB/s
+  Brotli/1:     ratio: 45.7%,   compress: 141.6 MB/s,   decompress: 181.3 MB/s
+  Brotli/2:     ratio: 43.6%,   compress: 90.8 MB/s,    decompress: 195.0 MB/s
+  Brotli/3:     ratio: 43.5%,   compress: 68.6 MB/s,    decompress: 197.0 MB/s
+  Brotli/4:     ratio: 41.9%,   compress: 44.7 MB/s,    decompress: 201.2 MB/s
+  Brotli/5:     ratio: 39.5%,   compress: 17.5 MB/s,    decompress: 194.0 MB/s
+  Brotli/6:     ratio: 38.4%,   compress: 12.2 MB/s,    decompress: 196.4 MB/s
+  Brotli/7:     ratio: 37.2%,   compress: 6.0 MB/s,     decompress: 203.3 MB/s
+  Brotli/8:     ratio: 37.0%,   compress: 4.2 MB/s,     decompress: 204.2 MB/s
+  Brotli/9:     ratio: 36.9%,   compress: 3.2 MB/s,     decompress: 205.8 MB/s
+  Lzma2/1:      ratio: 37.7%,   compress: 8.1 MB/s,     decompress: 38.0 MB/s
+  Lzma2/2:      ratio: 36.3%,   compress: 5.6 MB/s,     decompress: 40.7 MB/s
+  Lzma2/3:      ratio: 35.5%,   compress: 3.5 MB/s,     decompress: 42.2 MB/s
+  Lzma2/4:      ratio: 33.9%,   compress: 2.9 MB/s,     decompress: 43.1 MB/s
+  Lzma2/5:      ratio: 33.2%,   compress: 2.4 MB/s,     decompress: 43.4 MB/s
+  Lzma2/6:      ratio: 33.1%,   compress: 2.1 MB/s,     decompress: 43.9 MB/s
+
+
+
+Algorithm comparison on file test_data/silesia.tar
+
+Reading input file... done. 211957760 bytes
+
+Chunker algorithms
+  Chunk size: 4 KiB
+    AE:         avg chunk size 4779.0   ± 1348.1 bytes,         0.3% saved,     speed 715.3 MB/s
+    Rabin:      avg chunk size 5081.6   ± 3845.5 bytes,         0.7% saved,     speed 213.1 MB/s
+    FastCdc:    avg chunk size 4829.0   ± 1560.8 bytes,         0.2% saved,     speed 488.8 MB/s
+  Chunk size: 8 KiB
+    AE:         avg chunk size 9634.0   ± 2548.9 bytes,         0.0% saved,     speed 697.2 MB/s
+    Rabin:      avg chunk size 10137.6  ± 7591.8 bytes,         0.3% saved,     speed 213.7 MB/s
+    FastCdc:    avg chunk size 9609.1   ± 2957.7 bytes,         0.1% saved,     speed 482.2 MB/s
+  Chunk size: 16 KiB
+    AE:         avg chunk size 18849.1  ± 4654.1 bytes,         0.0% saved,     speed 719.9 MB/s
+    Rabin:      avg chunk size 20443.5  ± 15211.9 bytes,        0.1% saved,     speed 214.8 MB/s
+    FastCdc:    avg chunk size 19309.3  ± 6274.3 bytes,         0.0% saved,     speed 501.9 MB/s
+  Chunk size: 32 KiB
+    AE:         avg chunk size 36677.2  ± 7905.2 bytes,         0.0% saved,     speed 726.4 MB/s
+    Rabin:      avg chunk size 41814.5  ± 31117.0 bytes,        0.0% saved,     speed 213.3 MB/s
+    FastCdc:    avg chunk size 44463.6  ± 26128.5 bytes,        0.0% saved,     speed 469.7 MB/s
+  Chunk size: 64 KiB
+    AE:         avg chunk size 71923.2  ± 14350.5 bytes,        0.0% saved,     speed 724.0 MB/s
+    Rabin:      avg chunk size 81742.3  ± 60106.9 bytes,        0.0% saved,     speed 213.5 MB/s
+    FastCdc:    avg chunk size 79384.9  ± 31116.6 bytes,        0.0% saved,     speed 490.2 MB/s
+
+Hash algorithms
+  Blake2: 521.9 MB/s
+  Murmur3: 3763.0 MB/s
+
+Compression algorithms
+  Snappy:       ratio: 47.8%,   compress: 407.1 MB/s,   decompress: 760.6 MB/s
+  ZStd/1:       ratio: 34.8%,   compress: 189.0 MB/s,   decompress: 314.6 MB/s
+  ZStd/2:       ratio: 33.1%,   compress: 149.1 MB/s,   decompress: 327.1 MB/s
+  ZStd/3:       ratio: 32.2%,   compress: 122.4 MB/s,   decompress: 326.3 MB/s
+  ZStd/4:       ratio: 31.9%,   compress: 99.9 MB/s,    decompress: 318.4 MB/s
+  ZStd/5:       ratio: 30.9%,   compress: 66.8 MB/s,    decompress: 317.1 MB/s
+  ZStd/6:       ratio: 30.0%,   compress: 52.4 MB/s,    decompress: 324.8 MB/s
+  ZStd/7:       ratio: 29.3%,   compress: 39.2 MB/s,    decompress: 333.7 MB/s
+  ZStd/8:       ratio: 28.9%,   compress: 29.3 MB/s,    decompress: 338.9 MB/s
+  ZStd/9:       ratio: 28.5%,   compress: 23.0 MB/s,    decompress: 349.5 MB/s
+  Deflate/1:    ratio: 34.7%,   compress: 106.5 MB/s,   decompress: 418.2 MB/s
+  Deflate/2:    ratio: 33.9%,   compress: 96.6 MB/s,    decompress: 425.4 MB/s
+  Deflate/3:    ratio: 33.5%,   compress: 90.6 MB/s,    decompress: 442.4 MB/s
+  Deflate/4:    ratio: 33.1%,   compress: 83.2 MB/s,    decompress: 438.6 MB/s
+  Deflate/5:    ratio: 32.4%,   compress: 69.6 MB/s,    decompress: 452.2 MB/s
+  Deflate/6:    ratio: 32.1%,   compress: 57.5 MB/s,    decompress: 455.8 MB/s
+  Deflate/7:    ratio: 32.0%,   compress: 51.3 MB/s,    decompress: 457.0 MB/s
+  Deflate/8:    ratio: 31.8%,   compress: 14.8 MB/s,    decompress: 409.7 MB/s
+  Deflate/9:    ratio: 31.2%,   compress: 10.7 MB/s,    decompress: 406.9 MB/s
+  Brotli/1:     ratio: 34.3%,   compress: 137.2 MB/s,   decompress: 214.6 MB/s
+  Brotli/2:     ratio: 32.1%,   compress: 88.9 MB/s,    decompress: 233.6 MB/s
+  Brotli/3:     ratio: 31.8%,   compress: 68.7 MB/s,    decompress: 242.2 MB/s
+  Brotli/4:     ratio: 30.9%,   compress: 45.5 MB/s,    decompress: 254.2 MB/s
+  Brotli/5:     ratio: 28.7%,   compress: 22.0 MB/s,    decompress: 259.2 MB/s
+  Brotli/6:     ratio: 28.1%,   compress: 15.8 MB/s,    decompress: 267.8 MB/s
+  Brotli/7:     ratio: 27.4%,   compress: 9.1 MB/s,     decompress: 274.4 MB/s
+  Brotli/8:     ratio: 27.1%,   compress: 6.4 MB/s,     decompress: 245.7 MB/s
+  Brotli/9:     ratio: 26.8%,   compress: 4.7 MB/s,     decompress: 276.0 MB/s
+  Lzma2/1:      ratio: 27.6%,   compress: 11.3 MB/s,    decompress: 52.5 MB/s
+  Lzma2/2:      ratio: 26.8%,   compress: 7.6 MB/s,     decompress: 54.6 MB/s
+  Lzma2/3:      ratio: 26.3%,   compress: 5.0 MB/s,     decompress: 56.4 MB/s
+  Lzma2/4:      ratio: 24.6%,   compress: 3.2 MB/s,     decompress: 56.8 MB/s
+  Lzma2/5:      ratio: 23.6%,   compress: 2.4 MB/s,     decompress: 59.0 MB/s
+  Lzma2/6:      ratio: 23.2%,   compress: 2.0 MB/s,     decompress: 59.3 MB/s

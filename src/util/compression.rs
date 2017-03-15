@@ -35,7 +35,7 @@ impl Compression {
 
     #[inline]
     pub fn from_string(name: &str) -> Result<Self, &'static str> {
-        let (name, level) = if let Some(pos) = name.find("/") {
+        let (name, level) = if let Some(pos) = name.find('/') {
             let level = try!(u8::from_str(&name[pos+1..]).map_err(|_| "Level must be a number"));
             let name = &name[..pos];
             (name, level)

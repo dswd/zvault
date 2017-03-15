@@ -2,6 +2,7 @@ mod config;
 mod bundle_map;
 mod integrity;
 mod basic_io;
+mod info;
 
 use std::mem;
 use std::cmp::max;
@@ -13,7 +14,7 @@ use super::bundle::{BundleDb, BundleWriter};
 use super::chunker::Chunker;
 
 pub use self::config::Config;
-use self::bundle_map::{BundleMap, BundleInfo};
+use self::bundle_map::BundleMap;
 
 
 #[derive(Eq, Debug, PartialEq, Clone, Copy)]
@@ -111,8 +112,7 @@ impl Repository {
             mem::swap(&mut self.content_bundle, &mut finished);
             {
                 let bundle = try!(self.bundles.add_bundle(finished.unwrap()).map_err(|_| "Failed to write finished bundle"));
-                let bundle_info = BundleInfo{id: bundle.id.clone()};
-                self.bundle_map.set(self.next_content_bundle, bundle_info);
+                self.bundle_map.set(self.next_content_bundle, bundle);
             }
             self.next_content_bundle = self.next_free_bundle_id()
         }
@@ -121,8 +121,7 @@ impl Repository {
             mem::swap(&mut self.meta_bundle, &mut finished);
             {
                 let bundle = try!(self.bundles.add_bundle(finished.unwrap()).map_err(|_| "Failed to write finished bundle"));
-                let bundle_info = BundleInfo{id: bundle.id.clone()};
-                self.bundle_map.set(self.next_meta_bundle, bundle_info);
+                self.bundle_map.set(self.next_meta_bundle, bundle);
             }
             self.next_meta_bundle = self.next_free_bundle_id()
         }

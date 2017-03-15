@@ -2,7 +2,6 @@ use std::mem;
 use std::io::{Read, Write, Cursor};
 
 use super::{Repository, Mode};
-use super::bundle_map::BundleInfo;
 use ::index::Location;
 
 use ::util::Hash;
@@ -19,7 +18,7 @@ impl Repository {
         };
         // Lookup bundle id from map
         let bundle_id = if let Some(bundle_info) = self.bundle_map.get(found.bundle) {
-            bundle_info.id.clone()
+            bundle_info.id()
         } else {
             return Err("Bundle id not found in map")
         };
@@ -50,23 +49,24 @@ impl Repository {
         debug_assert!(writer.is_some());
         let chunk_id;
         let size;
+        let raw_size;
         {
             // Add chunk to bundle writer and determine the size of the bundle
             let writer_obj = writer.as_mut().unwrap();
             chunk_id = try!(writer_obj.add(data).map_err(|_| "Failed to write chunk"));
             size = writer_obj.size();
+            raw_size = writer_obj.raw_size();
         }
         let bundle_id = match mode {
             Mode::Content => self.next_content_bundle,
             Mode::Meta => self.next_meta_bundle
         };
         // Finish bundle if over maximum size
-        if size >= self.config.bundle_size {
+        if size >= self.config.bundle_size || raw_size >= 4 * self.config.bundle_size {
             let mut finished = None;
             mem::swap(writer, &mut finished);
             let bundle = try!(self.bundles.add_bundle(finished.unwrap()).map_err(|_| "Failed to write finished bundle"));
-            let bundle_info = BundleInfo{id: bundle.id.clone()};
-            self.bundle_map.set(bundle_id, bundle_info);
+            self.bundle_map.set(bundle_id, bundle);
             if self.next_meta_bundle == bundle_id {
                 self.next_meta_bundle = next_free_bundle_id
             }

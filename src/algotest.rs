@@ -71,14 +71,14 @@ fn compare_compression(name: &str, method: Compression, data: &[u8]) {
     let duration = elapsed.as_secs() as f64 * 1.0 + elapsed.subsec_nanos() as f64 / 1_000_000_000.0;
     let cspeed = data.len() as f64 / duration;
     let ratio = compressed.len() as f64 / data.len() as f64;
-    /*let start = time::Instant::now();
+    let start = time::Instant::now();
     let uncompressed = method.decompress(&compressed).unwrap();
     if uncompressed != data {
         panic!("{} did not uncompress to the same value", name);
     }
     let elapsed = start.elapsed();
-    let duration = elapsed.as_secs() as f64 * 1.0 + elapsed.subsec_nanos() as f64 / 1_000_000_000.0;*/
-    let dspeed = 0.0;//data.len() as f64 / duration;
+    let duration = elapsed.as_secs() as f64 * 1.0 + elapsed.subsec_nanos() as f64 / 1_000_000_000.0;
+    let dspeed = data.len() as f64 / duration;
     println!("{}:\tratio: {:.1}%,\tcompress: {:.1} MB/s,\tdecompress: {:.1} MB/s",
         name, ratio * 100.0, cspeed / 1_000_000.0, dspeed / 1_000_000.0);
 }
