@@ -1,5 +1,16 @@
 use std::collections::HashMap;
 
+quick_error!{
+    #[derive(Debug)]
+    pub enum EncryptionError {
+        Operation(reason: &'static str) {
+            description("Operation failed")
+            display("Operation failed: {}", reason)
+        }
+    }
+}
+
+
 #[derive(Clone)]
 pub enum EncryptionMethod {
     Dummy
@@ -36,12 +47,12 @@ impl Crypto {
     }
 
     #[inline]
-    pub fn encrypt(&self, _enc: Encryption, _data: &[u8]) -> Result<Vec<u8>, &'static str> {
+    pub fn encrypt(&self, _enc: Encryption, _data: &[u8]) -> Result<Vec<u8>, EncryptionError> {
         unimplemented!()
     }
 
     #[inline]
-    pub fn decrypt(&self, _enc: Encryption, _data: &[u8]) -> Result<Vec<u8>, &'static str> {
+    pub fn decrypt(&self, _enc: Encryption, _data: &[u8]) -> Result<Vec<u8>, EncryptionError> {
         unimplemented!()
     }
 }

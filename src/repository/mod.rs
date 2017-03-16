@@ -5,6 +5,7 @@ mod basic_io;
 mod info;
 mod metadata;
 mod backup;
+mod error;
 
 use std::mem;
 use std::cmp::max;
@@ -15,6 +16,7 @@ use super::index::Index;
 use super::bundle::{BundleDb, BundleWriter};
 use super::chunker::Chunker;
 
+pub use self::error::RepositoryError;
 pub use self::config::Config;
 pub use self::metadata::Inode;
 pub use self::basic_io::Chunk;
@@ -42,20 +44,20 @@ pub struct Repository {
 
 
 impl Repository {
-    pub fn create<P: AsRef<Path>>(path: P, config: Config) -> Result<Self, &'static str> {
+    pub fn create<P: AsRef<Path>>(path: P, config: Config) -> Result<Self, RepositoryError> {
         let path = path.as_ref().to_owned();
-        try!(fs::create_dir(&path).map_err(|_| "Failed to create repository directory"));
+        try!(fs::create_dir(&path));
         let bundles = try!(BundleDb::create(
             path.join("bundles"),
             config.compression.clone(),
             None, //FIXME: store encryption in config
             config.checksum
-        ).map_err(|_| "Failed to create bundle db"));
-        let index = try!(Index::create(&path.join("index")).map_err(|_| "Failed to create index"));
-        try!(config.save(path.join("config.yaml")).map_err(|_| "Failed to save config"));
+        ));
+        let index = try!(Index::create(&path.join("index")));
+        try!(config.save(path.join("config.yaml")));
         let bundle_map = BundleMap::create();
-        try!(bundle_map.save(path.join("bundles.map")).map_err(|_| "Failed to save bundle map"));
-        try!(fs::create_dir(&path.join("backups")).map_err(|_| "Failed to create backup directory"));
+        try!(bundle_map.save(path.join("bundles.map")));
+        try!(fs::create_dir(&path.join("backups")));
         Ok(Repository{
             path: path,
             chunker: config.chunker.create(),
@@ -70,17 +72,17 @@ impl Repository {
         })
     }
 
-    pub fn open<P: AsRef<Path>>(path: P) -> Result<Self, &'static str> {
+    pub fn open<P: AsRef<Path>>(path: P) -> Result<Self, RepositoryError> {
         let path = path.as_ref().to_owned();
-        let config = try!(Config::load(path.join("config.yaml")).map_err(|_| "Failed to load config"));
+        let config = try!(Config::load(path.join("config.yaml")));
         let bundles = try!(BundleDb::open(
             path.join("bundles"),
             config.compression.clone(),
             None, //FIXME: load encryption from config
             config.checksum
-        ).map_err(|_| "Failed to open bundle db"));
-        let index = try!(Index::open(&path.join("index")).map_err(|_| "Failed to open index"));
-        let bundle_map = try!(BundleMap::load(path.join("bundles.map")).map_err(|_| "Failed to load bundle map"));
+        ));
+        let index = try!(Index::open(&path.join("index")));
+        let bundle_map = try!(BundleMap::load(path.join("bundles.map")));
         let mut repo = Repository {
             path: path,
             chunker: config.chunker.create(),
@@ -99,8 +101,9 @@ impl Repository {
     }
 
     #[inline]
-    fn save_bundle_map(&self) -> Result<(), &'static str> {
-        self.bundle_map.save(self.path.join("bundles.map"))
+    fn save_bundle_map(&self) -> Result<(), RepositoryError> {
+        try!(self.bundle_map.save(self.path.join("bundles.map")));
+        Ok(())
     }
 
     #[inline]
@@ -112,12 +115,12 @@ impl Repository {
         id
     }
 
-    pub fn flush(&mut self) -> Result<(), &'static str> {
+    pub fn flush(&mut self) -> Result<(), RepositoryError> {
         if self.content_bundle.is_some() {
             let mut finished = None;
             mem::swap(&mut self.content_bundle, &mut finished);
             {
-                let bundle = try!(self.bundles.add_bundle(finished.unwrap()).map_err(|_| "Failed to write finished bundle"));
+                let bundle = try!(self.bundles.add_bundle(finished.unwrap()));
                 self.bundle_map.set(self.next_content_bundle, bundle);
             }
             self.next_content_bundle = self.next_free_bundle_id()
@@ -126,12 +129,12 @@ impl Repository {
             let mut finished = None;
             mem::swap(&mut self.meta_bundle, &mut finished);
             {
-                let bundle = try!(self.bundles.add_bundle(finished.unwrap()).map_err(|_| "Failed to write finished bundle"));
+                let bundle = try!(self.bundles.add_bundle(finished.unwrap()));
                 self.bundle_map.set(self.next_meta_bundle, bundle);
             }
             self.next_meta_bundle = self.next_free_bundle_id()
         }
-        try!(self.save_bundle_map().map_err(|_| "Failed to save bundle map"));
+        try!(self.save_bundle_map());
         Ok(())
     }
 }

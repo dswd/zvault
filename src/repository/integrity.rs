@@ -1,41 +1,66 @@
-use super::Repository;
+use super::{Repository, RepositoryError};
 
+use ::bundle::BundleId;
 use ::util::Hash;
 
 
+quick_error!{
+    #[derive(Debug)]
+    pub enum RepositoryIntegrityError {
+        MissingChunk(hash: Hash) {
+            description("Missing chunk")
+            display("Missing chunk: {}", hash)
+        }
+        MissingBundleId(id: u32) {
+            description("Missing bundle")
+            display("Missing bundle: {}", id)
+        }
+        MissingBundle(id: BundleId) {
+            description("Missing bundle")
+            display("Missing bundle: {}", id)
+        }
+        NoSuchChunk(bundle: BundleId, chunk: u32) {
+            description("No such chunk")
+            display("Bundle {} does not conain the chunk {}", bundle, chunk)
+        }
+        InvalidNextBundleId {
+            description("Invalid next bundle id")
+        }
+        SymlinkWithoutTarget {
+            description("Symlink without target")
+        }
+    }
+}
+
 impl Repository {
-    fn check_chunk(&self, hash: Hash) -> Result<(), &'static str> {
+    fn check_chunk(&self, hash: Hash) -> Result<(), RepositoryError> {
         // Find bundle and chunk id in index
         let found = if let Some(found) = self.index.get(&hash) {
             found
         } else {
-            return Err("Chunk not in index");
+            return Err(RepositoryIntegrityError::MissingChunk(hash).into());
         };
         // Lookup bundle id from map
-        let bundle_id = if let Some(bundle_info) = self.bundle_map.get(found.bundle) {
-            bundle_info.id()
-        } else {
-            return Err("Bundle id not found in map")
-        };
+        let bundle_id = try!(self.get_bundle_id(found.bundle));
         // Get bundle object from bundledb
         let bundle = if let Some(bundle) = self.bundles.get_bundle(&bundle_id) {
             bundle
         } else {
-            return Err("Bundle not found in bundledb")
+            return Err(RepositoryIntegrityError::MissingBundle(bundle_id.clone()).into())
         };
         // Get chunk from bundle
         if bundle.info.chunk_count > found.chunk as usize {
             Ok(())
         } else {
-            Err("Bundle does not contain that chunk")
+            Err(RepositoryIntegrityError::NoSuchChunk(bundle_id.clone(), found.chunk).into())
         }
         //TODO: check that contents match their hash
     }
 
-    pub fn check(&mut self, full: bool) -> Result<(), &'static str> {
+    pub fn check(&mut self, full: bool) -> Result<(), RepositoryError> {
         try!(self.flush());
-        try!(self.bundles.check(full).map_err(|_| "Bundles inconsistent"));
-        try!(self.index.check().map_err(|_| "Index inconsistent"));
+        try!(self.bundles.check(full));
+        try!(self.index.check());
         let mut pos = 0;
         loop {
             pos = if let Some(pos) = self.index.next_entry(pos) {
@@ -48,13 +73,13 @@ impl Repository {
             pos += 1;
         }
         if self.next_content_bundle == self.next_meta_bundle {
-            return Err("Next bundle ids for meta and content as the same")
+            return Err(RepositoryIntegrityError::InvalidNextBundleId.into())
         }
         if self.bundle_map.get(self.next_content_bundle).is_some() {
-            return Err("Bundle map already contains next bundle bundle id")
+            return Err(RepositoryIntegrityError::InvalidNextBundleId.into())
         }
         if self.bundle_map.get(self.next_meta_bundle).is_some() {
-            return Err("Bundle map already contains next meta bundle id")
+            return Err(RepositoryIntegrityError::InvalidNextBundleId.into())
         }
         Ok(())
     }

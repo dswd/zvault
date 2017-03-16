@@ -10,7 +10,6 @@ extern crate serde_yaml;
 extern crate docopt;
 extern crate rustc_serialize;
 
-mod errors;
 pub mod util;
 pub mod bundle;
 pub mod index;

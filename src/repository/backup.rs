@@ -1,7 +1,6 @@
-use super::{Repository, Chunk};
+use super::{Repository, Chunk, RepositoryError};
 
-use rmp_serde;
-use serde::{Deserialize, Serialize};
+use ::util::*;
 
 use std::fs::{self, File};
 use std::path::Path;
@@ -39,19 +38,19 @@ serde_impl!(Backup(u8) {
 
 
 impl Repository {
-    pub fn list_backups(&self) -> Result<Vec<String>, &'static str> {
+    pub fn list_backups(&self) -> Result<Vec<String>, RepositoryError> {
         let mut backups = Vec::new();
         let mut paths = Vec::new();
         let base_path = self.path.join("backups");
         paths.push(base_path.clone());
         while let Some(path) = paths.pop() {
-            for entry in try!(fs::read_dir(path).map_err(|_| "Failed to list files")) {
-                let entry = try!(entry.map_err(|_| "Failed to list files"));
+            for entry in try!(fs::read_dir(path)) {
+                let entry = try!(entry);
                 let path = entry.path();
                 if path.is_dir() {
                     paths.push(path);
                 } else {
-                    let relpath = try!(path.strip_prefix(&base_path).map_err(|_| "Failed to obtain relative path"));
+                    let relpath = path.strip_prefix(&base_path).unwrap();
                     backups.push(relpath.to_string_lossy().to_string());
                 }
             }
@@ -59,25 +58,23 @@ impl Repository {
         Ok(backups)
     }
 
-    pub fn get_backup(&self, name: &str) -> Result<Backup, &'static str> {
-        let file = try!(File::open(self.path.join("backups").join(name)).map_err(|_| "Failed to load backup"));
-        let mut reader = rmp_serde::Deserializer::new(file);
-        Backup::deserialize(&mut reader).map_err(|_| "Failed to read backup data")
+    pub fn get_backup(&self, name: &str) -> Result<Backup, RepositoryError> {
+        let mut file = try!(File::open(self.path.join("backups").join(name)));
+        Ok(try!(msgpack::decode_from_stream(&mut file)))
     }
 
-    pub fn save_backup(&mut self, backup: &Backup, name: &str) -> Result<(), &'static str> {
-        let mut file = try!(File::create(self.path.join("backups").join(name)).map_err(|_| "Failed to save backup"));
-        let mut writer = rmp_serde::Serializer::new(&mut file);
-        backup.serialize(&mut writer).map_err(|_| "Failed to write backup data")
+    pub fn save_backup(&mut self, backup: &Backup, name: &str) -> Result<(), RepositoryError> {
+        let mut file = try!(File::create(self.path.join("backups").join(name)));
+        Ok(try!(msgpack::encode_to_stream(backup, &mut file)))
     }
 
-    pub fn restore_backup<P: AsRef<Path>>(&mut self, backup: &Backup, path: P) -> Result<(), &'static str> {
+    pub fn restore_backup<P: AsRef<Path>>(&mut self, backup: &Backup, path: P) -> Result<(), RepositoryError> {
         let inode = try!(self.get_inode(&backup.root));
         try!(self.save_inode_at(&inode, path));
         Ok(())
     }
 
-    pub fn create_full_backup<P: AsRef<Path>>(&mut self, path: P) -> Result<Backup, &'static str> {
+    pub fn create_full_backup<P: AsRef<Path>>(&mut self, path: P) -> Result<Backup, RepositoryError> {
         // Maintain a stack of folders still todo
         // Maintain a map of path->inode entries
         // Work on topmost stack entry

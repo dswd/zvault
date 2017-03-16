@@ -2,14 +2,36 @@ use serde_yaml;
 
 use std::fs::File;
 use std::path::Path;
+use std::io;
 
 use ::util::*;
 use ::chunker::ChunkerType;
 
 
+quick_error!{
+    #[derive(Debug)]
+    pub enum ConfigError {
+        Io(err: io::Error) {
+            from()
+            cause(err)
+        }
+        Parse(reason: &'static str) {
+            from()
+            description("Failed to parse config")
+            display("Failed to parse config: {}", reason)
+        }
+        Yaml(err: serde_yaml::Error) {
+            from()
+            cause(err)
+            description("Yaml format error")
+        }
+    }
+}
+
+
 impl HashMethod {
-    fn from_yaml(yaml: String) -> Result<Self, &'static str> {
-        HashMethod::from(&yaml)
+    fn from_yaml(yaml: String) -> Result<Self, ConfigError> {
+        HashMethod::from(&yaml).map_err(ConfigError::Parse)
     }
 
     fn to_yaml(&self) -> String {
@@ -20,8 +42,8 @@ impl HashMethod {
 
 
 impl ChecksumType {
-    fn from_yaml(yaml: String) -> Result<Self, &'static str> {
-        ChecksumType::from(&yaml)
+    fn from_yaml(yaml: String) -> Result<Self, ConfigError> {
+        ChecksumType::from(&yaml).map_err(ConfigError::Parse)
     }
 
     fn to_yaml(&self) -> String {
@@ -52,8 +74,8 @@ serde_impl!(ChunkerYaml(String) {
 });
 
 impl ChunkerType {
-    fn from_yaml(yaml: ChunkerYaml) -> Result<Self, &'static str> {
-        ChunkerType::from(&yaml.method, yaml.avg_size, yaml.seed)
+    fn from_yaml(yaml: ChunkerYaml) -> Result<Self, ConfigError> {
+        ChunkerType::from(&yaml.method, yaml.avg_size, yaml.seed).map_err(ConfigError::Parse)
     }
 
     fn to_yaml(&self) -> ChunkerYaml {
@@ -69,8 +91,8 @@ impl ChunkerType {
 
 impl Compression {
     #[inline]
-    fn from_yaml(yaml: String) -> Result<Self, &'static str> {
-        Compression::from_string(&yaml)
+    fn from_yaml(yaml: String) -> Result<Self, ConfigError> {
+        Compression::from_string(&yaml).map_err(|_| ConfigError::Parse("Invalid codec"))
     }
 
     #[inline]
@@ -118,7 +140,7 @@ pub struct Config {
     pub hash: HashMethod
 }
 impl Config {
-    fn from_yaml(yaml: ConfigYaml) -> Result<Self, &'static str> {
+    fn from_yaml(yaml: ConfigYaml) -> Result<Self, ConfigError> {
         let compression = if let Some(c) = yaml.compression {
             Some(try!(Compression::from_yaml(c)))
         } else {
@@ -143,15 +165,15 @@ impl Config {
         }
     }
 
-    pub fn load<P: AsRef<Path>>(path: P) -> Result<Self, &'static str> {
-        let f = try!(File::open(path).map_err(|_| "Failed to open config"));
-        let config = try!(serde_yaml::from_reader(f).map_err(|_| "Failed to parse config"));
+    pub fn load<P: AsRef<Path>>(path: P) -> Result<Self, ConfigError> {
+        let f = try!(File::open(path));
+        let config = try!(serde_yaml::from_reader(f));
         Config::from_yaml(config)
     }
 
-    pub fn save<P: AsRef<Path>>(&self, path: P) -> Result<(), &'static str> {
-        let mut f = try!(File::create(path).map_err(|_| "Failed to open config"));
-        try!(serde_yaml::to_writer(&mut f, &self.to_yaml()).map_err(|_| "Failed to wrtie config"));
+    pub fn save<P: AsRef<Path>>(&self, path: P) -> Result<(), ConfigError> {
+        let mut f = try!(File::create(path));
+        try!(serde_yaml::to_writer(&mut f, &self.to_yaml()));
         Ok(())
     }
 }

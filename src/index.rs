@@ -65,31 +65,56 @@ pub struct Index {
     data: &'static mut [Entry]
 }
 
-#[derive(Debug)]
-pub enum Error {
-    IOError(io::Error),
-    MapError(MapError),
-    NoHeader,
-    MagicError,
-    VersionError,
+quick_error!{
+    #[derive(Debug)]
+    pub enum IndexError {
+        Io(err: io::Error) {
+            from()
+            cause(err)
+            description("Failed to open index file")
+        }
+        Mmap(err: MapError) {
+            from()
+            cause(err)
+            description("Failed to write bundle map")
+        }
+        NoHeader {
+            description("Index file does not contain a header")
+        }
+        WrongHeader {
+            description("Wrong header")
+        }
+        WrongVersion(version: u8) {
+            description("Wrong version")
+            display("Wrong version: {}", version)
+        }
+        WrongPosition(key: Hash, should: usize, is: LocateResult) {
+            description("Key at wrong position")
+            display("Key {} has wrong position, expected at: {}, but is at: {:?}", key, should, is)
+        }
+        WrongEntryCount(header: usize, actual: usize) {
+            description("Wrong entry count")
+            display("Wrong entry count, expected {}, but is {}", header, actual)
+        }
+    }
 }
 
 #[derive(Debug)]
-enum LocateResult {
+pub enum LocateResult {
     Found(usize), // Found the key at this position
     Hole(usize), // Found a hole at this position while searching for a key
     Steal(usize) // Found a spot to steal at this position while searching for a key
 }
 
 impl Index {
-    pub fn new(path: &Path, create: bool) -> Result<Index, Error> {
-        let fd = try!(OpenOptions::new().read(true).write(true).create(create).open(path).map_err(|e| { Error::IOError(e) }));
+    pub fn new(path: &Path, create: bool) -> Result<Index, IndexError> {
+        let fd = try!(OpenOptions::new().read(true).write(true).create(create).open(path));
         if create {
             try!(Index::resize_fd(&fd, INITIAL_SIZE));
         }
         let mmap = try!(Index::map_fd(&fd));
         if mmap.len() < mem::size_of::<Header>() {
-            return Err(Error::NoHeader);
+            return Err(IndexError::NoHeader);
         }
         let data = Index::mmap_as_slice(&mmap, INITIAL_SIZE as usize);
         let mut index = Index{capacity: 0, max_entries: 0, min_entries: 0, entries: 0, fd: fd, mmap: mmap, data: data};
@@ -105,10 +130,10 @@ impl Index {
                     header.capacity = INITIAL_SIZE as u64;
                 } else {
                     if header.magic != MAGIC {
-                        return Err(Error::MagicError);
+                        return Err(IndexError::WrongHeader);
                     }
                     if header.version != VERSION {
-                        return Err(Error::VersionError);
+                        return Err(IndexError::WrongVersion(header.version));
                     }
                 }
                 capacity = header.capacity;
@@ -118,34 +143,34 @@ impl Index {
             index.set_capacity(capacity as usize);
             index.entries = entries as usize;
         }
-        debug_assert!(index.is_consistent(), "Inconsistent after creation");
+        debug_assert!(index.check().is_ok(), "Inconsistent after creation");
         Ok(index)
     }
 
     #[inline]
-    pub fn open(path: &Path) -> Result<Index, Error> {
+    pub fn open(path: &Path) -> Result<Index, IndexError> {
         Index::new(path, false)
     }
 
     #[inline]
-    pub fn create(path: &Path) -> Result<Index, Error> {
+    pub fn create(path: &Path) -> Result<Index, IndexError> {
         Index::new(path, true)
     }
 
     #[inline]
-    fn map_fd(fd: &File) -> Result<MemoryMap, Error> {
+    fn map_fd(fd: &File) -> Result<MemoryMap, IndexError> {
         MemoryMap::new(
-            try!(fd.metadata().map_err(Error::IOError)).len() as usize,
+            try!(fd.metadata().map_err(IndexError::Io)).len() as usize,
             &[MapOption::MapReadable,
             MapOption::MapWritable,
             MapOption::MapFd(fd.as_raw_fd()),
             MapOption::MapNonStandardFlags(0x0001) //libc::consts::os::posix88::MAP_SHARED
-        ]).map_err(|e| { Error::MapError(e) })
+        ]).map_err(IndexError::Mmap)
     }
 
     #[inline]
-    fn resize_fd(fd: &File, capacity: usize) -> Result<(), Error> {
-        fd.set_len((mem::size_of::<Header>() + capacity * mem::size_of::<Entry>()) as u64).map_err( Error::IOError)
+    fn resize_fd(fd: &File, capacity: usize) -> Result<(), IndexError> {
+        fd.set_len((mem::size_of::<Header>() + capacity * mem::size_of::<Entry>()) as u64).map_err(IndexError::Io)
     }
 
     #[inline]
@@ -172,7 +197,7 @@ impl Index {
         self.max_entries = (capacity as f64 * MAX_USAGE) as usize;
     }
 
-    fn reinsert(&mut self, start: usize, end: usize) -> Result<(), Error> {
+    fn reinsert(&mut self, start: usize, end: usize) -> Result<(), IndexError> {
         for pos in start..end {
             let key;
             let data;
@@ -191,7 +216,7 @@ impl Index {
         Ok(())
     }
 
-    fn shrink(&mut self) -> Result<bool, Error> {
+    fn shrink(&mut self) -> Result<bool, IndexError> {
         if self.entries >= self.min_entries || self.capacity <= INITIAL_SIZE {
             return Ok(false)
         }
@@ -206,7 +231,7 @@ impl Index {
         Ok(true)
     }
 
-    fn extend(&mut self) -> Result<bool, Error> {
+    fn extend(&mut self) -> Result<bool, IndexError> {
         if self.entries <= self.max_entries {
             return Ok(false)
         }
@@ -220,8 +245,7 @@ impl Index {
         Ok(true)
     }
 
-    #[allow(dead_code)]
-    pub fn is_consistent(&self) -> bool {
+    pub fn check(&self) -> Result<(), IndexError> {
         let mut entries = 0;
         for pos in 0..self.capacity {
             let entry = &self.data[pos];
@@ -231,30 +255,17 @@ impl Index {
             entries += 1;
             match self.locate(&entry.key) {
                 LocateResult::Found(p) if p == pos => true,
-                found => {
-                    println!("Inconsistency found: Key {:?} should be at {} but is at {:?}", entry.key, pos, found);
-                    return false
-                }
+                found => return Err(IndexError::WrongPosition(entry.key, pos, found))
             };
         }
         if entries != self.entries {
-            println!("Inconsistency found: Index contains {} entries, should contain {}", entries, self.entries);
-            return false
+            return Err(IndexError::WrongEntryCount(self.entries, entries));
         }
-        true
-    }
-
-    pub fn check(&self) -> Result<(), &'static str> {
-        //TODO: proper errors instead of string
-        if self.is_consistent() {
-            Ok(())
-        } else {
-            Err("Inconsistent")
-        }
+        Ok(())
     }
 
     #[inline]
-    fn increase_count(&mut self) -> Result<(), Error> {
+    fn increase_count(&mut self) -> Result<(), IndexError> {
         self.entries += 1;
         try!(self.extend());
         self.write_header();
@@ -262,7 +273,7 @@ impl Index {
     }
 
     #[inline]
-    fn decrease_count(&mut self) -> Result<(), Error> {
+    fn decrease_count(&mut self) -> Result<(), IndexError> {
         self.entries -= 1;
         try!(self.shrink());
         self.write_header();
@@ -328,7 +339,7 @@ impl Index {
     /// Adds the key, data pair into the table.
     /// If the key existed in the table before, it is overwritten and false is returned.
     /// Otherwise it will be added to the table and true is returned.
-    pub fn set(&mut self, key: &Hash, data: &Location) -> Result<bool, Error> {
+    pub fn set(&mut self, key: &Hash, data: &Location) -> Result<bool, IndexError> {
         match self.locate(key) {
             LocateResult::Found(pos) => {
                 self.data[pos].data = *data;
@@ -374,7 +385,7 @@ impl Index {
 
     #[inline]
     pub fn contains(&self, key: &Hash) -> bool {
-        debug_assert!(self.is_consistent(), "Inconsistent before get");
+        debug_assert!(self.check().is_ok(), "Inconsistent before get");
         match self.locate(key) {
             LocateResult::Found(_) => true,
             _ => false
@@ -383,7 +394,7 @@ impl Index {
 
     #[inline]
     pub fn get(&self, key: &Hash) -> Option<Location> {
-        debug_assert!(self.is_consistent(), "Inconsistent before get");
+        debug_assert!(self.check().is_ok(), "Inconsistent before get");
         match self.locate(key) {
             LocateResult::Found(pos) => Some(self.data[pos].data),
             _ => None
@@ -392,7 +403,7 @@ impl Index {
 
     #[inline]
     pub fn modify<F>(&mut self, key: &Hash, mut f: F) -> bool where F: FnMut(&mut Location) {
-        debug_assert!(self.is_consistent(), "Inconsistent before get");
+        debug_assert!(self.check().is_ok(), "Inconsistent before get");
         match self.locate(key) {
             LocateResult::Found(pos) => {
                 f(&mut self.data[pos].data);
@@ -403,7 +414,7 @@ impl Index {
     }
 
     #[inline]
-    pub fn delete(&mut self, key: &Hash) -> Result<bool, Error> {
+    pub fn delete(&mut self, key: &Hash) -> Result<bool, IndexError> {
         match self.locate(key) {
             LocateResult::Found(pos) => {
                 self.backshift(pos);
@@ -414,7 +425,7 @@ impl Index {
         }
     }
 
-    pub fn filter<F>(&mut self, mut f: F) -> Result<usize, Error> where F: FnMut(&Hash, &Location) -> bool {
+    pub fn filter<F>(&mut self, mut f: F) -> Result<usize, IndexError> where F: FnMut(&Hash, &Location) -> bool {
         //TODO: is it faster to walk in reverse direction?
         let mut deleted = 0;
         let mut pos = 0;
@@ -485,7 +496,7 @@ impl Index {
 
     #[inline]
     pub fn size(&self) -> usize {
-        self.mmap.len() 
+        self.mmap.len()
     }
 
     #[inline]

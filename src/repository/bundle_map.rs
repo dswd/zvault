@@ -1,17 +1,43 @@
 use std::collections::HashMap;
 use std::path::Path;
-use std::io::{BufReader, Read, Write, BufWriter};
+use std::io::{self, BufReader, Read, Write, BufWriter};
 use std::fs::File;
 
-use rmp_serde;
-use serde::Deserialize;
-use serde::Serialize;
-
 use ::bundle::{Bundle, BundleId, BundleInfo};
+use ::util::*;
 
 
 static HEADER_STRING: [u8; 7] = *b"zbunmap";
 static HEADER_VERSION: u8 = 1;
+
+
+quick_error!{
+    #[derive(Debug)]
+    pub enum BundleMapError {
+        Io(err: io::Error) {
+            from()
+            cause(err)
+            description("Failed to read/write bundle map")
+        }
+        Decode(err: msgpack::DecodeError) {
+            from()
+            cause(err)
+            description("Failed to decode bundle map")
+        }
+        Encode(err: msgpack::EncodeError) {
+            from()
+            cause(err)
+            description("Failed to encode bundle map")
+        }
+        WrongHeader {
+            description("Wrong header")
+        }
+        WrongVersion(version: u8) {
+            description("Wrong version")
+            display("Wrong version: {}", version)
+        }
+    }
+}
 
 
 #[derive(Default)]
@@ -37,36 +63,26 @@ impl BundleMap {
         BundleMap(Default::default())
     }
 
-    pub fn load<P: AsRef<Path>>(path: P) -> Result<Self, &'static str> {
-        let mut file = BufReader::new(try!(File::open(path.as_ref())
-            .map_err(|_| "Failed to open bundle map file")));
+    pub fn load<P: AsRef<Path>>(path: P) -> Result<Self, BundleMapError> {
+        let mut file = BufReader::new(try!(File::open(path.as_ref())));
         let mut header = [0u8; 8];
-        try!(file.read_exact(&mut header)
-            .map_err(|_| "Failed to read bundle map header"));
+        try!(file.read_exact(&mut header));
         if header[..HEADER_STRING.len()] != HEADER_STRING {
-            return Err("Wrong header string")
+            return Err(BundleMapError::WrongHeader)
         }
         let version = header[HEADER_STRING.len()];
         if version != HEADER_VERSION {
-            return Err("Unsupported bundle map file version")
+            return Err(BundleMapError::WrongVersion(version))
         }
-        let mut reader = rmp_serde::Deserializer::new(file);
-        let map = try!(HashMap::deserialize(&mut reader)
-            .map_err(|_| "Failed to read bundle map data"));
-        Ok(BundleMap(map))
+        Ok(BundleMap(try!(msgpack::decode_from_stream(&mut file))))
     }
 
 
-    pub fn save<P: AsRef<Path>>(&self, path: P) -> Result<(), &'static str> {
-        let mut file = BufWriter::new(try!(File::create(path)
-            .map_err(|_| "Failed to create bundle file")));
-        try!(file.write_all(&HEADER_STRING)
-            .map_err(|_| "Failed to write bundle header"));
-        try!(file.write_all(&[HEADER_VERSION])
-            .map_err(|_| "Failed to write bundle header"));
-        let mut writer = rmp_serde::Serializer::new(&mut file);
-        self.0.serialize(&mut writer)
-            .map_err(|_| "Failed to write bundle map data")
+    pub fn save<P: AsRef<Path>>(&self, path: P) -> Result<(), BundleMapError> {
+        let mut file = BufWriter::new(try!(File::create(path)));
+        try!(file.write_all(&HEADER_STRING));
+        try!(file.write_all(&[HEADER_VERSION]));
+        msgpack::encode_to_stream(&self.0, &mut file).map_err(BundleMapError::Encode)
     }
 
     #[inline]

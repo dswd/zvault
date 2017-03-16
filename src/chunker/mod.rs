@@ -1,6 +1,4 @@
-use std::io::{Write, Read};
-
-use super::errors::ChunkerError;
+use std::io::{self, Write, Read};
 
 mod ae;
 mod rabin;
@@ -18,6 +16,27 @@ pub use self::fastcdc::FastCdcChunker;
 // https://borgbackup.readthedocs.io/en/stable/internals.html#chunks
 // https://github.com/bup/bup/blob/master/lib/bup/bupsplit.c
 
+quick_error!{
+    #[derive(Debug)]
+    pub enum ChunkerError {
+        Read(err: io::Error) {
+            from(err)
+            cause(err)
+            description("Failed to read")
+        }
+        Write(err: io::Error) {
+            from(err)
+            cause(err)
+            description("Failed to write")
+        }
+        Custom {
+            from(&'static str)
+            description("Custom error")
+        }
+    }
+}
+
+
 #[derive(Debug, Eq, PartialEq)]
 pub enum ChunkerStatus {
     Continue,
@@ -34,6 +53,7 @@ pub enum Chunker {
     Rabin(Box<RabinChunker>),
     FastCdc(Box<FastCdcChunker>)
 }
+
 
 impl IChunker for Chunker {
     #[inline]

@@ -1,24 +1,77 @@
 use std::path::{Path, PathBuf};
 use std::collections::HashMap;
 use std::fs::{self, File};
-use std::io::{Read, Write, Seek, SeekFrom, BufWriter, BufReader};
+use std::io::{self, Read, Write, Seek, SeekFrom, BufWriter, BufReader};
 use std::cmp::max;
 use std::fmt::{self, Debug, Write as FmtWrite};
 use std::sync::{Arc, Mutex};
 
 use serde::{self, Serialize, Deserialize};
-use serde::bytes::ByteBuf;
-use rmp_serde;
 
-use errors::BundleError;
 use util::*;
 
 static HEADER_STRING: [u8; 7] = *b"zbundle";
 static HEADER_VERSION: u8 = 1;
 
 
-// TODO: Test cases
-// TODO: Benchmarks
+quick_error!{
+    #[derive(Debug)]
+    pub enum BundleError {
+        List(err: io::Error) {
+            cause(err)
+            description("Failed to list bundles")
+        }
+        Read(err: io::Error, path: PathBuf) {
+            cause(err)
+            description("Failed to read bundle")
+        }
+        Decode(err: msgpack::DecodeError, path: PathBuf) {
+            cause(err)
+            description("Failed to decode bundle header")
+        }
+        Write(err: io::Error, path: PathBuf) {
+            cause(err)
+            description("Failed to write bundle")
+        }
+        Encode(err: msgpack::EncodeError, path: PathBuf) {
+            cause(err)
+            description("Failed to encode bundle header")
+        }
+        WrongHeader(path: PathBuf) {
+            description("Wrong header")
+            display("Wrong header on bundle {:?}", path)
+        }
+        WrongVersion(path: PathBuf, version: u8) {
+            description("Wrong version")
+            display("Wrong version on bundle {:?}: {}", path, version)
+        }
+        Integrity(bundle: BundleId, reason: &'static str) {
+            description("Bundle has an integrity error")
+            display("Bundle {:?} has an integrity error: {}", bundle, reason)
+        }
+        NoSuchBundle(bundle: BundleId) {
+            description("No such bundle")
+            display("No such bundle: {:?}", bundle)
+        }
+        NoSuchChunk(bundle: BundleId, id: usize) {
+            description("Bundle has no such chunk")
+            display("Bundle {:?} has no chunk with that id: {}", bundle, id)
+        }
+        Compression(err: CompressionError) {
+            from()
+            cause(err)
+        }
+        Encryption(err: EncryptionError) {
+            from()
+            cause(err)
+        }
+        Remove(err: io::Error, bundle: BundleId) {
+            cause(err)
+            description("Failed to remove bundle")
+            display("Failed to remove bundle {}", bundle)
+        }
+    }
+}
 
 
 #[derive(Hash, PartialEq, Eq, Clone, Default)]
@@ -32,7 +85,7 @@ impl Serialize for BundleId {
 
 impl Deserialize for BundleId {
     fn deserialize<D: serde::Deserializer>(de: D) -> Result<Self, D::Error> {
-        let bytes = try!(ByteBuf::deserialize(de));
+        let bytes = try!(msgpack::Bytes::deserialize(de));
         Ok(BundleId(bytes.into()))
     }
 }
@@ -92,7 +145,7 @@ impl Default for BundleInfo {
             id: BundleId(vec![]),
             compression: None,
             encryption: None,
-            checksum: (ChecksumType::Blake2_256, ByteBuf::new()),
+            checksum: (ChecksumType::Blake2_256, msgpack::Bytes::new()),
             raw_size: 0,
             encoded_size: 0,
             chunk_count: 0,
@@ -135,34 +188,28 @@ impl Bundle {
     }
 
     pub fn load(path: PathBuf, crypto: Arc<Mutex<Crypto>>) -> Result<Self, BundleError> {
-        let mut file = BufReader::new(try!(File::open(&path)
-            .map_err(|e| BundleError::Read(e, path.clone(), "Failed to open bundle file"))));
+        let mut file = BufReader::new(try!(File::open(&path).map_err(|e| BundleError::Read(e, path.clone()))));
         let mut header = [0u8; 8];
-        try!(file.read_exact(&mut header)
-            .map_err(|e| BundleError::Read(e, path.clone(), "Failed to read bundle header")));
+        try!(file.read_exact(&mut header).map_err(|e| BundleError::Read(e, path.clone())));
         if header[..HEADER_STRING.len()] != HEADER_STRING {
-            return Err(BundleError::Format(path.clone(), "Wrong header string"))
+            return Err(BundleError::WrongHeader(path.clone()))
         }
         let version = header[HEADER_STRING.len()];
         if version != HEADER_VERSION {
-            return Err(BundleError::Format(path.clone(), "Unsupported bundle file version"))
+            return Err(BundleError::WrongVersion(path.clone(), version))
         }
-        let mut reader = rmp_serde::Deserializer::new(file);
-        let header = try!(BundleInfo::deserialize(&mut reader)
+        let header = try!(msgpack::decode_from_stream(&mut file)
             .map_err(|e| BundleError::Decode(e, path.clone())));
-        file = reader.into_inner();
         let content_start = file.seek(SeekFrom::Current(0)).unwrap() as usize;
         Ok(Bundle::new(path, version, content_start, crypto, header))
     }
 
     #[inline]
     fn load_encoded_contents(&self) -> Result<Vec<u8>, BundleError> {
-        let mut file = BufReader::new(try!(File::open(&self.path)
-            .map_err(|e| BundleError::Read(e, self.path.clone(), "Failed to open bundle file"))));
-        try!(file.seek(SeekFrom::Start(self.content_start as u64))
-            .map_err(|e| BundleError::Read(e, self.path.clone(), "Failed to seek to data")));
+        let mut file = BufReader::new(try!(File::open(&self.path).map_err(|e| BundleError::Read(e, self.path.clone()))));
+        try!(file.seek(SeekFrom::Start(self.content_start as u64)).map_err(|e| BundleError::Read(e, self.path.clone())));
         let mut data = Vec::with_capacity(max(self.info.encoded_size, self.info.raw_size)+1024);
-        try!(file.read_to_end(&mut data).map_err(|_| "Failed to read data"));
+        try!(file.read_to_end(&mut data).map_err(|e| BundleError::Read(e, self.path.clone())));
         Ok(data)
     }
 
@@ -185,7 +232,7 @@ impl Bundle {
     #[inline]
     pub fn get_chunk_position(&self, id: usize) -> Result<(usize, usize), BundleError> {
         if id >= self.info.chunk_count {
-            return Err("Invalid chunk id".into())
+            return Err(BundleError::NoSuchChunk(self.id(), id))
         }
         Ok((self.chunk_positions[id], self.info.chunk_sizes[id]))
     }
@@ -200,8 +247,7 @@ impl Bundle {
                 "Individual chunk sizes do not add up to total size"))
         }
         if !full {
-            let size = try!(fs::metadata(&self.path)
-                .map_err(|e| BundleError::Read(e, self.path.clone(), "Failed to get size of file"))
+            let size = try!(fs::metadata(&self.path).map_err(|e| BundleError::Read(e, self.path.clone()))
             ).len();
             if size as usize != self.info.encoded_size + self.content_start {
                 return Err(BundleError::Integrity(self.id(),
@@ -290,14 +336,10 @@ impl BundleWriter {
         let id = BundleId(checksum.1.to_vec());
         let (folder, file) = db.bundle_path(&id);
         let path = folder.join(file);
-        try!(fs::create_dir_all(&folder)
-            .map_err(|e| BundleError::Write(e, path.clone(), "Failed to create folder")));
-        let mut file = BufWriter::new(try!(File::create(&path)
-            .map_err(|e| BundleError::Write(e, path.clone(), "Failed to create bundle file"))));
-        try!(file.write_all(&HEADER_STRING)
-            .map_err(|e| BundleError::Write(e, path.clone(), "Failed to write bundle header")));
-        try!(file.write_all(&[HEADER_VERSION])
-            .map_err(|e| BundleError::Write(e, path.clone(), "Failed to write bundle header")));
+        try!(fs::create_dir_all(&folder).map_err(|e| BundleError::Write(e, path.clone())));
+        let mut file = BufWriter::new(try!(File::create(&path).map_err(|e| BundleError::Write(e, path.clone()))));
+        try!(file.write_all(&HEADER_STRING).map_err(|e| BundleError::Write(e, path.clone())));
+        try!(file.write_all(&[HEADER_VERSION]).map_err(|e| BundleError::Write(e, path.clone())));
         let header = BundleInfo {
             checksum: checksum,
             compression: self.compression,
@@ -308,14 +350,10 @@ impl BundleWriter {
             encoded_size: encoded_size,
             chunk_sizes: self.chunk_sizes
         };
-        {
-            let mut writer = rmp_serde::Serializer::new(&mut file);
-            try!(header.serialize(&mut writer)
-                .map_err(|e| BundleError::Encode(e, path.clone())));
-        }
+        try!(msgpack::encode_to_stream(&header, &mut file)
+            .map_err(|e| BundleError::Encode(e, path.clone())));
         let content_start = file.seek(SeekFrom::Current(0)).unwrap() as usize;
-        try!(file.write_all(&self.data)
-            .map_err(|e| BundleError::Write(e, path.clone(), "Failed to write bundle data")));
+        try!(file.write_all(&self.data).map_err(|e| BundleError::Write(e, path.clone())));
         Ok(Bundle::new(path, HEADER_VERSION, content_start, self.crypto, header))
     }
 
@@ -402,7 +440,7 @@ impl BundleDb {
     pub fn create<P: AsRef<Path>>(path: P, compression: Option<Compression>, encryption: Option<Encryption>, checksum: ChecksumType) -> Result<Self, BundleError> {
         let path = path.as_ref().to_owned();
         try!(fs::create_dir_all(&path)
-            .map_err(|e| BundleError::Write(e, path.clone(), "Failed to create folder")));
+            .map_err(|e| BundleError::Write(e, path.clone())));
         Ok(Self::new(path, compression, encryption, checksum))
     }
 
@@ -421,7 +459,7 @@ impl BundleDb {
     }
 
     pub fn get_chunk(&mut self, bundle_id: &BundleId, id: usize) -> Result<Vec<u8>, BundleError> {
-        let bundle = try!(self.bundles.get(bundle_id).ok_or("Bundle not found"));
+        let bundle = try!(self.bundles.get(bundle_id).ok_or(BundleError::NoSuchBundle(bundle_id.clone())));
         let (pos, len) = try!(bundle.get_chunk_position(id));
         let mut chunk = Vec::with_capacity(len);
         if let Some(data) = self.bundle_cache.get(bundle_id) {
@@ -457,7 +495,7 @@ impl BundleDb {
         if let Some(bundle) = self.bundles.remove(bundle) {
             fs::remove_file(&bundle.path).map_err(|e| BundleError::Remove(e, bundle.id()))
         } else {
-            Err("No such bundle".into())
+            Err(BundleError::NoSuchBundle(bundle.clone()))
         }
     }
 

@@ -1,15 +1,13 @@
-use serde::bytes::ByteBuf;
-use serde::{Serialize, Deserialize};
-use rmp_serde;
-
 use std::collections::HashMap;
 use std::path::Path;
 use std::fs::{self, Metadata, File, Permissions};
 use std::os::linux::fs::MetadataExt;
 use std::os::unix::fs::{PermissionsExt, symlink};
-use std::io::{Cursor, Read, Write};
+use std::io::{Read, Write};
 
-use super::{Repository, Mode, Chunk};
+use ::util::*;
+use super::{Repository, RepositoryError, Mode, Chunk};
+use super::integrity::RepositoryIntegrityError;
 
 
 #[derive(Debug, Eq, PartialEq)]
@@ -27,13 +25,14 @@ serde_impl!(FileType(u8) {
 
 #[derive(Debug)]
 pub enum FileContents {
-    Inline(ByteBuf),
-    Chunked(Vec<Chunk>)
-    //TODO: ChunkedIndirect
+    Inline(msgpack::Bytes),
+    ChunkedDirect(Vec<Chunk>),
+    ChunkedIndirect(Vec<Chunk>)
 }
 serde_impl!(FileContents(u8) {
     Inline(ByteBuf) => 0,
-    Chunked(Vec<Chunk>) => 1
+    ChunkedDirect(Vec<Chunk>) => 1,
+    ChunkedIndirect(Vec<Chunk>) => 2
 });
 
 
@@ -86,7 +85,7 @@ serde_impl!(Inode(u8) {
 });
 
 impl Inode {
-    fn get_extended_attrs_from(&mut self, meta: &Metadata) -> Result<(), &'static str> {
+    fn get_extended_attrs_from(&mut self, meta: &Metadata) -> Result<(), RepositoryError> {
         self.mode = meta.st_mode();
         self.user = meta.st_uid();
         self.group = meta.st_gid();
@@ -96,9 +95,11 @@ impl Inode {
         Ok(())
     }
 
-    pub fn get_from<P: AsRef<Path>>(path: P) -> Result<Self, &'static str> {
-        let name = try!(path.as_ref().file_name().ok_or("Not a file")).to_string_lossy().to_string();
-        let meta = try!(fs::symlink_metadata(path.as_ref()).map_err(|_| "Failed to get metadata"));
+    pub fn get_from<P: AsRef<Path>>(path: P) -> Result<Self, RepositoryError> {
+        let name = try!(path.as_ref().file_name()
+            .ok_or_else(|| RepositoryError::InvalidFileType(path.as_ref().to_owned())))
+            .to_string_lossy().to_string();
+        let meta = try!(fs::symlink_metadata(path.as_ref()));
         let mut inode = Inode::default();
         inode.name = name;
         inode.size = meta.len();
@@ -109,36 +110,35 @@ impl Inode {
         } else if meta.file_type().is_symlink() {
             FileType::Symlink
         } else {
-            return Err("Unsupported file type");
+            return Err(RepositoryError::InvalidFileType(path.as_ref().to_owned()));
         };
         if meta.file_type().is_symlink() {
-            inode.symlink_target = Some(try!(fs::read_link(path).map_err(|_| "Failed to read symlink")).to_string_lossy().to_string());
+            inode.symlink_target = Some(try!(fs::read_link(path)).to_string_lossy().to_string());
         }
         try!(inode.get_extended_attrs_from(&meta));
         Ok(inode)
     }
 
     #[allow(dead_code)]
-    pub fn create_at<P: AsRef<Path>>(&self, path: P) -> Result<Option<File>, &'static str> {
+    pub fn create_at<P: AsRef<Path>>(&self, path: P) -> Result<Option<File>, RepositoryError> {
         let full_path = path.as_ref().join(&self.name);
         let mut file = None;
         match self.file_type {
             FileType::File => {
-                file = Some(try!(File::create(&full_path).map_err(|_| "Failed to create file")));
+                file = Some(try!(File::create(&full_path)));
             },
             FileType::Directory => {
-                try!(fs::create_dir(&full_path).map_err(|_| "Failed to create directory"));
+                try!(fs::create_dir(&full_path));
             },
             FileType::Symlink => {
                 if let Some(ref src) = self.symlink_target {
-
-                    try!(symlink(src, &full_path).map_err(|_| "Failed to create symlink"));
+                    try!(symlink(src, &full_path));
                 } else {
-                    return Err("Symlink without destination")
+                    return Err(RepositoryIntegrityError::SymlinkWithoutTarget.into())
                 }
             }
         }
-        try!(fs::set_permissions(&full_path, Permissions::from_mode(self.mode)).map_err(|_| "Failed to set permissions"));
+        try!(fs::set_permissions(&full_path, Permissions::from_mode(self.mode)));
         //FIXME: set times and gid/uid
         // https://crates.io/crates/filetime
         Ok(file)
@@ -147,44 +147,48 @@ impl Inode {
 
 
 impl Repository {
-    pub fn put_inode<P: AsRef<Path>>(&mut self, path: P) -> Result<Vec<Chunk>, &'static str> {
+    pub fn put_inode<P: AsRef<Path>>(&mut self, path: P) -> Result<Vec<Chunk>, RepositoryError> {
         let mut inode = try!(Inode::get_from(path.as_ref()));
         if inode.file_type == FileType::File && inode.size > 0 {
-            let mut file = try!(File::open(path).map_err(|_| "Failed to open file"));
+            let mut file = try!(File::open(path));
             if inode.size < 100 {
                 let mut data = Vec::with_capacity(inode.size as usize);
-                try!(file.read_to_end(&mut data).map_err(|_| "Failed to read file contents"));
+                try!(file.read_to_end(&mut data));
                 inode.contents = Some(FileContents::Inline(data.into()));
             } else {
-                let chunks = try!(self.put_stream(Mode::Content, &mut file));
-                inode.contents = Some(FileContents::Chunked(chunks));
+                let mut chunks = try!(self.put_stream(Mode::Content, &mut file));
+                if chunks.len() < 10 {
+                    inode.contents = Some(FileContents::ChunkedDirect(chunks));
+                } else {
+                    let chunks_data = try!(msgpack::encode(&chunks));
+                    chunks = try!(self.put_data(Mode::Meta, &chunks_data));
+                    inode.contents = Some(FileContents::ChunkedIndirect(chunks));
+                }
             }
         }
-        let mut inode_data = Vec::new();
-        {
-            let mut writer = rmp_serde::Serializer::new(&mut inode_data);
-            try!(inode.serialize(&mut writer).map_err(|_| "Failed to write inode data"));
-        }
-        self.put_data(Mode::Meta, &inode_data)
+        self.put_data(Mode::Meta, &try!(msgpack::encode(&inode)))
     }
 
     #[inline]
-    pub fn get_inode(&mut self, chunks: &[Chunk]) -> Result<Inode, &'static str> {
-        let data = Cursor::new(try!(self.get_data(chunks)));
-        let mut reader = rmp_serde::Deserializer::new(data);
-        Inode::deserialize(&mut reader).map_err(|_| "Failed to read inode data")
+    pub fn get_inode(&mut self, chunks: &[Chunk]) -> Result<Inode, RepositoryError> {
+        Ok(try!(msgpack::decode(&try!(self.get_data(chunks)))))
     }
 
     #[inline]
-    pub fn save_inode_at<P: AsRef<Path>>(&mut self, inode: &Inode, path: P) -> Result<(), &'static str> {
+    pub fn save_inode_at<P: AsRef<Path>>(&mut self, inode: &Inode, path: P) -> Result<(), RepositoryError> {
         if let Some(mut file) = try!(inode.create_at(path.as_ref())) {
             if let Some(ref contents) = inode.contents {
                 match *contents {
                     FileContents::Inline(ref data) => {
-                        try!(file.write_all(&data).map_err(|_| "Failed to write data to file"));
+                        try!(file.write_all(&data));
                     },
-                    FileContents::Chunked(ref chunks) => {
+                    FileContents::ChunkedDirect(ref chunks) => {
                         try!(self.get_stream(chunks, &mut file));
+                    },
+                    FileContents::ChunkedIndirect(ref chunks) => {
+                        let chunk_data = try!(self.get_data(chunks));
+                        let chunks: Vec<Chunk> = try!(msgpack::decode(&chunk_data));
+                        try!(self.get_stream(&chunks, &mut file));
                     }
                 }
             }
