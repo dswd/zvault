@@ -18,7 +18,7 @@ use super::chunker::Chunker;
 
 pub use self::error::RepositoryError;
 pub use self::config::Config;
-pub use self::metadata::Inode;
+pub use self::metadata::{Inode, FileType};
 pub use self::basic_io::Chunk;
 pub use self::backup::Backup;
 use self::bundle_map::BundleMap;

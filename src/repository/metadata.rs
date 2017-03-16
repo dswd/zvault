@@ -143,14 +143,6 @@ impl Inode {
         // https://crates.io/crates/filetime
         Ok(file)
     }
-
-    pub fn format_one_line(&self) -> String {
-        match self.file_type {
-            FileType::Directory => format!("{:25}\t{} entries", format!("{}/", self.name), self.children.as_ref().unwrap().len()),
-            FileType::File => format!("{:25}\t{}", self.name, to_file_size(self.size)),
-            FileType::Symlink => format!("{:25}\t -> {}", self.name, self.symlink_target.as_ref().unwrap()),
-        }
-    }
 }
 
 
@@ -169,7 +161,7 @@ impl Repository {
                     inode.contents = Some(FileContents::ChunkedDirect(chunks));
                 } else {
                     let chunks_data = try!(msgpack::encode(&chunks));
-                    chunks = try!(self.put_data(Mode::Meta, &chunks_data));
+                    chunks = try!(self.put_data(Mode::Content, &chunks_data));
                     inode.contents = Some(FileContents::ChunkedIndirect(chunks));
                 }
             }

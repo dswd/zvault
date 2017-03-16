@@ -2,8 +2,8 @@ use std::io::{Cursor, Read};
 use std::fs::File;
 use std::time;
 
-use super::chunker::*;
-use super::util::*;
+use ::chunker::*;
+use ::util::*;
 
 fn speed_chunk<C: IChunker>(chunker: &mut C, data: &[u8]) {
     let mut input = Cursor::new(data);
