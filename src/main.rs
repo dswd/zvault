@@ -30,7 +30,7 @@ static USAGE: &'static str = "
 Usage:
     zvault init [--bundle-size SIZE] [--chunker METHOD] [--chunk-size SIZE] [--compression COMPRESSION] <repo>
     zvault backup [--full] <backup> <path>
-    zvault restore <backup> <path>
+    zvault restore <backup> [<src>] <dst>
     zvault check [--full] <repo>
     zvault backups <repo>
     zvault info <backup>
@@ -68,6 +68,8 @@ struct Args {
 
     arg_repo: Option<String>,
     arg_path: Option<String>,
+    arg_src: Option<String>,
+    arg_dst: Option<String>,
     arg_backup: Option<String>,
 
     flag_full: bool,
@@ -188,7 +190,13 @@ fn main() {
     }
 
     if args.cmd_restore {
-        repo.restore_backup(&backup, &args.arg_path.unwrap()).unwrap();
+        let dst = args.arg_dst.unwrap();
+        if let Some(src) = args.arg_src {
+            let inode = repo.get_backup_inode(&backup, src).unwrap();
+            repo.restore_inode_tree(inode, &dst).unwrap();
+        } else {
+            repo.restore_backup(&backup, &dst).unwrap();
+        }
         return
     }
 

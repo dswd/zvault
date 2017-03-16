@@ -72,9 +72,9 @@ impl Repository {
         Ok(try!(msgpack::encode_to_stream(backup, &mut file)))
     }
 
-    pub fn restore_backup<P: AsRef<Path>>(&mut self, backup: &Backup, path: P) -> Result<(), RepositoryError> {
+    pub fn restore_inode_tree<P: AsRef<Path>>(&mut self, inode: Inode, path: P) -> Result<(), RepositoryError> {
         let mut queue = VecDeque::new();
-        queue.push_back((path.as_ref().to_owned(), try!(self.get_inode(&backup.root))));
+        queue.push_back((path.as_ref().to_owned(), inode));
         while let Some((path, inode)) = queue.pop_front() {
             try!(self.save_inode_at(&inode, &path));
             if inode.file_type == FileType::Directory {
@@ -86,6 +86,12 @@ impl Repository {
             }
         }
         Ok(())
+    }
+
+    #[inline]
+    pub fn restore_backup<P: AsRef<Path>>(&mut self, backup: &Backup, path: P) -> Result<(), RepositoryError> {
+        let inode = try!(self.get_inode(&backup.root));
+        self.restore_inode_tree(inode, path)
     }
 
     #[allow(dead_code)]
