@@ -147,7 +147,7 @@ impl Inode {
 
 
 impl Repository {
-    pub fn put_inode<P: AsRef<Path>>(&mut self, path: P) -> Result<Vec<Chunk>, RepositoryError> {
+    pub fn create_inode<P: AsRef<Path>>(&mut self, path: P) -> Result<Inode, RepositoryError> {
         let mut inode = try!(Inode::get_from(path.as_ref()));
         if inode.file_type == FileType::File && inode.size > 0 {
             let mut file = try!(File::open(path));
@@ -166,7 +166,11 @@ impl Repository {
                 }
             }
         }
-        self.put_data(Mode::Meta, &try!(msgpack::encode(&inode)))
+        Ok(inode)
+    }
+
+    pub fn put_inode(&mut self, inode: &Inode) -> Result<Vec<Chunk>, RepositoryError> {
+        self.put_data(Mode::Meta, &try!(msgpack::encode(inode)))
     }
 
     #[inline]

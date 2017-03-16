@@ -9,6 +9,7 @@ extern crate serde_yaml;
 #[macro_use] extern crate quick_error;
 extern crate docopt;
 extern crate rustc_serialize;
+extern crate chrono;
 
 pub mod util;
 pub mod bundle;
@@ -17,15 +18,12 @@ mod chunker;
 mod repository;
 mod algotest;
 
-use std::fs::File;
-use std::io::Read;
-use std::time;
-
 use docopt::Docopt;
+use chrono::prelude::*;
 
 use chunker::ChunkerType;
-use repository::{Repository, Config, Mode, Inode, Backup};
-use util::{ChecksumType, Compression, HashMethod, to_file_size};
+use repository::{Repository, Config, Inode};
+use util::{ChecksumType, Compression, HashMethod, to_file_size, to_duration};
 
 
 static USAGE: &'static str = "
@@ -34,14 +32,12 @@ Usage:
     zvault backup [--full] <backup> <path>
     zvault restore <backup> <path>
     zvault check [--full] <repo>
-    zvault list <repo>
+    zvault backups <repo>
     zvault info <backup>
     zvault stats <repo>
     zvault bundles <repo>
     zvault algotest <path>
-    zvault test <repo> <path>
     zvault stat <path>
-    zvault put <backup> <path>
 
 Options:
     --full                         Whether to verify the repository by loading all bundles
@@ -59,16 +55,14 @@ struct Args {
     cmd_restore: bool,
     cmd_check: bool,
 
-    cmd_list: bool,
+    cmd_backups: bool,
     cmd_info: bool,
 
     cmd_stats: bool,
     cmd_bundles: bool,
 
     cmd_algotest: bool,
-    cmd_test: bool,
     cmd_stat: bool,
-    cmd_put: bool,
 
     arg_repo: Option<String>,
     arg_path: Option<String>,
@@ -134,15 +128,15 @@ fn main() {
         println!("Bundles: {}", info.bundle_count);
         println!("Total size: {}", to_file_size(info.encoded_data_size));
         println!("Uncompressed size: {}", to_file_size(info.raw_data_size));
-        println!("Compression ratio: {:.1}", info.compression_ratio * 100.0);
+        println!("Compression ratio: {:.1}%", info.compression_ratio * 100.0);
         println!("Chunk count: {}", info.chunk_count);
         println!("Average chunk size: {}", to_file_size(info.avg_chunk_size as u64));
         let index_usage = info.index_entries as f32 / info.index_capacity as f32;
-        println!("Index: {}, {}% full", to_file_size(info.index_size as u64), index_usage * 100.0);
+        println!("Index: {}, {:.0}% full", to_file_size(info.index_size as u64), index_usage * 100.0);
         return
     }
 
-    if args.cmd_list {
+    if args.cmd_backups {
         for backup in repo.list_backups().unwrap() {
             println!("{}", backup);
         }
@@ -167,58 +161,27 @@ fn main() {
         return
     }
 
-    if args.cmd_test {
-        print!("Integrity check before...");
-        repo.check(true).unwrap();
-        println!(" done.");
-
-        let file_path = args.arg_path.unwrap();
-        print!("Reading file {}...", file_path);
-        let mut data = Vec::new();
-        let mut file = File::open(file_path).unwrap();
-        file.read_to_end(&mut data).unwrap();
-        println!(" done. {} bytes", data.len());
-
-        print!("Adding data to repository...");
-        let start = time::Instant::now();
-        let chunks = repo.put_data(Mode::Content, &data).unwrap();
-        repo.flush().unwrap();
-        let elapsed = start.elapsed();
-        let duration = elapsed.as_secs() as f64 * 1.0 + elapsed.subsec_nanos() as f64 / 1_000_000_000.0;
-        let write_speed = data.len() as f64 / duration;
-        println!(" done. {} chunks, {:.1} MB/s", chunks.len(), write_speed / 1_000_000.0);
-
-        println!("Integrity check after...");
-        repo.check(true).unwrap();
-        println!(" done.");
-
-        print!("Reading data from repository...");
-        let start = time::Instant::now();
-        let data2 = repo.get_data(&chunks).unwrap();
-        let elapsed = start.elapsed();
-        let duration = elapsed.as_secs() as f64 * 1.0 + elapsed.subsec_nanos() as f64 / 1_000_000_000.0;
-        let read_speed = data.len() as f64 / duration;
-        assert_eq!(data.len(), data2.len());
-        println!(" done. {:.1} MB/s", read_speed / 1_000_000.0);
-        return
-    }
-
     let backup_name = args.arg_backup.unwrap().splitn(2, "::").nth(1).unwrap().to_string();
 
-    if args.cmd_put {
-        let chunks = repo.put_inode(&args.arg_path.unwrap()).unwrap();
-        repo.save_backup(&Backup{root: chunks, ..Default::default()}, &backup_name).unwrap();
-        return
-    }
-
     if args.cmd_backup {
-        unimplemented!()
+        let backup = repo.create_full_backup(&args.arg_path.unwrap()).unwrap();
+        repo.save_backup(&backup, &backup_name).unwrap();
+        return
     }
 
     let backup = repo.get_backup(&backup_name).unwrap();
 
     if args.cmd_info {
-        println!("{:?}", backup.root);
+        println!("Date: {}", Local.timestamp(backup.date, 0).to_rfc2822());
+        println!("Duration: {}", to_duration(backup.duration));
+        println!("Entries: {} files, {} dirs", backup.file_count, backup.dir_count);
+        println!("Total backup size: {}", to_file_size(backup.total_data_size));
+        println!("Modified data size: {}", to_file_size(backup.changed_data_size));
+        let dedup_ratio = backup.deduplicated_data_size as f32 / backup.changed_data_size as f32;
+        println!("Deduplicated size: {}, {:.1}% saved", to_file_size(backup.deduplicated_data_size), (1.0 - dedup_ratio)*100.0);
+        let compress_ratio = backup.encoded_data_size as f32 / backup.deduplicated_data_size as f32;
+        println!("Compressed size: {} in {} bundles, {:.1}% saved", to_file_size(backup.encoded_data_size), backup.bundle_count, (1.0 - compress_ratio)*100.0);
+        println!("Chunk count: {}, avg size: {}", backup.chunk_count, to_file_size(backup.avg_chunk_size as u64));
         return
     }
 

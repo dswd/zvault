@@ -1,19 +1,23 @@
 use super::{Repository, Chunk, RepositoryError};
+use super::metadata::FileType;
 
 use ::util::*;
 
 use std::fs::{self, File};
 use std::path::Path;
+use std::collections::HashMap;
+
+use chrono::prelude::*;
 
 
 #[derive(Default, Debug)]
 pub struct Backup {
     pub root: Vec<Chunk>,
-    pub total_data_size: u64,
-    pub changed_data_size: u64,
-    pub new_data_size: u64,
-    pub encoded_data_size: u64,
-    pub new_bundle_count: usize,
+    pub total_data_size: u64, // Sum of all raw sizes of all entities
+    pub changed_data_size: u64, // Sum of all raw sizes of all entities actively stored
+    pub deduplicated_data_size: u64, // Sum of all raw sizes of all new bundles
+    pub encoded_data_size: u64, // Sum al all encoded sizes of all new bundles
+    pub bundle_count: usize,
     pub chunk_count: usize,
     pub avg_chunk_size: f32,
     pub date: i64,
@@ -25,9 +29,9 @@ serde_impl!(Backup(u8) {
     root: Vec<Chunk> => 0,
     total_data_size: u64 => 1,
     changed_data_size: u64 => 2,
-    new_data_size: u64 => 3,
+    deduplicated_data_size: u64 => 3,
     encoded_data_size: u64 => 4,
-    new_bundle_count: usize => 5,
+    bundle_count: usize => 5,
     chunk_count: usize => 6,
     avg_chunk_size: f32 => 7,
     date: i64 => 8,
@@ -71,17 +75,76 @@ impl Repository {
     pub fn restore_backup<P: AsRef<Path>>(&mut self, backup: &Backup, path: P) -> Result<(), RepositoryError> {
         let inode = try!(self.get_inode(&backup.root));
         try!(self.save_inode_at(&inode, path));
+        //FIXME: recurse
         Ok(())
     }
 
+    #[allow(dead_code)]
     pub fn create_full_backup<P: AsRef<Path>>(&mut self, path: P) -> Result<Backup, RepositoryError> {
-        // Maintain a stack of folders still todo
-        // Maintain a map of path->inode entries
-        // Work on topmost stack entry
-        //   If it is a file, create inode for it and put it in the map
-        //   If it is a folder, list contents and put entries not in the map on the stack, folders last
-        //   If it is a folder with no missing entries, create a directory inode, add it to the map, and remove all children from the map
-        // If stack is empty create a backup with the last inode as root
-        unimplemented!()
+        let mut scan_stack = vec![path.as_ref().to_owned()];
+        let mut save_stack = vec![];
+        let mut directories = HashMap::new();
+        let mut backup = Backup::default();
+        let info_before = self.info();
+        let start = Local::now();
+        while let Some(path) = scan_stack.pop() {
+            // Create an inode for this path containing all attributes and contents
+            // (for files) but no children (for directories)
+            let mut inode = try!(self.create_inode(&path));
+            backup.total_data_size += inode.size;
+            backup.changed_data_size += inode.size;
+            if inode.file_type == FileType::Directory {
+                backup.dir_count +=1;
+                // For directories we need to put all children on the stack too, so there will be inodes created for them
+                // Also we put directories on the save stack to save them in order
+                save_stack.push(path.clone());
+                inode.children = Some(HashMap::new());
+                directories.insert(path.clone(), inode);
+                for ch in try!(fs::read_dir(&path)) {
+                    scan_stack.push(try!(ch).path());
+                }
+            } else {
+                backup.file_count +=1;
+                // Non-directories are stored directly and the chunks are put into the children map of their parents
+                let chunks = try!(self.put_inode(&inode));
+                if let Some(parent) = path.parent() {
+                    let parent = parent.to_owned();
+                    if let Some(ref mut parent) = directories.get_mut(&parent) {
+                        let children = parent.children.as_mut().unwrap();
+                        children.insert(inode.name.clone(), chunks);
+                    }
+                }
+            }
+        }
+        loop {
+            let path = save_stack.pop().unwrap();
+            // Now that all children have been saved the directories can be saved in order, adding their chunks to their parents as well
+            let inode = directories.remove(&path).unwrap();
+            let chunks = try!(self.put_inode(&inode));
+            if let Some(parent) = path.parent() {
+                let parent = parent.to_owned();
+                if let Some(ref mut parent) = directories.get_mut(&parent) {
+                    let children = parent.children.as_mut().unwrap();
+                    children.insert(inode.name.clone(), chunks);
+                } else if save_stack.is_empty() {
+                    backup.root = chunks;
+                    break
+                }
+            } else if save_stack.is_empty() {
+                backup.root = chunks;
+                break
+            }
+        }
+        try!(self.flush());
+        let elapsed = Local::now().signed_duration_since(start);
+        backup.date = start.timestamp();
+        backup.duration = elapsed.num_milliseconds() as f32 / 1_000.0;
+        let info_after = self.info();
+        backup.deduplicated_data_size = info_after.raw_data_size - info_before.raw_data_size;
+        backup.encoded_data_size = info_after.encoded_data_size - info_before.encoded_data_size;
+        backup.bundle_count = info_after.bundle_count - info_before.bundle_count;
+        backup.chunk_count = info_after.chunk_count - info_before.chunk_count;
+        backup.avg_chunk_size = backup.deduplicated_data_size as f32 / backup.chunk_count as f32;
+        Ok(backup)
     }
 }
