@@ -1,16 +1,16 @@
 use super::{Repository, Chunk, RepositoryError};
-use super::metadata::FileType;
+use super::metadata::{FileType, Inode};
 
 use ::util::*;
 
 use std::fs::{self, File};
-use std::path::Path;
-use std::collections::HashMap;
+use std::path::{self, Path};
+use std::collections::{HashMap, VecDeque};
 
 use chrono::prelude::*;
 
 
-#[derive(Default, Debug)]
+#[derive(Default, Debug, Clone)]
 pub struct Backup {
     pub root: Vec<Chunk>,
     pub total_data_size: u64, // Sum of all raw sizes of all entities
@@ -73,9 +73,18 @@ impl Repository {
     }
 
     pub fn restore_backup<P: AsRef<Path>>(&mut self, backup: &Backup, path: P) -> Result<(), RepositoryError> {
-        let inode = try!(self.get_inode(&backup.root));
-        try!(self.save_inode_at(&inode, path));
-        //FIXME: recurse
+        let mut queue = VecDeque::new();
+        queue.push_back((path.as_ref().to_owned(), try!(self.get_inode(&backup.root))));
+        while let Some((path, inode)) = queue.pop_front() {
+            try!(self.save_inode_at(&inode, &path));
+            if inode.file_type == FileType::Directory {
+                let path = path.join(inode.name);
+                for chunks in inode.children.unwrap().values() {
+                    let inode = try!(self.get_inode(&chunks));
+                    queue.push_back((path.clone(), inode));
+                }
+            }
+        }
         Ok(())
     }
 
@@ -146,5 +155,20 @@ impl Repository {
         backup.chunk_count = info_after.chunk_count - info_before.chunk_count;
         backup.avg_chunk_size = backup.deduplicated_data_size as f32 / backup.chunk_count as f32;
         Ok(backup)
+    }
+
+    pub fn get_backup_inode<P: AsRef<Path>>(&mut self, backup: &Backup, path: P) -> Result<Inode, RepositoryError> {
+        let mut inode = try!(self.get_inode(&backup.root));
+        for c in path.as_ref().components() {
+            if let path::Component::Normal(name) = c {
+                let name = name.to_string_lossy();
+                if let Some(chunks) = inode.children.as_mut().and_then(|c| c.remove(&name as &str)) {
+                    inode = try!(self.get_inode(&chunks));
+                } else {
+                    return Err(RepositoryError::NoSuchFileInBackup(backup.clone(), path.as_ref().to_owned()));
+                }
+            }
+        }
+        Ok(inode)
     }
 }

@@ -1,6 +1,7 @@
 use std::io;
 use std::path::PathBuf;
 
+use super::backup::Backup;
 use super::bundle_map::BundleMapError;
 use super::config::ConfigError;
 use super::integrity::RepositoryIntegrityError;
@@ -61,6 +62,10 @@ quick_error!{
         InvalidFileType(path: PathBuf) {
             description("Invalid file type")
             display("{:?} has an invalid file type", path)
+        }
+        NoSuchFileInBackup(backup: Backup, path: PathBuf) {
+            description("No such file in backup")
+            display("The backup does not contain the file {:?}", path)
         }
     }
 }

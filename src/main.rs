@@ -34,6 +34,7 @@ Usage:
     zvault check [--full] <repo>
     zvault backups <repo>
     zvault info <backup>
+    zvault list <backup> <path>
     zvault stats <repo>
     zvault bundles <repo>
     zvault algotest <path>
@@ -57,6 +58,7 @@ struct Args {
 
     cmd_backups: bool,
     cmd_info: bool,
+    cmd_list: bool,
 
     cmd_stats: bool,
     cmd_bundles: bool,
@@ -187,5 +189,18 @@ fn main() {
 
     if args.cmd_restore {
         repo.restore_backup(&backup, &args.arg_path.unwrap()).unwrap();
+        return
+    }
+
+    if args.cmd_list {
+        let inode = repo.get_backup_inode(&backup, &args.arg_path.unwrap()).unwrap();
+        println!("{}", inode.format_one_line());
+        if let Some(children) = inode.children {
+            for chunks in children.values() {
+                let inode = repo.get_inode(&chunks).unwrap();
+                println!("- {}", inode.format_one_line());
+            }
+        }
+        return
     }
 }
