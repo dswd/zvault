@@ -20,18 +20,20 @@ mod repository;
 mod cli;
 
 // TODO: Seperate remote folder
-// TODO: Copy backup files to remote folder
-// TODO: Keep meta bundles also locally
+// TODO: - Copy/move backup files to remote folder
+// TODO: - Keep meta bundles also locally
+// TODO: - Load and compare remote bundles to bundle map
+// TODO: - Write backup files there as well
+// TODO: Store list of hashes in bundle
 // TODO: Remove backups/subtrees
+// TODO: Recompress & combine bundles
 // TODO: Prune backups (based on age like attic)
 // TODO: Backup files tree structure
-// TODO: Recompress & combine bundles
-// TODO: Check backup integrity
+// TODO: Check backup integrity too
 // TODO: Encryption
 // TODO: list --tree
 // TODO: Partial backups
-// TODO: Load and compare remote bundles to bundle map
-// TODO: Import remote backup
+// TODO: Import repository from remote folder
 // TODO: Continue on errors
 
 fn main() {
