@@ -7,10 +7,10 @@ extern crate blake2_rfc as blake2;
 extern crate murmurhash3;
 extern crate serde_yaml;
 #[macro_use] extern crate quick_error;
-extern crate docopt;
 extern crate rustc_serialize;
 extern crate chrono;
 #[macro_use] extern crate clap;
+#[macro_use] extern crate log;
 
 pub mod util;
 pub mod bundle;
@@ -22,7 +22,8 @@ mod cli;
 // TODO: Seperate remote folder
 // TODO: Copy backup files to remote folder
 // TODO: Keep meta bundles also locally
-// TODO: Remove backups (based on age like attic)
+// TODO: Remove backups/subtrees
+// TODO: Prune backups (based on age like attic)
 // TODO: Backup files tree structure
 // TODO: Recompress & combine bundles
 // TODO: Check backup integrity
@@ -30,7 +31,6 @@ mod cli;
 // TODO: list --tree
 // TODO: Partial backups
 // TODO: Load and compare remote bundles to bundle map
-// TODO: Nice errors / checks for CLI
 // TODO: Import remote backup
 // TODO: Continue on errors
 

@@ -1,13 +1,5 @@
 use ::repository::{Inode, FileType};
 
-pub fn split_repo_path(repo_path: &str) -> (&str, Option<&str>, Option<&str>) {
-    let mut parts = repo_path.splitn(3, "::");
-    let repo = parts.next().unwrap();
-    let backup = parts.next();
-    let inode = parts.next();
-    (repo, backup, inode)
-}
-
 pub fn to_file_size(size: u64) -> String {
     let mut size = size as f32;
     if size >= 512.0 {
@@ -31,6 +23,11 @@ pub fn to_file_size(size: u64) -> String {
         return format!("{:.1} GiB", size);
     }
     format!("{:.1} TiB", size)
+}
+
+pub fn to_speed(size: u64, dur: f32) -> String {
+    let speed = (size as f32 / dur) as u64;
+    to_file_size(speed) + "/s"
 }
 
 pub fn to_duration(dur: f32) -> String {

@@ -1,4 +1,5 @@
 use std::io::{self, Write, Read};
+use std::str::FromStr;
 
 mod ae;
 mod rabin;
@@ -99,6 +100,19 @@ impl ChunkerType {
             _ => Err("Unsupported chunker type")
         }
     }
+
+    #[inline]
+    pub fn from_string(name: &str) -> Result<Self, &'static str> {
+        let (name, size) = if let Some(pos) = name.find('/') {
+            let size = try!(usize::from_str(&name[pos+1..]).map_err(|_| "Chunk size must be a number"));
+            let name = &name[..pos];
+            (name, size)
+        } else {
+            (name, 8)
+        };
+        Self::from(name, size * 1024, 0)
+    }
+
 
     #[inline]
     pub fn create(&self) -> Chunker {

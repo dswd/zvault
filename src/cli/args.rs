@@ -1,68 +1,7 @@
-use clap::{Arg, App, SubCommand};
-
-use docopt::Docopt;
-
 use ::chunker::ChunkerType;
-use ::util::{ChecksumType, Compression, HashMethod};
+use ::util::{Compression, HashMethod, ChecksumType};
 
 use std::process::exit;
-use std::path::Path;
-
-
-static USAGE: &'static str = "
-Usage:
-    zvault init [--bundle-size SIZE] [--chunker METHOD] [--chunk-size SIZE] [--compression COMPRESSION] <repo>
-    zvault backup [--full] <backup> <path>
-    zvault restore <backup> [<src>] <dst>
-    zvault check [--full] <repo>
-    zvault backups <repo>
-    zvault info <backup>
-    zvault list [--tree] <backup> <path>
-    zvault stats <repo>
-    zvault bundles <repo>
-    zvault algotest <file>
-
-Options:
-    --tree                         Print the whole (sub-)tree from the backup
-    --full                         Whether to verify the repository by loading all bundles
-    --bundle-size SIZE             The target size of a full bundle in MiB [default: 25]
-    --chunker METHOD               The chunking algorithm to use [default: fastcdc]
-    --chunk-size SIZE              The target average chunk size in KiB [default: 8]
-    --compression COMPRESSION      The compression to use [default: brotli/3]
-";
-
-
-#[derive(RustcDecodable, Debug)]
-pub struct DocoptArgs {
-    pub cmd_init: bool,
-    pub cmd_backup: bool,
-    pub cmd_restore: bool,
-    pub cmd_check: bool,
-
-    pub cmd_backups: bool,
-    pub cmd_info: bool,
-    pub cmd_list: bool,
-
-    pub cmd_stats: bool,
-    pub cmd_bundles: bool,
-
-    pub cmd_algotest: bool,
-    pub cmd_stat: bool,
-
-    pub arg_file: Option<String>,
-    pub arg_repo: Option<String>,
-    pub arg_path: Option<String>,
-    pub arg_src: Option<String>,
-    pub arg_dst: Option<String>,
-    pub arg_backup: Option<String>,
-
-    pub flag_full: bool,
-    pub flag_bundle_size: usize,
-    pub flag_chunker: String,
-    pub flag_chunk_size: usize,
-    pub flag_compression: String,
-    pub flag_tree: bool
-}
 
 
 pub enum Arguments {
@@ -70,8 +9,8 @@ pub enum Arguments {
         repo_path: String,
         bundle_size: usize,
         chunker: ChunkerType,
-        chunk_size: usize,
-        compression: Compression
+        compression: Option<Compression>,
+        hash: HashMethod
     },
     Backup {
         repo_path: String,
@@ -105,26 +44,89 @@ pub enum Arguments {
         repo_path: String
     },
     AlgoTest {
-        file: String
+        file: String,
+        bundle_size: usize,
+        chunker: ChunkerType,
+        compression: Option<Compression>,
+        hash: HashMethod
     }
 }
 
 
-pub fn parse() -> DocoptArgs {
-    Docopt::new(USAGE).and_then(|d| d.decode()).unwrap_or_else(|e| e.exit())
+pub fn split_repo_path(repo_path: &str) -> (&str, Option<&str>, Option<&str>) {
+    let mut parts = repo_path.splitn(3, "::");
+    let repo = parts.next().unwrap();
+    let backup = parts.next();
+    let inode = parts.next();
+    (repo, backup, inode)
 }
 
-pub fn parse2() -> Arguments {
+fn parse_num(num: &str, name: &str) -> u64 {
+    if let Ok(num) = num.parse::<u64>() {
+        num
+    } else {
+        error!("{} must be a number, was '{}'", name, num);
+        exit(1);
+    }
+}
+
+fn parse_chunker(val: Option<&str>) -> ChunkerType {
+    if let Ok(chunker) = ChunkerType::from_string(val.unwrap_or("fastcdc/8")) {
+        chunker
+    } else {
+        error!("Invalid chunker method/size: {}", val.unwrap());
+        exit(1);
+    }
+}
+
+fn parse_compression(val: Option<&str>) -> Option<Compression> {
+    let val = val.unwrap_or("brotli/3");
+    if val == "none" {
+        return None
+    }
+    if let Ok(compression) = Compression::from_string(val) {
+        Some(compression)
+    } else {
+        error!("Invalid compression method/level: {}", val);
+        exit(1);
+    }
+}
+
+#[allow(dead_code)]
+fn parse_checksum(val: Option<&str>) -> ChecksumType {
+    if let Ok(checksum) = ChecksumType::from(val.unwrap_or("blake2")) {
+        checksum
+    } else {
+        error!("Invalid checksum method: {}", val.unwrap());
+        exit(1);
+    }
+}
+
+fn parse_hash(val: Option<&str>) -> HashMethod {
+    if let Ok(hash) = HashMethod::from(val.unwrap_or("blake2")) {
+        hash
+    } else {
+        error!("Invalid hash method: {}", val.unwrap());
+        exit(1);
+    }
+}
+
+
+pub fn parse() -> Arguments {
     let args = clap_app!(zvault =>
-        (version: "0.1")
+        (version: env!("CARGO_PKG_VERSION"))
         (author: "Dennis Schwerdel <schwerdel@googlemail.com>")
         (about: "Deduplicating backup tool")
+        (@setting SubcommandRequiredElseHelp)
+        (@setting GlobalVersion)
+        (@setting VersionlessSubcommands)
+        (@setting UnifiedHelpMessage)
         (@subcommand init =>
             (about: "initializes a new repository")
-            (@arg bundle_size: --bundle-size +takes_value "maximal bundle size")
-            (@arg chunker: --chunker +takes_value "chunker algorithm")
-            (@arg chunk_size: --chunk-size +takes_value "average chunk size")
-            (@arg compression: --compression -c +takes_value "compression to use")
+            (@arg bundle_size: --bundle-size +takes_value "maximal bundle size in MiB [default: 25]")
+            (@arg chunker: --chunker +takes_value "chunker algorithm [default: fastcdc/8]")
+            (@arg compression: --compression -c +takes_value "compression to use [default: brotli/3]")
+            (@arg hash: --hash +takes_value "hash method to use [default: blake2]")
             (@arg REPO: +required "path of the repository")
         )
         (@subcommand backup =>
@@ -157,14 +159,101 @@ pub fn parse2() -> Arguments {
         )
         (@subcommand algotest =>
             (about: "test a specific algorithm combination")
-            (@arg bundle_size: --bundle-size +takes_value "maximal bundle size")
-            (@arg chunker: --chunker +takes_value "chunker algorithm")
-            (@arg chunk_size: --chunk-size +takes_value "average chunk size")
-            (@arg compression: --compression -c +takes_value "compression to use")
+            (@arg bundle_size: --bundle-size +takes_value "maximal bundle size in MiB [default: 25]")
+            (@arg chunker: --chunker +takes_value "chunker algorithm [default: fastcdc/8]")
+            (@arg compression: --compression -c +takes_value "compression to use [default: brotli/3]")
+            (@arg hash: --hash +takes_value "hash method to use [default: blake2]")
             (@arg FILE: +required "the file to test the algorithms with")
         )
     ).get_matches();
     if let Some(args) = args.subcommand_matches("init") {
+        let (repository, backup, inode) = split_repo_path(args.value_of("REPO").unwrap());
+        if backup.is_some() || inode.is_some() {
+            println!("No backups or subpaths may be given here");
+            exit(1);
+        }
+        return Arguments::Init {
+            bundle_size: (parse_num(args.value_of("bundle_size").unwrap_or("25"), "Bundle size") * 1024 * 1024) as usize,
+            chunker: parse_chunker(args.value_of("chunker")),
+            compression: parse_compression(args.value_of("compression")),
+            hash: parse_hash(args.value_of("hash")),
+            repo_path: repository.to_string(),
+        }
     }
-    unimplemented!()
+    if let Some(args) = args.subcommand_matches("backup") {
+        let (repository, backup, inode) = split_repo_path(args.value_of("BACKUP").unwrap());
+        if backup.is_none() {
+            println!("A backup must be specified");
+            exit(1);
+        }
+        if inode.is_some() {
+            println!("No subpaths may be given here");
+            exit(1);
+        }
+        return Arguments::Backup {
+            repo_path: repository.to_string(),
+            backup_name: backup.unwrap().to_string(),
+            full: args.is_present("full"),
+            src_path: args.value_of("SRC").unwrap().to_string()
+        }
+    }
+    if let Some(args) = args.subcommand_matches("restore") {
+        let (repository, backup, inode) = split_repo_path(args.value_of("BACKUP").unwrap());
+        if backup.is_none() {
+            println!("A backup must be specified");
+            exit(1);
+        }
+        return Arguments::Restore {
+            repo_path: repository.to_string(),
+            backup_name: backup.unwrap().to_string(),
+            inode: inode.map(|v| v.to_string()),
+            dst_path: args.value_of("DST").unwrap().to_string()
+        }
+    }
+    if let Some(args) = args.subcommand_matches("check") {
+        let (repository, backup, inode) = split_repo_path(args.value_of("PATH").unwrap());
+        return Arguments::Check {
+            repo_path: repository.to_string(),
+            backup_name: backup.map(|v| v.to_string()),
+            inode: inode.map(|v| v.to_string()),
+            full: args.is_present("full")
+        }
+    }
+    if let Some(args) = args.subcommand_matches("list") {
+        let (repository, backup, inode) = split_repo_path(args.value_of("PATH").unwrap());
+        return Arguments::List {
+            repo_path: repository.to_string(),
+            backup_name: backup.map(|v| v.to_string()),
+            inode: inode.map(|v| v.to_string())
+        }
+    }
+    if let Some(args) = args.subcommand_matches("listbundles") {
+        let (repository, backup, inode) = split_repo_path(args.value_of("PATH").unwrap());
+        if backup.is_some() || inode.is_some() {
+            println!("No backups or subpaths may be given here");
+            exit(1);
+        }
+        return Arguments::ListBundles {
+            repo_path: repository.to_string(),
+        }
+    }
+    if let Some(args) = args.subcommand_matches("info") {
+        let (repository, backup, inode) = split_repo_path(args.value_of("PATH").unwrap());
+        return Arguments::Info {
+            repo_path: repository.to_string(),
+            backup_name: backup.map(|v| v.to_string()),
+            inode: inode.map(|v| v.to_string())
+        }
+    }
+    if let Some(args) = args.subcommand_matches("algotest") {
+        return Arguments::AlgoTest {
+            bundle_size: (parse_num(args.value_of("bundle_size").unwrap_or("25"), "Bundle size") * 1024 * 1024) as usize,
+            chunker: parse_chunker(args.value_of("chunker")),
+            compression: parse_compression(args.value_of("compression")),
+            hash: parse_hash(args.value_of("hash")),
+            file: args.value_of("FILE").unwrap().to_string(),
+        }
+    }
+    error!("No subcommand given");
+    exit(1);
 }
