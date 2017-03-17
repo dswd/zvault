@@ -77,7 +77,6 @@ impl BundleMap {
         Ok(BundleMap(try!(msgpack::decode_from_stream(&mut file))))
     }
 
-
     pub fn save<P: AsRef<Path>>(&self, path: P) -> Result<(), BundleMapError> {
         let mut file = BufWriter::new(try!(File::create(path)));
         try!(file.write_all(&HEADER_STRING));

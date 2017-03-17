@@ -24,7 +24,7 @@ mod cli;
 // TODO: - Keep meta bundles also locally
 // TODO: - Load and compare remote bundles to bundle map
 // TODO: - Write backup files there as well
-// TODO: Store list of hashes in bundle
+// TODO: Store list of hashes and hash method in bundle
 // TODO: Remove backups/subtrees
 // TODO: Recompress & combine bundles
 // TODO: Prune backups (based on age like attic)

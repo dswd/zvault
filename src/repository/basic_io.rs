@@ -49,7 +49,7 @@ impl Repository {
         };
         // ...alocate one if needed
         if writer.is_none() {
-            *writer = Some(try!(self.bundles.create_bundle(mode)));
+            *writer = Some(try!(self.bundles.create_bundle(mode, self.config.hash)));
         }
         debug_assert!(writer.is_some());
         let chunk_id;
@@ -58,7 +58,7 @@ impl Repository {
         {
             // Add chunk to bundle writer and determine the size of the bundle
             let writer_obj = writer.as_mut().unwrap();
-            chunk_id = try!(writer_obj.add(data));
+            chunk_id = try!(writer_obj.add(data, hash));
             size = writer_obj.size();
             raw_size = writer_obj.raw_size();
         }

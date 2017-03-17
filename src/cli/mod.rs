@@ -5,7 +5,7 @@ mod algotest;
 use chrono::prelude::*;
 use std::process::exit;
 
-use ::repository::{Repository, Config, Inode, Backup};
+use ::repository::{Repository, Config, Backup};
 use ::util::ChecksumType;
 use ::util::cli::*;
 use self::args::Arguments;
@@ -64,14 +64,32 @@ pub fn run() {
                 repo.restore_backup(&backup, &dst_path).unwrap();
             }
         },
+        Arguments::Remove{repo_path, backup_name, inode} => {
+            let repo = open_repository(&repo_path);
+            let _backup = get_backup(&repo, &backup_name);
+            if let Some(_inode) = inode {
+                error!("Removing backup subtrees is not implemented yet");
+                return
+            } else {
+                error!("Removing backups is not implemented yet");
+                return
+            }
+        },
+        Arguments::Vacuum{repo_path, ..} => {
+            let _repo = open_repository(&repo_path);
+            error!("Vaccum is not implemented yet");
+            return
+        },
         Arguments::Check{repo_path, backup_name, inode, full} => {
             let mut repo = open_repository(&repo_path);
             if let Some(backup_name) = backup_name {
-                let backup = get_backup(&repo, &backup_name);
-                if let Some(inode) = inode {
-                    unimplemented!()
+                let _backup = get_backup(&repo, &backup_name);
+                if let Some(_inode) = inode {
+                    error!("Checking backup subtrees is not implemented yet");
+                    return
                 } else {
-                    unimplemented!()
+                    error!("Checking backups is not implemented yet");
+                    return
                 }
             } else {
                 repo.check(full).unwrap()
@@ -94,13 +112,14 @@ pub fn run() {
                     println!("{}", backup);
                 }
             }
-        }
+        },
         Arguments::Info{repo_path, backup_name, inode} => {
             let repo = open_repository(&repo_path);
             if let Some(backup_name) = backup_name {
                 let backup = get_backup(&repo, &backup_name);
-                if let Some(inode) = inode {
-                    unimplemented!()
+                if let Some(_inode) = inode {
+                    error!("Displaying information on single inodes is not implemented yet");
+                    return
                 } else {
                     println!("Date: {}", Local.timestamp(backup.date, 0).to_rfc2822());
                     println!("Duration: {}", to_duration(backup.duration));
@@ -124,12 +143,13 @@ pub fn run() {
                 let index_usage = info.index_entries as f32 / info.index_capacity as f32;
                 println!("Index: {}, {:.0}% full", to_file_size(info.index_size as u64), index_usage * 100.0);
             }
-        }
+        },
         Arguments::ListBundles{repo_path} => {
             let repo = open_repository(&repo_path);
             for bundle in repo.list_bundles() {
                 println!("Bundle {}", bundle.id);
                 println!("  - Mode: {:?}", bundle.mode);
+                println!("  - Hash method: {:?}", bundle.hash_method);
                 println!("  - Chunks: {}", bundle.chunk_count);
                 println!("  - Size: {}", to_file_size(bundle.encoded_size as u64));
                 println!("  - Data size: {}", to_file_size(bundle.raw_size as u64));
@@ -142,7 +162,11 @@ pub fn run() {
                 println!("  - Compression: {}, ratio: {:.1}%", compression, ratio * 100.0);
                 println!();
             }
-        }
+        },
+        Arguments::Import{..} => {
+            error!("Import is not implemented yet");
+            return
+        },
         Arguments::AlgoTest{bundle_size, chunker, compression, hash, file} => {
             algotest::run(&file, bundle_size, chunker, compression, hash);
         }
