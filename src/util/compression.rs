@@ -34,32 +34,41 @@ quick_error!{
     }
 }
 
+#[derive(Clone, Debug, Copy)]
+pub enum CompressionAlgo {
+    Deflate, // Standardized
+    Brotli, // Good speed and ratio
+    Lzma2, // Very good ratio, slow
+    Lz4 // Very fast, low ratio
+}
+serde_impl!(CompressionAlgo(u8) {
+    Deflate => 0,
+    Brotli => 1,
+    Lzma2 => 2,
+    Lz4 => 3
+});
+
 
 #[derive(Clone, Debug)]
-pub enum Compression {
-    Snappy(()),
-    Deflate(u8),
-    Brotli(u8),
-    Lzma2(u8),
-    ZStd(u8)
+pub struct Compression {
+    algo: CompressionAlgo,
+    level: u8
+}
+impl Default for Compression {
+    fn default() -> Self {
+        Compression { algo: CompressionAlgo::Brotli, level: 3 }
+    }
 }
 serde_impl!(Compression(u64) {
-    Snappy(()) => 0,
-    Deflate(u8) => 1,
-    Brotli(u8) => 2,
-    Lzma2(u8) => 3,
-    ZStd(u8) => 4
+    algo: CompressionAlgo => 0,
+    level: u8 => 1
 });
 
 
 impl Compression {
     #[inline]
     pub fn to_string(&self) -> String {
-        if let Some(level) = self.level() {
-            format!("{}/{}", self.name(), level)
-        } else {
-            self.name().to_string()
-        }
+        format!("{}/{}", self.name(), self.level)
     }
 
     #[inline]
@@ -71,24 +80,23 @@ impl Compression {
         } else {
             (name, 5)
         };
-        match name {
-            "snappy" => Ok(Compression::Snappy(())),
-            "zstd" => Ok(Compression::ZStd(level)),
-            "deflate" | "zlib" | "gzip" => Ok(Compression::Deflate(level)),
-            "brotli" => Ok(Compression::Brotli(level)),
-            "lzma2" => Ok(Compression::Lzma2(level)),
-            _ => Err(CompressionError::UnsupportedCodec(name.to_string()))
-        }
+        let algo = match name {
+            "deflate" | "zlib" | "gzip" => CompressionAlgo::Deflate,
+            "brotli" => CompressionAlgo::Brotli,
+            "lzma2" => CompressionAlgo::Lzma2,
+            "lz4" => CompressionAlgo::Lz4,
+            _ => return Err(CompressionError::UnsupportedCodec(name.to_string()))
+        };
+        Ok(Compression { algo: algo, level: level })
     }
 
     #[inline]
     pub fn name(&self) -> &'static str {
-        match *self {
-            Compression::Snappy(_) => "snappy",
-            Compression::Deflate(_) => "deflate",
-            Compression::Brotli(_) => "brotli",
-            Compression::Lzma2(_) => "lzma2",
-            Compression::ZStd(_) => "zstd",
+        match self.algo {
+            CompressionAlgo::Deflate => "deflate",
+            CompressionAlgo::Brotli => "brotli",
+            CompressionAlgo::Lzma2 => "lzma2",
+            CompressionAlgo::Lz4 => "lz4",
         }
     }
 
@@ -103,34 +111,26 @@ impl Compression {
     }
 
     #[inline]
-    pub fn level(&self) -> Option<u8> {
-        match *self {
-            Compression::Snappy(_) => None,
-            Compression::Deflate(lvl) |
-            Compression::Brotli(lvl) |
-            Compression::ZStd(lvl) |
-            Compression::Lzma2(lvl) => Some(lvl),
-        }
+    pub fn level(&self) -> u8 {
+        self.level
     }
 
     fn options(&self) -> Result<*mut SquashOptions, CompressionError> {
         let codec = try!(self.codec());
         let options = unsafe { squash_options_new(codec, ptr::null::<()>()) };
-        if let Some(level) = self.level() {
-            if options.is_null() {
-                return Err(CompressionError::InitializeOptions)
-            }
-            let option = CString::new("level");
-            let value = CString::new(format!("{}", level));
-            let res = unsafe { squash_options_parse_option(
-                options,
-                option.unwrap().as_ptr(),
-                value.unwrap().as_ptr()
-            )};
-            if res != SQUASH_OK {
-                //panic!(unsafe { CStr::from_ptr(squash_status_to_string(res)).to_str().unwrap() });
-                return Err(CompressionError::InitializeOptions)
-            }
+        if options.is_null() {
+            return Err(CompressionError::InitializeOptions)
+        }
+        let option = CString::new("level");
+        let value = CString::new(format!("{}", self.level));
+        let res = unsafe { squash_options_parse_option(
+            options,
+            option.unwrap().as_ptr(),
+            value.unwrap().as_ptr()
+        )};
+        if res != SQUASH_OK {
+            //panic!(unsafe { CStr::from_ptr(squash_status_to_string(res)).to_str().unwrap() });
+            return Err(CompressionError::InitializeOptions)
         }
         Ok(options)
     }
