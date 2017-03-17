@@ -116,10 +116,20 @@ impl fmt::Debug for BundleId {
 }
 
 
+#[derive(Eq, Debug, PartialEq, Clone, Copy)]
+pub enum BundleMode {
+    Content, Meta
+}
+serde_impl!(BundleMode(u8) {
+    Content => 0,
+    Meta => 1
+});
+
 
 #[derive(Clone)]
 pub struct BundleInfo {
     pub id: BundleId,
+    pub mode: BundleMode,
     pub compression: Option<Compression>,
     pub encryption: Option<Encryption>,
     pub checksum: Checksum,
@@ -130,6 +140,7 @@ pub struct BundleInfo {
 }
 serde_impl!(BundleInfo(u64) {
     id: BundleId => 0,
+    mode: BundleMode => 8,
     compression: Option<Compression> => 1,
     encryption: Option<Encryption> => 2,
     checksum: Checksum => 3,
@@ -149,7 +160,8 @@ impl Default for BundleInfo {
             raw_size: 0,
             encoded_size: 0,
             chunk_count: 0,
-            chunk_sizes: vec![]
+            chunk_sizes: vec![],
+            mode: BundleMode::Content
         }
     }
 }
@@ -281,6 +293,7 @@ impl Debug for Bundle {
 
 
 pub struct BundleWriter {
+    mode: BundleMode,
     data: Vec<u8>,
     compression: Option<Compression>,
     compression_stream: Option<CompressionStream>,
@@ -293,12 +306,13 @@ pub struct BundleWriter {
 }
 
 impl BundleWriter {
-    fn new(compression: Option<Compression>, encryption: Option<Encryption>, crypto: Arc<Mutex<Crypto>>, checksum: ChecksumType) -> Result<Self, BundleError> {
+    fn new(mode: BundleMode, compression: Option<Compression>, encryption: Option<Encryption>, crypto: Arc<Mutex<Crypto>>, checksum: ChecksumType) -> Result<Self, BundleError> {
         let compression_stream = match compression {
             Some(ref compression) => Some(try!(compression.compress_stream())),
             None => None
         };
         Ok(BundleWriter {
+            mode: mode,
             data: vec![],
             compression: compression,
             compression_stream: compression_stream,
@@ -341,6 +355,7 @@ impl BundleWriter {
         try!(file.write_all(&HEADER_STRING).map_err(|e| BundleError::Write(e, path.clone())));
         try!(file.write_all(&[HEADER_VERSION]).map_err(|e| BundleError::Write(e, path.clone())));
         let header = BundleInfo {
+            mode: self.mode,
             checksum: checksum,
             compression: self.compression,
             encryption: self.encryption,
@@ -454,8 +469,8 @@ impl BundleDb {
     }
 
     #[inline]
-    pub fn create_bundle(&self) -> Result<BundleWriter, BundleError> {
-        BundleWriter::new(self.compression.clone(), self.encryption.clone(), self.crypto.clone(), self.checksum)
+    pub fn create_bundle(&self, mode: BundleMode) -> Result<BundleWriter, BundleError> {
+        BundleWriter::new(mode, self.compression.clone(), self.encryption.clone(), self.crypto.clone(), self.checksum)
     }
 
     pub fn get_chunk(&mut self, bundle_id: &BundleId, id: usize) -> Result<Vec<u8>, BundleError> {

@@ -10,6 +10,7 @@ extern crate serde_yaml;
 extern crate docopt;
 extern crate rustc_serialize;
 extern crate chrono;
+#[macro_use] extern crate clap;
 
 pub mod util;
 pub mod bundle;
@@ -21,7 +22,6 @@ mod cli;
 // TODO: Seperate remote folder
 // TODO: Copy backup files to remote folder
 // TODO: Keep meta bundles also locally
-// TODO: Store bundle type in bundle
 // TODO: Remove backups (based on age like attic)
 // TODO: Backup files tree structure
 // TODO: Recompress & combine bundles
@@ -31,6 +31,8 @@ mod cli;
 // TODO: Partial backups
 // TODO: Load and compare remote bundles to bundle map
 // TODO: Nice errors / checks for CLI
+// TODO: Import remote backup
+// TODO: Continue on errors
 
 fn main() {
     cli::run();

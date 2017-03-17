@@ -1,7 +1,12 @@
+use clap::{Arg, App, SubCommand};
+
 use docopt::Docopt;
 
 use ::chunker::ChunkerType;
 use ::util::{ChecksumType, Compression, HashMethod};
+
+use std::process::exit;
+use std::path::Path;
 
 
 static USAGE: &'static str = "
@@ -66,7 +71,7 @@ pub enum Arguments {
         bundle_size: usize,
         chunker: ChunkerType,
         chunk_size: usize,
-        compresion: Compression
+        compression: Compression
     },
     Backup {
         repo_path: String,
@@ -107,4 +112,59 @@ pub enum Arguments {
 
 pub fn parse() -> DocoptArgs {
     Docopt::new(USAGE).and_then(|d| d.decode()).unwrap_or_else(|e| e.exit())
+}
+
+pub fn parse2() -> Arguments {
+    let args = clap_app!(zvault =>
+        (version: "0.1")
+        (author: "Dennis Schwerdel <schwerdel@googlemail.com>")
+        (about: "Deduplicating backup tool")
+        (@subcommand init =>
+            (about: "initializes a new repository")
+            (@arg bundle_size: --bundle-size +takes_value "maximal bundle size")
+            (@arg chunker: --chunker +takes_value "chunker algorithm")
+            (@arg chunk_size: --chunk-size +takes_value "average chunk size")
+            (@arg compression: --compression -c +takes_value "compression to use")
+            (@arg REPO: +required "path of the repository")
+        )
+        (@subcommand backup =>
+            (about: "creates a new backup")
+            (@arg full: --full "create a full backup")
+            (@arg BACKUP: +required "repository::backup path")
+            (@arg SRC: +required "source path to backup")
+        )
+        (@subcommand restore =>
+            (about: "restores a backup")
+            (@arg BACKUP: +required "repository::backup[::subpath] path")
+            (@arg DST: +required "destination path for backup")
+        )
+        (@subcommand check =>
+            (about: "checks the repository")
+            (@arg full: --full "also check file contents")
+            (@arg PATH: +required "repository[::backup] path")
+        )
+        (@subcommand list =>
+            (about: "lists backups or backup contents")
+            (@arg PATH: +required "repository[::backup[::subpath]] path")
+        )
+        (@subcommand listbundles =>
+            (about: "lists bundles in a repository")
+            (@arg PATH: +required "repository path")
+        )
+        (@subcommand info =>
+            (about: "displays information on a repository, a backup or a path in a backup")
+            (@arg PATH: +required "repository[::backup[::subpath]] path")
+        )
+        (@subcommand algotest =>
+            (about: "test a specific algorithm combination")
+            (@arg bundle_size: --bundle-size +takes_value "maximal bundle size")
+            (@arg chunker: --chunker +takes_value "chunker algorithm")
+            (@arg chunk_size: --chunk-size +takes_value "average chunk size")
+            (@arg compression: --compression -c +takes_value "compression to use")
+            (@arg FILE: +required "the file to test the algorithms with")
+        )
+    ).get_matches();
+    if let Some(args) = args.subcommand_matches("init") {
+    }
+    unimplemented!()
 }

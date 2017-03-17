@@ -24,11 +24,6 @@ pub use self::backup::Backup;
 use self::bundle_map::BundleMap;
 
 
-#[derive(Eq, Debug, PartialEq, Clone, Copy)]
-pub enum Mode {
-    Content, Meta
-}
-
 pub struct Repository {
     path: PathBuf,
     config: Config,

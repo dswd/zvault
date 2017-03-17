@@ -1,9 +1,9 @@
 use std::mem;
 use std::io::{Read, Write, Cursor};
 
-use super::{Repository, Mode, RepositoryError};
+use super::{Repository, RepositoryError};
 use ::index::Location;
-use ::bundle::BundleId;
+use ::bundle::{BundleId, BundleMode};
 use super::integrity::RepositoryIntegrityError;
 
 use ::util::Hash;
@@ -35,7 +35,7 @@ impl Repository {
         Ok(Some(try!(self.bundles.get_chunk(&bundle_id, found.chunk as usize))))
     }
 
-    pub fn put_chunk(&mut self, mode: Mode, hash: Hash, data: &[u8]) -> Result<(), RepositoryError> {
+    pub fn put_chunk(&mut self, mode: BundleMode, hash: Hash, data: &[u8]) -> Result<(), RepositoryError> {
         // If this chunk is in the index, ignore it
         if self.index.contains(&hash) {
             return Ok(())
@@ -44,12 +44,12 @@ impl Repository {
         let next_free_bundle_id = self.next_free_bundle_id();
         // Select a bundle writer according to the mode and...
         let writer = match mode {
-            Mode::Content => &mut self.content_bundle,
-            Mode::Meta => &mut self.meta_bundle
+            BundleMode::Content => &mut self.content_bundle,
+            BundleMode::Meta => &mut self.meta_bundle
         };
         // ...alocate one if needed
         if writer.is_none() {
-            *writer = Some(try!(self.bundles.create_bundle()));
+            *writer = Some(try!(self.bundles.create_bundle(mode)));
         }
         debug_assert!(writer.is_some());
         let chunk_id;
@@ -63,8 +63,8 @@ impl Repository {
             raw_size = writer_obj.raw_size();
         }
         let bundle_id = match mode {
-            Mode::Content => self.next_content_bundle,
-            Mode::Meta => self.next_meta_bundle
+            BundleMode::Content => self.next_content_bundle,
+            BundleMode::Meta => self.next_meta_bundle
         };
         // Finish bundle if over maximum size
         if size >= self.config.bundle_size || raw_size >= 4 * self.config.bundle_size {
@@ -86,12 +86,12 @@ impl Repository {
     }
 
     #[inline]
-    pub fn put_data(&mut self, mode: Mode, data: &[u8]) -> Result<Vec<Chunk>, RepositoryError> {
+    pub fn put_data(&mut self, mode: BundleMode, data: &[u8]) -> Result<Vec<Chunk>, RepositoryError> {
         let mut input = Cursor::new(data);
         self.put_stream(mode, &mut input)
     }
 
-    pub fn put_stream<R: Read>(&mut self, mode: Mode, data: &mut R) -> Result<Vec<Chunk>, RepositoryError> {
+    pub fn put_stream<R: Read>(&mut self, mode: BundleMode, data: &mut R) -> Result<Vec<Chunk>, RepositoryError> {
         let avg_size = self.config.chunker.avg_size();
         let mut chunks = Vec::new();
         let mut chunk = Vec::with_capacity(avg_size * 2);

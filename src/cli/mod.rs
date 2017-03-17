@@ -79,6 +79,7 @@ pub fn run() {
     if args.cmd_bundles {
         for bundle in repo.list_bundles() {
             println!("Bundle {}", bundle.id);
+            println!("  - Mode: {:?}", bundle.mode);
             println!("  - Chunks: {}", bundle.chunk_count);
             println!("  - Size: {}", to_file_size(bundle.encoded_size as u64));
             println!("  - Data size: {}", to_file_size(bundle.raw_size as u64));

@@ -6,8 +6,9 @@ use std::os::unix::fs::{PermissionsExt, symlink};
 use std::io::{Read, Write};
 
 use ::util::*;
-use super::{Repository, RepositoryError, Mode, Chunk};
+use super::{Repository, RepositoryError, Chunk};
 use super::integrity::RepositoryIntegrityError;
+use ::bundle::BundleMode;
 
 
 #[derive(Debug, Eq, PartialEq)]
@@ -85,6 +86,7 @@ serde_impl!(Inode(u8) {
 });
 
 impl Inode {
+    #[inline]
     fn get_extended_attrs_from(&mut self, meta: &Metadata) -> Result<(), RepositoryError> {
         self.mode = meta.st_mode();
         self.user = meta.st_uid();
@@ -156,12 +158,12 @@ impl Repository {
                 try!(file.read_to_end(&mut data));
                 inode.contents = Some(FileContents::Inline(data.into()));
             } else {
-                let mut chunks = try!(self.put_stream(Mode::Content, &mut file));
+                let mut chunks = try!(self.put_stream(BundleMode::Content, &mut file));
                 if chunks.len() < 10 {
                     inode.contents = Some(FileContents::ChunkedDirect(chunks));
                 } else {
                     let chunks_data = try!(msgpack::encode(&chunks));
-                    chunks = try!(self.put_data(Mode::Content, &chunks_data));
+                    chunks = try!(self.put_data(BundleMode::Content, &chunks_data));
                     inode.contents = Some(FileContents::ChunkedIndirect(chunks));
                 }
             }
@@ -169,8 +171,9 @@ impl Repository {
         Ok(inode)
     }
 
+    #[inline]
     pub fn put_inode(&mut self, inode: &Inode) -> Result<Vec<Chunk>, RepositoryError> {
-        self.put_data(Mode::Meta, &try!(msgpack::encode(inode)))
+        self.put_data(BundleMode::Meta, &try!(msgpack::encode(inode)))
     }
 
     #[inline]
