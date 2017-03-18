@@ -19,7 +19,6 @@ use super::chunker::Chunker;
 pub use self::error::RepositoryError;
 pub use self::config::Config;
 pub use self::metadata::{Inode, FileType};
-pub use self::basic_io::Chunk;
 pub use self::backup::Backup;
 use self::bundle_map::BundleMap;
 
@@ -46,7 +45,6 @@ impl Repository {
             path.join("bundles"),
             config.compression.clone(),
             None, //FIXME: store encryption in config
-            config.checksum
         ));
         let index = try!(Index::create(&path.join("index")));
         try!(config.save(path.join("config.yaml")));
@@ -74,7 +72,6 @@ impl Repository {
             path.join("bundles"),
             config.compression.clone(),
             None, //FIXME: load encryption from config
-            config.checksum
         ));
         let index = try!(Index::open(&path.join("index")));
         let bundle_map = try!(BundleMap::load(path.join("bundles.map")));

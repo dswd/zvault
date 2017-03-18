@@ -1,9 +1,9 @@
 use std::path::{Path, PathBuf};
 use std::collections::HashMap;
 use std::fs::{self, File};
-use std::io::{self, Read, Write, Seek, SeekFrom, BufWriter, BufReader, Cursor};
+use std::io::{self, Read, Write, Seek, SeekFrom, BufWriter, BufReader};
 use std::cmp::max;
-use std::fmt::{self, Debug, Write as FmtWrite};
+use std::fmt::{self, Debug};
 use std::sync::{Arc, Mutex};
 
 use serde::{self, Serialize, Deserialize};
@@ -86,29 +86,25 @@ quick_error!{
 
 
 #[derive(Hash, PartialEq, Eq, Clone, Default)]
-pub struct BundleId(pub Vec<u8>);
+pub struct BundleId(pub Hash);
 
 impl Serialize for BundleId {
     fn serialize<S: serde::Serializer>(&self, ser: S) -> Result<S::Ok, S::Error> {
-        ser.serialize_bytes(&self.0)
+        self.0.serialize(ser)
     }
 }
 
 impl Deserialize for BundleId {
     fn deserialize<D: serde::Deserializer>(de: D) -> Result<Self, D::Error> {
-        let bytes = try!(msgpack::Bytes::deserialize(de));
-        Ok(BundleId(bytes.into()))
+        let hash = try!(Hash::deserialize(de));
+        Ok(BundleId(hash))
     }
 }
 
 impl BundleId {
     #[inline]
     fn to_string(&self) -> String {
-        let mut buf = String::with_capacity(self.0.len()*2);
-        for b in &self.0 {
-            write!(&mut buf, "{:02x}", b).unwrap()
-        }
-        buf
+        self.0.to_string()
     }
 }
 
@@ -144,11 +140,10 @@ pub struct BundleInfo {
     pub compression: Option<Compression>,
     pub encryption: Option<Encryption>,
     pub hash_method: HashMethod,
-    pub checksum: Checksum,
     pub raw_size: usize,
     pub encoded_size: usize,
     pub chunk_count: usize,
-    pub contents_info_size: usize
+    pub chunk_info_size: usize
 }
 serde_impl!(BundleInfo(u64) {
     id: BundleId => 0,
@@ -156,45 +151,32 @@ serde_impl!(BundleInfo(u64) {
     compression: Option<Compression> => 2,
     encryption: Option<Encryption> => 3,
     hash_method: HashMethod => 4,
-    checksum: Checksum => 5,
     raw_size: usize => 6,
     encoded_size: usize => 7,
     chunk_count: usize => 8,
-    contents_info_size: usize => 9
+    chunk_info_size: usize => 9
 });
 
 impl Default for BundleInfo {
     fn default() -> Self {
         BundleInfo {
-            id: BundleId(vec![]),
+            id: BundleId(Hash::empty()),
             compression: None,
             encryption: None,
             hash_method: HashMethod::Blake2,
-            checksum: (ChecksumType::Blake2_256, msgpack::Bytes::new()),
             raw_size: 0,
             encoded_size: 0,
             chunk_count: 0,
             mode: BundleMode::Content,
-            contents_info_size: 0
+            chunk_info_size: 0
         }
     }
 }
 
 
-#[derive(Clone, Default)]
-pub struct BundleContentInfo {
-    pub chunk_sizes: Vec<usize>,
-    pub chunk_hashes: Vec<Hash>
-}
-serde_impl!(BundleContentInfo(u64) {
-    chunk_sizes: Vec<usize> => 0,
-    chunk_hashes: Vec<Hash> => 1
-});
-
-
 pub struct Bundle {
     pub info: BundleInfo,
-    pub contents: BundleContentInfo,
+    pub chunks: ChunkList,
     pub version: u8,
     pub path: PathBuf,
     crypto: Arc<Mutex<Crypto>>,
@@ -203,16 +185,16 @@ pub struct Bundle {
 }
 
 impl Bundle {
-    fn new(path: PathBuf, version: u8, content_start: usize, crypto: Arc<Mutex<Crypto>>, info: BundleInfo, contents: BundleContentInfo) -> Self {
-        let mut chunk_positions = Vec::with_capacity(contents.chunk_sizes.len());
+    fn new(path: PathBuf, version: u8, content_start: usize, crypto: Arc<Mutex<Crypto>>, info: BundleInfo, chunks: ChunkList) -> Self {
+        let mut chunk_positions = Vec::with_capacity(chunks.len());
         let mut pos = 0;
-        for len in &contents.chunk_sizes {
+        for &(_, len) in (&chunks).iter() {
             chunk_positions.push(pos);
-            pos += *len;
+            pos += len as usize;
         }
         Bundle {
             info: info,
-            contents: contents,
+            chunks: chunks,
             version: version,
             path: path,
             crypto: crypto,
@@ -239,16 +221,15 @@ impl Bundle {
         }
         let header: BundleInfo = try!(msgpack::decode_from_stream(&mut file)
             .map_err(|e| BundleError::Decode(e, path.clone())));
-        let mut contents_data = Vec::with_capacity(header.contents_info_size);
-        contents_data.resize(header.contents_info_size, 0);
-        try!(file.read_exact(&mut contents_data).map_err(|e| BundleError::Read(e, path.clone())));
+        let mut chunk_data = Vec::with_capacity(header.chunk_info_size);
+        chunk_data.resize(header.chunk_info_size, 0);
+        try!(file.read_exact(&mut chunk_data).map_err(|e| BundleError::Read(e, path.clone())));
         if let Some(ref encryption) = header.encryption {
-            contents_data = try!(crypto.lock().unwrap().decrypt(encryption.clone(), &contents_data));
+            chunk_data = try!(crypto.lock().unwrap().decrypt(encryption.clone(), &chunk_data));
         }
-        let contents = try!(msgpack::decode_from_stream(&mut Cursor::new(&contents_data))
-            .map_err(|e| BundleError::Decode(e, path.clone())));
+        let chunks = ChunkList::read_from(&chunk_data);
         let content_start = file.seek(SeekFrom::Current(0)).unwrap() as usize;
-        Ok(Bundle::new(path, version, content_start, crypto, header, contents))
+        Ok(Bundle::new(path, version, content_start, crypto, header, chunks))
     }
 
     #[inline]
@@ -281,16 +262,16 @@ impl Bundle {
         if id >= self.info.chunk_count {
             return Err(BundleError::NoSuchChunk(self.id(), id))
         }
-        Ok((self.chunk_positions[id], self.contents.chunk_sizes[id]))
+        Ok((self.chunk_positions[id], self.chunks[id].1 as usize))
     }
 
     pub fn check(&self, full: bool) -> Result<(), BundleError> {
         //FIXME: adapt to new format
-        if self.info.chunk_count != self.contents.chunk_sizes.len() {
+        if self.info.chunk_count != self.chunks.len() {
             return Err(BundleError::Integrity(self.id(),
                 "Chunk list size does not match chunk count"))
         }
-        if self.contents.chunk_sizes.iter().sum::<usize>() != self.info.raw_size {
+        if self.chunks.iter().map(|c| c.1 as usize).sum::<usize>() != self.info.raw_size {
             return Err(BundleError::Integrity(self.id(),
                 "Individual chunk sizes do not add up to total size"))
         }
@@ -331,16 +312,14 @@ impl Debug for Bundle {
 pub struct BundleWriter {
     mode: BundleMode,
     hash_method: HashMethod,
-    hashes: Vec<Hash>,
     data: Vec<u8>,
     compression: Option<Compression>,
     compression_stream: Option<CompressionStream>,
     encryption: Option<Encryption>,
     crypto: Arc<Mutex<Crypto>>,
-    checksum: ChecksumCreator,
     raw_size: usize,
     chunk_count: usize,
-    chunk_sizes: Vec<usize>
+    chunks: ChunkList,
 }
 
 impl BundleWriter {
@@ -349,8 +328,7 @@ impl BundleWriter {
         hash_method: HashMethod,
         compression: Option<Compression>,
         encryption: Option<Encryption>,
-        crypto: Arc<Mutex<Crypto>>,
-        checksum: ChecksumType
+        crypto: Arc<Mutex<Crypto>>
     ) -> Result<Self, BundleError> {
         let compression_stream = match compression {
             Some(ref compression) => Some(try!(compression.compress_stream())),
@@ -359,16 +337,14 @@ impl BundleWriter {
         Ok(BundleWriter {
             mode: mode,
             hash_method: hash_method,
-            hashes: vec![],
             data: vec![],
             compression: compression,
             compression_stream: compression_stream,
             encryption: encryption,
             crypto: crypto,
-            checksum: ChecksumCreator::new(checksum),
             raw_size: 0,
             chunk_count: 0,
-            chunk_sizes: vec![]
+            chunks: ChunkList::new()
         })
     }
 
@@ -378,11 +354,9 @@ impl BundleWriter {
         } else {
             self.data.extend_from_slice(chunk)
         }
-        self.checksum.update(chunk);
         self.raw_size += chunk.len();
         self.chunk_count += 1;
-        self.chunk_sizes.push(chunk.len());
-        self.hashes.push(hash);
+        self.chunks.push((hash, chunk.len() as u32));
         Ok(self.chunk_count-1)
     }
 
@@ -394,42 +368,35 @@ impl BundleWriter {
             self.data = try!(self.crypto.lock().unwrap().encrypt(encryption.clone(), &self.data));
         }
         let encoded_size = self.data.len();
-        let checksum = self.checksum.finish();
-        let id = BundleId(checksum.1.to_vec());
+        let mut chunk_data = Vec::with_capacity(self.chunks.encoded_size());
+        self.chunks.write_to(&mut chunk_data).unwrap();
+        let id = BundleId(self.hash_method.hash(&chunk_data));
+        if let Some(ref encryption) = self.encryption {
+            chunk_data = try!(self.crypto.lock().unwrap().encrypt(encryption.clone(), &chunk_data));
+        }
         let (folder, file) = db.bundle_path(&id);
         let path = folder.join(file);
         try!(fs::create_dir_all(&folder).map_err(|e| BundleError::Write(e, path.clone())));
         let mut file = BufWriter::new(try!(File::create(&path).map_err(|e| BundleError::Write(e, path.clone()))));
         try!(file.write_all(&HEADER_STRING).map_err(|e| BundleError::Write(e, path.clone())));
         try!(file.write_all(&[HEADER_VERSION]).map_err(|e| BundleError::Write(e, path.clone())));
-        let contents = BundleContentInfo {
-            chunk_sizes: self.chunk_sizes,
-            chunk_hashes: self.hashes
-        };
-        let mut contents_data = Vec::new();
-        try!(msgpack::encode_to_stream(&contents, &mut contents_data)
-            .map_err(|e| BundleError::Encode(e, path.clone())));
-        if let Some(ref encryption) = self.encryption {
-            contents_data = try!(self.crypto.lock().unwrap().encrypt(encryption.clone(), &contents_data));
-        }
         let header = BundleInfo {
             mode: self.mode,
             hash_method: self.hash_method,
-            checksum: checksum,
             compression: self.compression,
             encryption: self.encryption,
             chunk_count: self.chunk_count,
             id: id.clone(),
             raw_size: self.raw_size,
             encoded_size: encoded_size,
-            contents_info_size: contents_data.len()
+            chunk_info_size: chunk_data.len()
         };
         try!(msgpack::encode_to_stream(&header, &mut file)
             .map_err(|e| BundleError::Encode(e, path.clone())));
-        try!(file.write_all(&contents_data).map_err(|e| BundleError::Write(e, path.clone())));
+        try!(file.write_all(&chunk_data).map_err(|e| BundleError::Write(e, path.clone())));
         let content_start = file.seek(SeekFrom::Current(0)).unwrap() as usize;
         try!(file.write_all(&self.data).map_err(|e| BundleError::Write(e, path.clone())));
-        Ok(Bundle::new(path, HEADER_VERSION, content_start, self.crypto, header, contents))
+        Ok(Bundle::new(path, HEADER_VERSION, content_start, self.crypto, header, self.chunks))
     }
 
     #[inline]
@@ -449,21 +416,19 @@ pub struct BundleDb {
     compression: Option<Compression>,
     encryption: Option<Encryption>,
     crypto: Arc<Mutex<Crypto>>,
-    checksum: ChecksumType,
     bundles: HashMap<BundleId, Bundle>,
     bundle_cache: LruCache<BundleId, Vec<u8>>
 }
 
 
 impl BundleDb {
-    fn new(path: PathBuf, compression: Option<Compression>, encryption: Option<Encryption>, checksum: ChecksumType) -> Self {
+    fn new(path: PathBuf, compression: Option<Compression>, encryption: Option<Encryption>) -> Self {
         BundleDb {
             path: path,
             compression:
             compression,
             crypto: Arc::new(Mutex::new(Crypto::new())),
             encryption: encryption,
-            checksum: checksum,
             bundles: HashMap::new(),
             bundle_cache: LruCache::new(5, 10)
         }
@@ -504,33 +469,33 @@ impl BundleDb {
     }
 
     #[inline]
-    pub fn open<P: AsRef<Path>>(path: P, compression: Option<Compression>, encryption: Option<Encryption>, checksum: ChecksumType) -> Result<Self, BundleError> {
+    pub fn open<P: AsRef<Path>>(path: P, compression: Option<Compression>, encryption: Option<Encryption>) -> Result<Self, BundleError> {
         let path = path.as_ref().to_owned();
-        let mut self_ = Self::new(path, compression, encryption, checksum);
+        let mut self_ = Self::new(path, compression, encryption);
         try!(self_.load_bundle_list());
         Ok(self_)
     }
 
     #[inline]
-    pub fn create<P: AsRef<Path>>(path: P, compression: Option<Compression>, encryption: Option<Encryption>, checksum: ChecksumType) -> Result<Self, BundleError> {
+    pub fn create<P: AsRef<Path>>(path: P, compression: Option<Compression>, encryption: Option<Encryption>) -> Result<Self, BundleError> {
         let path = path.as_ref().to_owned();
         try!(fs::create_dir_all(&path)
             .map_err(|e| BundleError::Write(e, path.clone())));
-        Ok(Self::new(path, compression, encryption, checksum))
+        Ok(Self::new(path, compression, encryption))
     }
 
     #[inline]
-    pub fn open_or_create<P: AsRef<Path>>(path: P, compression: Option<Compression>, encryption: Option<Encryption>, checksum: ChecksumType) -> Result<Self, BundleError> {
+    pub fn open_or_create<P: AsRef<Path>>(path: P, compression: Option<Compression>, encryption: Option<Encryption>) -> Result<Self, BundleError> {
         if path.as_ref().exists() {
-            Self::open(path, compression, encryption, checksum)
+            Self::open(path, compression, encryption)
         } else {
-            Self::create(path, compression, encryption, checksum)
+            Self::create(path, compression, encryption)
         }
     }
 
     #[inline]
     pub fn create_bundle(&self, mode: BundleMode, hash_method: HashMethod) -> Result<BundleWriter, BundleError> {
-        BundleWriter::new(mode, hash_method, self.compression.clone(), self.encryption.clone(), self.crypto.clone(), self.checksum)
+        BundleWriter::new(mode, hash_method, self.compression.clone(), self.encryption.clone(), self.crypto.clone())
     }
 
     pub fn get_chunk(&mut self, bundle_id: &BundleId, id: usize) -> Result<Vec<u8>, BundleError> {

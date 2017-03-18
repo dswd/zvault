@@ -40,19 +40,6 @@ impl HashMethod {
 }
 
 
-
-impl ChecksumType {
-    fn from_yaml(yaml: String) -> Result<Self, ConfigError> {
-        ChecksumType::from(&yaml).map_err(ConfigError::Parse)
-    }
-
-    fn to_yaml(&self) -> String {
-        self.name().to_string()
-    }
-}
-
-
-
 struct ChunkerYaml {
     method: String,
     avg_size: usize,
@@ -107,7 +94,6 @@ struct ConfigYaml {
     compression: Option<String>,
     bundle_size: usize,
     chunker: ChunkerYaml,
-    checksum: String,
     hash: String,
 }
 impl Default for ConfigYaml {
@@ -116,7 +102,6 @@ impl Default for ConfigYaml {
             compression: Some("brotli/5".to_string()),
             bundle_size: 25*1024*1024,
             chunker: ChunkerYaml::default(),
-            checksum: "blake2_256".to_string(),
             hash: "blake2".to_string()
         }
     }
@@ -125,7 +110,6 @@ serde_impl!(ConfigYaml(String) {
     compression: Option<String> => "compression",
     bundle_size: usize => "bundle_size",
     chunker: ChunkerYaml => "chunker",
-    checksum: String => "checksum",
     hash: String => "hash"
 });
 
@@ -136,7 +120,6 @@ pub struct Config {
     pub compression: Option<Compression>,
     pub bundle_size: usize,
     pub chunker: ChunkerType,
-    pub checksum: ChecksumType,
     pub hash: HashMethod
 }
 impl Config {
@@ -150,7 +133,6 @@ impl Config {
             compression: compression,
             bundle_size: yaml.bundle_size,
             chunker: try!(ChunkerType::from_yaml(yaml.chunker)),
-            checksum: try!(ChecksumType::from_yaml(yaml.checksum)),
             hash: try!(HashMethod::from_yaml(yaml.hash))
         })
     }
@@ -160,7 +142,6 @@ impl Config {
             compression: self.compression.as_ref().map(|c| c.to_yaml()),
             bundle_size: self.bundle_size,
             chunker: self.chunker.to_yaml(),
-            checksum: self.checksum.to_yaml(),
             hash: self.hash.to_yaml()
         }
     }

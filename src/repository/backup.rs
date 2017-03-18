@@ -1,4 +1,4 @@
-use super::{Repository, Chunk, RepositoryError};
+use super::{Repository, RepositoryError};
 use super::metadata::{FileType, Inode};
 
 use ::util::*;
@@ -12,7 +12,7 @@ use chrono::prelude::*;
 
 #[derive(Default, Debug, Clone)]
 pub struct Backup {
-    pub root: Vec<Chunk>,
+    pub root: ChunkList,
     pub total_data_size: u64, // Sum of all raw sizes of all entities
     pub changed_data_size: u64, // Sum of all raw sizes of all entities actively stored
     pub deduplicated_data_size: u64, // Sum of all raw sizes of all new bundles

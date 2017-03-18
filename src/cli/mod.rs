@@ -6,7 +6,6 @@ use chrono::prelude::*;
 use std::process::exit;
 
 use ::repository::{Repository, Config, Backup};
-use ::util::ChecksumType;
 use ::util::cli::*;
 use self::args::Arguments;
 
@@ -40,7 +39,6 @@ pub fn run() {
         Arguments::Init{repo_path, bundle_size, chunker, compression, hash} => {
             Repository::create(repo_path, Config {
                 bundle_size: bundle_size,
-                checksum: ChecksumType::Blake2_256,
                 chunker: chunker,
                 compression: compression,
                 hash: hash

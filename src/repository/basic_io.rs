@@ -6,11 +6,8 @@ use ::index::Location;
 use ::bundle::{BundleId, BundleMode};
 use super::integrity::RepositoryIntegrityError;
 
-use ::util::Hash;
+use ::util::*;
 use ::chunker::{IChunker, ChunkerStatus};
-
-
-pub type Chunk = (Hash, usize);
 
 
 impl Repository {
@@ -86,12 +83,12 @@ impl Repository {
     }
 
     #[inline]
-    pub fn put_data(&mut self, mode: BundleMode, data: &[u8]) -> Result<Vec<Chunk>, RepositoryError> {
+    pub fn put_data(&mut self, mode: BundleMode, data: &[u8]) -> Result<ChunkList, RepositoryError> {
         let mut input = Cursor::new(data);
         self.put_stream(mode, &mut input)
     }
 
-    pub fn put_stream<R: Read>(&mut self, mode: BundleMode, data: &mut R) -> Result<Vec<Chunk>, RepositoryError> {
+    pub fn put_stream<R: Read>(&mut self, mode: BundleMode, data: &mut R) -> Result<ChunkList, RepositoryError> {
         let avg_size = self.config.chunker.avg_size();
         let mut chunks = Vec::new();
         let mut chunk = Vec::with_capacity(avg_size * 2);
@@ -102,17 +99,17 @@ impl Repository {
             chunk = output.into_inner();
             let hash = self.config.hash.hash(&chunk);
             try!(self.put_chunk(mode, hash, &chunk));
-            chunks.push((hash, chunk.len()));
+            chunks.push((hash, chunk.len() as u32));
             if res == ChunkerStatus::Finished {
                 break
             }
         }
-        Ok(chunks)
+        Ok(chunks.into())
     }
 
     #[inline]
     pub fn get_data(&mut self, chunks: &[Chunk]) -> Result<Vec<u8>, RepositoryError> {
-        let mut data = Vec::with_capacity(chunks.iter().map(|&(_, size)| size).sum());
+        let mut data = Vec::with_capacity(chunks.iter().map(|&(_, size)| size).sum::<u32>() as usize);
         try!(self.get_stream(chunks, &mut data));
         Ok(data)
     }
@@ -121,7 +118,7 @@ impl Repository {
     pub fn get_stream<W: Write>(&mut self, chunks: &[Chunk], w: &mut W) -> Result<(), RepositoryError> {
         for &(ref hash, len) in chunks {
             let data = try!(try!(self.get_chunk(*hash)).ok_or_else(|| RepositoryIntegrityError::MissingChunk(hash.clone())));
-            debug_assert_eq!(data.len(), len);
+            debug_assert_eq!(data.len() as u32, len);
             try!(w.write_all(&data));
         }
         Ok(())

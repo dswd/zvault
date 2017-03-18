@@ -11,6 +11,8 @@ extern crate rustc_serialize;
 extern crate chrono;
 #[macro_use] extern crate clap;
 #[macro_use] extern crate log;
+extern crate byteorder;
+
 
 pub mod util;
 pub mod bundle;

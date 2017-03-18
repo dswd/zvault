@@ -1,5 +1,5 @@
 use ::chunker::ChunkerType;
-use ::util::{Compression, HashMethod, ChecksumType};
+use ::util::{Compression, HashMethod};
 
 use std::process::exit;
 
@@ -111,16 +111,6 @@ fn parse_compression(val: Option<&str>) -> Option<Compression> {
         Some(compression)
     } else {
         error!("Invalid compression method/level: {}", val);
-        exit(1);
-    }
-}
-
-#[allow(dead_code)]
-fn parse_checksum(val: Option<&str>) -> ChecksumType {
-    if let Ok(checksum) = ChecksumType::from(val.unwrap_or("blake2")) {
-        checksum
-    } else {
-        error!("Invalid checksum method: {}", val.unwrap());
         exit(1);
     }
 }

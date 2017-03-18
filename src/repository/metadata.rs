@@ -6,7 +6,7 @@ use std::os::unix::fs::{PermissionsExt, symlink};
 use std::io::{Read, Write};
 
 use ::util::*;
-use super::{Repository, RepositoryError, Chunk};
+use super::{Repository, RepositoryError};
 use super::integrity::RepositoryIntegrityError;
 use ::bundle::BundleMode;
 
@@ -27,8 +27,8 @@ serde_impl!(FileType(u8) {
 #[derive(Debug)]
 pub enum FileContents {
     Inline(msgpack::Bytes),
-    ChunkedDirect(Vec<Chunk>),
-    ChunkedIndirect(Vec<Chunk>)
+    ChunkedDirect(ChunkList),
+    ChunkedIndirect(ChunkList)
 }
 serde_impl!(FileContents(u8) {
     Inline(ByteBuf) => 0,
@@ -50,7 +50,7 @@ pub struct Inode {
     pub create_time: i64,
     pub symlink_target: Option<String>,
     pub contents: Option<FileContents>,
-    pub children: Option<HashMap<String, Vec<Chunk>>>
+    pub children: Option<HashMap<String, ChunkList>>
 }
 impl Default for Inode {
     fn default() -> Self {
@@ -82,7 +82,7 @@ serde_impl!(Inode(u8) {
     create_time: i64 => 8,
     symlink_target: Option<String> => 9,
     contents: Option<FileContents> => 10,
-    children: HashMap<String, Vec<Chunk>> => 11
+    children: HashMap<String, ChunkList> => 11
 });
 
 impl Inode {
@@ -162,8 +162,9 @@ impl Repository {
                 if chunks.len() < 10 {
                     inode.contents = Some(FileContents::ChunkedDirect(chunks));
                 } else {
-                    let chunks_data = try!(msgpack::encode(&chunks));
-                    chunks = try!(self.put_data(BundleMode::Content, &chunks_data));
+                    let mut chunk_data = Vec::with_capacity(chunks.encoded_size());
+                    chunks.write_to(&mut chunk_data).unwrap();
+                    chunks = try!(self.put_data(BundleMode::Content, &chunk_data));
                     inode.contents = Some(FileContents::ChunkedIndirect(chunks));
                 }
             }
@@ -172,7 +173,7 @@ impl Repository {
     }
 
     #[inline]
-    pub fn put_inode(&mut self, inode: &Inode) -> Result<Vec<Chunk>, RepositoryError> {
+    pub fn put_inode(&mut self, inode: &Inode) -> Result<ChunkList, RepositoryError> {
         self.put_data(BundleMode::Meta, &try!(msgpack::encode(inode)))
     }
 
@@ -194,7 +195,7 @@ impl Repository {
                     },
                     FileContents::ChunkedIndirect(ref chunks) => {
                         let chunk_data = try!(self.get_data(chunks));
-                        let chunks: Vec<Chunk> = try!(msgpack::decode(&chunk_data));
+                        let chunks = ChunkList::read_from(&chunk_data);
                         try!(self.get_stream(&chunks, &mut file));
                     }
                 }

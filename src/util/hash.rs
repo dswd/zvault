@@ -4,15 +4,17 @@ use serde::bytes::{ByteBuf, Bytes};
 
 use murmurhash3::murmurhash3_x64_128;
 use blake2::blake2b::blake2b;
+use byteorder::{LittleEndian, ByteOrder, WriteBytesExt, ReadBytesExt};
 
 use std::mem;
 use std::fmt;
 use std::u64;
+use std::io::{self, Read, Write};
 
 
 
 #[repr(packed)]
-#[derive(Clone, Copy, PartialEq, Hash, Eq)]
+#[derive(Clone, Copy, PartialEq, Hash, Eq, Default)]
 pub struct Hash {
     pub high: u64,
     pub low: u64
@@ -27,6 +29,24 @@ impl Hash {
     #[inline]
     pub fn empty() -> Self {
         Hash{high: 0, low: 0}
+    }
+
+    #[inline]
+    pub fn to_string(&self) -> String {
+        format!("{:016x}{:016x}", self.high, self.low)
+    }
+
+    #[inline]
+    pub fn write_to(&self, dst: &mut Write) -> Result<(), io::Error> {
+        try!(dst.write_u64::<LittleEndian>(self.high));
+        dst.write_u64::<LittleEndian>(self.low)
+    }
+
+    #[inline]
+    pub fn read_from(src: &mut Read) -> Result<Self, io::Error> {
+        let high = try!(src.read_u64::<LittleEndian>());
+        let low = try!(src.read_u64::<LittleEndian>());
+        Ok(Hash { high: high, low: low })
     }
 }
 
@@ -47,8 +67,9 @@ impl fmt::Debug for Hash {
 
 impl Serialize for Hash {
     fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error> where S: serde::Serializer {
-        let hash = Hash{high: u64::to_le(self.high), low: u64::to_le(self.low)};
-        let dat: [u8; 16] = unsafe { mem::transmute(hash) };
+        let mut dat = [0u8; 16];
+        LittleEndian::write_u64(&mut dat[..8], self.high);
+        LittleEndian::write_u64(&mut dat[8..], self.low);
         Bytes::from(&dat as &[u8]).serialize(serializer)
     }
 }
@@ -59,8 +80,10 @@ impl Deserialize for Hash {
         if dat.len() != 16 {
             return Err(D::Error::custom("Invalid key length"));
         }
-        let hash = unsafe { &*(dat.as_ptr() as *const Hash) };
-        Ok(Hash{high: u64::from_le(hash.high), low: u64::from_le(hash.low)})
+        Ok(Hash{
+            high: LittleEndian::read_u64(&dat[..8]),
+            low: LittleEndian::read_u64(&dat[8..])
+        })
     }
 }
 
