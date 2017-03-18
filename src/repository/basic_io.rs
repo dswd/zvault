@@ -46,7 +46,12 @@ impl Repository {
         };
         // ...alocate one if needed
         if writer.is_none() {
-            *writer = Some(try!(self.bundles.create_bundle(mode, self.config.hash)));
+            *writer = Some(try!(self.bundles.create_bundle(
+                mode,
+                self.config.hash,
+                self.config.compression.clone(),
+                self.config.encryption.clone()
+            )));
         }
         debug_assert!(writer.is_some());
         let chunk_id;

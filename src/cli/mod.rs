@@ -7,6 +7,7 @@ use std::process::exit;
 
 use ::repository::{Repository, Config, Backup};
 use ::util::cli::*;
+use ::util::*;
 use self::args::Arguments;
 
 
@@ -36,13 +37,22 @@ pub fn run() {
         exit(-1)
     }
     match args::parse() {
-        Arguments::Init{repo_path, bundle_size, chunker, compression, hash} => {
-            Repository::create(repo_path, Config {
+        Arguments::Init{repo_path, bundle_size, chunker, compression, encryption, hash} => {
+            let mut repo = Repository::create(repo_path, Config {
                 bundle_size: bundle_size,
                 chunker: chunker,
                 compression: compression,
+                encryption: None,
                 hash: hash
             }).unwrap();
+            if encryption {
+                let (public, secret) = gen_keypair();
+                println!("Public key: {}", to_hex(&public[..]));
+                println!("Secret key: {}", to_hex(&secret[..]));
+                repo.set_encryption(Some(&public));
+                repo.register_key(public, secret).unwrap();
+                repo.save_config().unwrap();
+            }
         },
         Arguments::Backup{repo_path, backup_name, src_path, full} => {
             let mut repo = open_repository(&repo_path);
@@ -165,8 +175,63 @@ pub fn run() {
             error!("Import is not implemented yet");
             return
         },
-        Arguments::AlgoTest{bundle_size, chunker, compression, hash, file} => {
-            algotest::run(&file, bundle_size, chunker, compression, hash);
+        Arguments::Configure{repo_path, bundle_size, chunker, compression, encryption, hash} => {
+            let mut repo = open_repository(&repo_path);
+            if let Some(bundle_size) = bundle_size {
+                repo.config.bundle_size = bundle_size
+            }
+            if let Some(chunker) = chunker {
+                warn!("Changing the chunker makes it impossible to use existing data for deduplication");
+                repo.config.chunker = chunker
+            }
+            if let Some(compression) = compression {
+                repo.config.compression = compression
+            }
+            if let Some(encryption) = encryption {
+                repo.set_encryption(encryption.as_ref())
+            }
+            if let Some(hash) = hash {
+                warn!("Changing the hash makes it impossible to use existing data for deduplication");
+                repo.config.hash = hash
+            }
+            repo.save_config().unwrap();
+            println!("Bundle size: {}", to_file_size(repo.config.bundle_size as u64));
+            println!("Chunker: {}", repo.config.chunker.to_string());
+            if let Some(ref compression) = repo.config.compression {
+                println!("Compression: {}", compression.to_string());
+            } else {
+                println!("Compression: none");
+            }
+            if let Some(ref encryption) = repo.config.encryption {
+                println!("Encryption: {}", to_hex(&encryption.1[..]));
+            } else {
+                println!("Encryption: none");
+            }
+            println!("Hash method: {}", repo.config.hash.name());
+        },
+        Arguments::GenKey{} => {
+            let (public, secret) = gen_keypair();
+            println!("Public key: {}", to_hex(&public[..]));
+            println!("Secret key: {}", to_hex(&secret[..]));
+        },
+        Arguments::AddKey{repo_path, set_default, key_pair} => {
+            let mut repo = open_repository(&repo_path);
+            let (public, secret) = if let Some(key_pair) = key_pair {
+                key_pair
+            } else {
+                let (public, secret) = gen_keypair();
+                println!("Public key: {}", to_hex(&public[..]));
+                println!("Secret key: {}", to_hex(&secret[..]));
+                (public, secret)
+            };
+            if set_default {
+                repo.set_encryption(Some(&public));
+                repo.save_config().unwrap();
+            }
+            repo.register_key(public, secret).unwrap();
+        },
+        Arguments::AlgoTest{bundle_size, chunker, compression, encrypt, hash, file} => {
+            algotest::run(&file, bundle_size, chunker, compression, encrypt, hash);
         }
     }
 }

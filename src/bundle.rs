@@ -7,6 +7,7 @@ use std::fmt::{self, Debug};
 use std::sync::{Arc, Mutex};
 
 use serde::{self, Serialize, Deserialize};
+use quick_error::ResultExt;
 
 use util::*;
 
@@ -18,7 +19,7 @@ static HEADER_VERSION: u8 = 1;
 Bundle format
 - Magic header + version
 - Encoded header structure (contains size of next structure)
-- Encoded contents structure (with chunk sizes and hashes)
+- Encoded chunk list (with chunk hashes and sizes)
 - Chunk data
 
 */
@@ -31,22 +32,25 @@ quick_error!{
         List(err: io::Error) {
             cause(err)
             description("Failed to list bundles")
+            display("Failed to list bundles: {}", err)
         }
-        Read(err: io::Error, path: PathBuf) {
+        Io(err: io::Error, path: PathBuf) {
             cause(err)
+            context(path: &'a Path, err: io::Error) -> (err, path.to_path_buf())
             description("Failed to read bundle")
+            display("Failed to read bundle {:?}: {}", path, err)
         }
         Decode(err: msgpack::DecodeError, path: PathBuf) {
             cause(err)
+            context(path: &'a Path, err: msgpack::DecodeError) -> (err, path.to_path_buf())
             description("Failed to decode bundle header")
-        }
-        Write(err: io::Error, path: PathBuf) {
-            cause(err)
-            description("Failed to write bundle")
+            display("Failed to decode bundle header of {:?}: {}", path, err)
         }
         Encode(err: msgpack::EncodeError, path: PathBuf) {
             cause(err)
+            context(path: &'a Path, err: msgpack::EncodeError) -> (err, path.to_path_buf())
             description("Failed to encode bundle header")
+            display("Failed to encode bundle header of {:?}: {}", path, err)
         }
         WrongHeader(path: PathBuf) {
             description("Wrong header")
@@ -68,13 +72,29 @@ quick_error!{
             description("Bundle has no such chunk")
             display("Bundle {:?} has no chunk with that id: {}", bundle, id)
         }
+        Decompression(err: CompressionError, path: PathBuf) {
+            cause(err)
+            context(path: &'a Path, err: CompressionError) -> (err, path.to_path_buf())
+            description("Decompression failed")
+            display("Decompression failed on bundle {:?}: {}", path, err)
+        }
         Compression(err: CompressionError) {
             from()
             cause(err)
+            description("Compression failed")
+            display("Compression failed: {}", err)
+        }
+        Decryption(err: EncryptionError, path: PathBuf) {
+            cause(err)
+            context(path: &'a Path, err: EncryptionError) -> (err, path.to_path_buf())
+            description("Decryption failed")
+            display("Decryption failed on bundle {:?}: {}", path, err)
         }
         Encryption(err: EncryptionError) {
             from()
             cause(err)
+            description("Encryption failed")
+            display("Encryption failed: {}", err)
         }
         Remove(err: io::Error, bundle: BundleId) {
             cause(err)
@@ -209,9 +229,9 @@ impl Bundle {
     }
 
     pub fn load(path: PathBuf, crypto: Arc<Mutex<Crypto>>) -> Result<Self, BundleError> {
-        let mut file = BufReader::new(try!(File::open(&path).map_err(|e| BundleError::Read(e, path.clone()))));
+        let mut file = BufReader::new(try!(File::open(&path).context(&path as &Path)));
         let mut header = [0u8; 8];
-        try!(file.read_exact(&mut header).map_err(|e| BundleError::Read(e, path.clone())));
+        try!(file.read_exact(&mut header).context(&path as &Path));
         if header[..HEADER_STRING.len()] != HEADER_STRING {
             return Err(BundleError::WrongHeader(path.clone()))
         }
@@ -223,9 +243,9 @@ impl Bundle {
             .map_err(|e| BundleError::Decode(e, path.clone())));
         let mut chunk_data = Vec::with_capacity(header.chunk_info_size);
         chunk_data.resize(header.chunk_info_size, 0);
-        try!(file.read_exact(&mut chunk_data).map_err(|e| BundleError::Read(e, path.clone())));
+        try!(file.read_exact(&mut chunk_data).context(&path as &Path));
         if let Some(ref encryption) = header.encryption {
-            chunk_data = try!(crypto.lock().unwrap().decrypt(encryption.clone(), &chunk_data));
+            chunk_data = try!(crypto.lock().unwrap().decrypt(&encryption, &chunk_data).context(&path as &Path));
         }
         let chunks = ChunkList::read_from(&chunk_data);
         let content_start = file.seek(SeekFrom::Current(0)).unwrap() as usize;
@@ -234,20 +254,20 @@ impl Bundle {
 
     #[inline]
     fn load_encoded_contents(&self) -> Result<Vec<u8>, BundleError> {
-        let mut file = BufReader::new(try!(File::open(&self.path).map_err(|e| BundleError::Read(e, self.path.clone()))));
-        try!(file.seek(SeekFrom::Start(self.content_start as u64)).map_err(|e| BundleError::Read(e, self.path.clone())));
+        let mut file = BufReader::new(try!(File::open(&self.path).context(&self.path as &Path)));
+        try!(file.seek(SeekFrom::Start(self.content_start as u64)).context(&self.path as &Path));
         let mut data = Vec::with_capacity(max(self.info.encoded_size, self.info.raw_size)+1024);
-        try!(file.read_to_end(&mut data).map_err(|e| BundleError::Read(e, self.path.clone())));
+        try!(file.read_to_end(&mut data).context(&self.path as &Path));
         Ok(data)
     }
 
     #[inline]
     fn decode_contents(&self, mut data: Vec<u8>) -> Result<Vec<u8>, BundleError> {
         if let Some(ref encryption) = self.info.encryption {
-            data = try!(self.crypto.lock().unwrap().decrypt(encryption.clone(), &data));
+            data = try!(self.crypto.lock().unwrap().decrypt(&encryption, &data).context(&self.path as &Path));
         }
         if let Some(ref compression) = self.info.compression {
-            data = try!(compression.decompress(&data));
+            data = try!(compression.decompress(&data).context(&self.path as &Path));
         }
         Ok(data)
     }
@@ -276,8 +296,7 @@ impl Bundle {
                 "Individual chunk sizes do not add up to total size"))
         }
         if !full {
-            let size = try!(fs::metadata(&self.path).map_err(|e| BundleError::Read(e, self.path.clone()))
-            ).len();
+            let size = try!(fs::metadata(&self.path).context(&self.path as &Path)).len();
             if size as usize != self.info.encoded_size + self.content_start {
                 return Err(BundleError::Integrity(self.id(),
                     "File size does not match size in header, truncated file"))
@@ -365,21 +384,21 @@ impl BundleWriter {
             try!(stream.finish(&mut self.data))
         }
         if let Some(ref encryption) = self.encryption {
-            self.data = try!(self.crypto.lock().unwrap().encrypt(encryption.clone(), &self.data));
+            self.data = try!(self.crypto.lock().unwrap().encrypt(&encryption, &self.data));
         }
         let encoded_size = self.data.len();
         let mut chunk_data = Vec::with_capacity(self.chunks.encoded_size());
         self.chunks.write_to(&mut chunk_data).unwrap();
         let id = BundleId(self.hash_method.hash(&chunk_data));
         if let Some(ref encryption) = self.encryption {
-            chunk_data = try!(self.crypto.lock().unwrap().encrypt(encryption.clone(), &chunk_data));
+            chunk_data = try!(self.crypto.lock().unwrap().encrypt(&encryption, &chunk_data));
         }
         let (folder, file) = db.bundle_path(&id);
         let path = folder.join(file);
-        try!(fs::create_dir_all(&folder).map_err(|e| BundleError::Write(e, path.clone())));
-        let mut file = BufWriter::new(try!(File::create(&path).map_err(|e| BundleError::Write(e, path.clone()))));
-        try!(file.write_all(&HEADER_STRING).map_err(|e| BundleError::Write(e, path.clone())));
-        try!(file.write_all(&[HEADER_VERSION]).map_err(|e| BundleError::Write(e, path.clone())));
+        try!(fs::create_dir_all(&folder).context(&path as &Path));
+        let mut file = BufWriter::new(try!(File::create(&path).context(&path as &Path)));
+        try!(file.write_all(&HEADER_STRING).context(&path as &Path));
+        try!(file.write_all(&[HEADER_VERSION]).context(&path as &Path));
         let header = BundleInfo {
             mode: self.mode,
             hash_method: self.hash_method,
@@ -393,9 +412,9 @@ impl BundleWriter {
         };
         try!(msgpack::encode_to_stream(&header, &mut file)
             .map_err(|e| BundleError::Encode(e, path.clone())));
-        try!(file.write_all(&chunk_data).map_err(|e| BundleError::Write(e, path.clone())));
+        try!(file.write_all(&chunk_data).context(&path as &Path));
         let content_start = file.seek(SeekFrom::Current(0)).unwrap() as usize;
-        try!(file.write_all(&self.data).map_err(|e| BundleError::Write(e, path.clone())));
+        try!(file.write_all(&self.data).context(&path as &Path));
         Ok(Bundle::new(path, HEADER_VERSION, content_start, self.crypto, header, self.chunks))
     }
 
@@ -413,8 +432,6 @@ impl BundleWriter {
 
 pub struct BundleDb {
     path: PathBuf,
-    compression: Option<Compression>,
-    encryption: Option<Encryption>,
     crypto: Arc<Mutex<Crypto>>,
     bundles: HashMap<BundleId, Bundle>,
     bundle_cache: LruCache<BundleId, Vec<u8>>
@@ -422,13 +439,10 @@ pub struct BundleDb {
 
 
 impl BundleDb {
-    fn new(path: PathBuf, compression: Option<Compression>, encryption: Option<Encryption>) -> Self {
+    fn new(path: PathBuf, crypto: Arc<Mutex<Crypto>>) -> Self {
         BundleDb {
             path: path,
-            compression:
-            compression,
-            crypto: Arc::new(Mutex::new(Crypto::new())),
-            encryption: encryption,
+            crypto: crypto,
             bundles: HashMap::new(),
             bundle_cache: LruCache::new(5, 10)
         }
@@ -436,7 +450,7 @@ impl BundleDb {
 
     fn bundle_path(&self, bundle: &BundleId) -> (PathBuf, PathBuf) {
         let mut folder = self.path.clone();
-        let mut file = bundle.to_string()[0..32].to_owned() + ".bundle";
+        let mut file = bundle.to_string().to_owned() + ".bundle";
         let mut count = self.bundles.len();
         while count >= 100 {
             if file.len() < 10 {
@@ -469,33 +483,29 @@ impl BundleDb {
     }
 
     #[inline]
-    pub fn open<P: AsRef<Path>>(path: P, compression: Option<Compression>, encryption: Option<Encryption>) -> Result<Self, BundleError> {
+    pub fn open<P: AsRef<Path>>(path: P, crypto: Arc<Mutex<Crypto>>) -> Result<Self, BundleError> {
         let path = path.as_ref().to_owned();
-        let mut self_ = Self::new(path, compression, encryption);
+        let mut self_ = Self::new(path, crypto);
         try!(self_.load_bundle_list());
         Ok(self_)
     }
 
     #[inline]
-    pub fn create<P: AsRef<Path>>(path: P, compression: Option<Compression>, encryption: Option<Encryption>) -> Result<Self, BundleError> {
+    pub fn create<P: AsRef<Path>>(path: P, crypto: Arc<Mutex<Crypto>>) -> Result<Self, BundleError> {
         let path = path.as_ref().to_owned();
-        try!(fs::create_dir_all(&path)
-            .map_err(|e| BundleError::Write(e, path.clone())));
-        Ok(Self::new(path, compression, encryption))
+        try!(fs::create_dir_all(&path).context(&path as &Path));
+        Ok(Self::new(path, crypto))
     }
 
     #[inline]
-    pub fn open_or_create<P: AsRef<Path>>(path: P, compression: Option<Compression>, encryption: Option<Encryption>) -> Result<Self, BundleError> {
-        if path.as_ref().exists() {
-            Self::open(path, compression, encryption)
-        } else {
-            Self::create(path, compression, encryption)
-        }
-    }
-
-    #[inline]
-    pub fn create_bundle(&self, mode: BundleMode, hash_method: HashMethod) -> Result<BundleWriter, BundleError> {
-        BundleWriter::new(mode, hash_method, self.compression.clone(), self.encryption.clone(), self.crypto.clone())
+    pub fn create_bundle(
+        &self,
+        mode: BundleMode,
+        hash_method: HashMethod,
+        compression: Option<Compression>,
+        encryption: Option<Encryption>
+    ) -> Result<BundleWriter, BundleError> {
+        BundleWriter::new(mode, hash_method, compression, encryption, self.crypto.clone())
     }
 
     pub fn get_chunk(&mut self, bundle_id: &BundleId, id: usize) -> Result<Vec<u8>, BundleError> {

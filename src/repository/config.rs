@@ -24,6 +24,7 @@ quick_error!{
             from()
             cause(err)
             description("Yaml format error")
+            display("Yaml format error: {}", err)
         }
     }
 }
@@ -89,9 +90,41 @@ impl Compression {
 }
 
 
+impl EncryptionMethod {
+    #[inline]
+    fn from_yaml(yaml: String) -> Result<Self, ConfigError> {
+        EncryptionMethod::from_string(&yaml).map_err(|_| ConfigError::Parse("Invalid codec"))
+    }
+
+    #[inline]
+    fn to_yaml(&self) -> String {
+        self.to_string()
+    }
+}
+
+
+struct EncryptionYaml {
+    method: String,
+    key: String
+}
+impl Default for EncryptionYaml {
+    fn default() -> Self {
+        EncryptionYaml {
+            method: "sodium".to_string(),
+            key: "".to_string()
+        }
+    }
+}
+serde_impl!(EncryptionYaml(String) {
+    method: String => "method",
+    key: String => "key"
+});
+
+
 
 struct ConfigYaml {
     compression: Option<String>,
+    encryption: Option<EncryptionYaml>,
     bundle_size: usize,
     chunker: ChunkerYaml,
     hash: String,
@@ -100,6 +133,7 @@ impl Default for ConfigYaml {
     fn default() -> Self {
         ConfigYaml {
             compression: Some("brotli/5".to_string()),
+            encryption: None,
             bundle_size: 25*1024*1024,
             chunker: ChunkerYaml::default(),
             hash: "blake2".to_string()
@@ -108,6 +142,7 @@ impl Default for ConfigYaml {
 }
 serde_impl!(ConfigYaml(String) {
     compression: Option<String> => "compression",
+    encryption: Option<EncryptionYaml> => "encryption",
     bundle_size: usize => "bundle_size",
     chunker: ChunkerYaml => "chunker",
     hash: String => "hash"
@@ -118,6 +153,7 @@ serde_impl!(ConfigYaml(String) {
 #[derive(Debug)]
 pub struct Config {
     pub compression: Option<Compression>,
+    pub encryption: Option<Encryption>,
     pub bundle_size: usize,
     pub chunker: ChunkerType,
     pub hash: HashMethod
@@ -129,8 +165,16 @@ impl Config {
         } else {
             None
         };
+        let encryption = if let Some(e) = yaml.encryption {
+            let method = try!(EncryptionMethod::from_yaml(e.method));
+            let key = try!(parse_hex(&e.key).map_err(|_| ConfigError::Parse("Invalid public key")));
+            Some((method, key.into()))
+        } else {
+            None
+        };
         Ok(Config{
             compression: compression,
+            encryption: encryption,
             bundle_size: yaml.bundle_size,
             chunker: try!(ChunkerType::from_yaml(yaml.chunker)),
             hash: try!(HashMethod::from_yaml(yaml.hash))
@@ -140,6 +184,7 @@ impl Config {
     fn to_yaml(&self) -> ConfigYaml {
         ConfigYaml {
             compression: self.compression.as_ref().map(|c| c.to_yaml()),
+            encryption: self.encryption.as_ref().map(|e| EncryptionYaml{method: e.0.to_yaml(), key: to_hex(&e.1[..])}),
             bundle_size: self.bundle_size,
             chunker: self.chunker.to_yaml(),
             hash: self.hash.to_yaml()

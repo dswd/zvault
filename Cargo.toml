@@ -2,6 +2,7 @@
 name = "zvault"
 version = "0.1.0"
 authors = ["Dennis Schwerdel <schwerdel@informatik.uni-kl.de>"]
+description = "Deduplicating backup tool"
 
 [dependencies]
 serde = "0.9"
@@ -18,3 +19,8 @@ chrono = "0.3"
 clap = "2.19"
 log = "0.3"
 byteorder = "1.0"
+ansi_term = "0.9"
+sodiumoxide = "*"
+
+[build-dependencies]
+pkg-config = "0.3"

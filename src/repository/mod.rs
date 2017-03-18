@@ -11,10 +11,12 @@ use std::mem;
 use std::cmp::max;
 use std::path::{PathBuf, Path};
 use std::fs;
+use std::sync::{Arc, Mutex};
 
 use super::index::Index;
 use super::bundle::{BundleDb, BundleWriter};
 use super::chunker::Chunker;
+use ::util::*;
 
 pub use self::error::RepositoryError;
 pub use self::config::Config;
@@ -25,8 +27,9 @@ use self::bundle_map::BundleMap;
 
 pub struct Repository {
     path: PathBuf,
-    config: Config,
+    pub config: Config,
     index: Index,
+    crypto: Arc<Mutex<Crypto>>,
     bundle_map: BundleMap,
     next_content_bundle: u32,
     next_meta_bundle: u32,
@@ -41,10 +44,11 @@ impl Repository {
     pub fn create<P: AsRef<Path>>(path: P, config: Config) -> Result<Self, RepositoryError> {
         let path = path.as_ref().to_owned();
         try!(fs::create_dir(&path));
+        try!(fs::create_dir(path.join("keys")));
+        let crypto = Arc::new(Mutex::new(try!(Crypto::open(path.join("keys")))));
         let bundles = try!(BundleDb::create(
             path.join("bundles"),
-            config.compression.clone(),
-            None, //FIXME: store encryption in config
+            crypto.clone()
         ));
         let index = try!(Index::create(&path.join("index")));
         try!(config.save(path.join("config.yaml")));
@@ -62,16 +66,17 @@ impl Repository {
             bundles: bundles,
             content_bundle: None,
             meta_bundle: None,
+            crypto: crypto
         })
     }
 
     pub fn open<P: AsRef<Path>>(path: P) -> Result<Self, RepositoryError> {
         let path = path.as_ref().to_owned();
         let config = try!(Config::load(path.join("config.yaml")));
+        let crypto = Arc::new(Mutex::new(try!(Crypto::open(path.join("keys")))));
         let bundles = try!(BundleDb::open(
             path.join("bundles"),
-            config.compression.clone(),
-            None, //FIXME: load encryption from config
+            crypto.clone()
         ));
         let index = try!(Index::open(&path.join("index")));
         let bundle_map = try!(BundleMap::load(path.join("bundles.map")));
@@ -80,6 +85,7 @@ impl Repository {
             chunker: config.chunker.create(),
             config: config,
             index: index,
+            crypto: crypto,
             bundle_map: bundle_map,
             next_content_bundle: 0,
             next_meta_bundle: 0,
@@ -90,6 +96,27 @@ impl Repository {
         repo.next_meta_bundle = repo.next_free_bundle_id();
         repo.next_content_bundle = repo.next_free_bundle_id();
         Ok(repo)
+    }
+
+    #[inline]
+    pub fn register_key(&mut self, public: PublicKey, secret: SecretKey) -> Result<(), RepositoryError> {
+        Ok(try!(self.crypto.lock().unwrap().register_secret_key(public, secret)))
+    }
+
+    pub fn save_config(&mut self) -> Result<(), RepositoryError> {
+        try!(self.config.save(self.path.join("config.yaml")));
+        Ok(())
+    }
+
+    #[inline]
+    pub fn set_encryption(&mut self, public: Option<&PublicKey>) {
+        if let Some(key) = public {
+            let mut key_bytes = Vec::new();
+            key_bytes.extend_from_slice(&key[..]);
+            self.config.encryption = Some((EncryptionMethod::Sodium, key_bytes.into()))
+        } else {
+            self.config.encryption = None
+        }
     }
 
     #[inline]

@@ -1,5 +1,5 @@
 use ::chunker::ChunkerType;
-use ::util::{Compression, HashMethod};
+use ::util::*;
 
 use std::process::exit;
 
@@ -10,6 +10,7 @@ pub enum Arguments {
         bundle_size: usize,
         chunker: ChunkerType,
         compression: Option<Compression>,
+        encryption: bool,
         hash: HashMethod
     },
     Backup {
@@ -56,11 +57,27 @@ pub enum Arguments {
         repo_path: String,
         remote_path: String
     },
+    Configure {
+        repo_path: String,
+        bundle_size: Option<usize>,
+        chunker: Option<ChunkerType>,
+        compression: Option<Option<Compression>>,
+        encryption: Option<Option<PublicKey>>,
+        hash: Option<HashMethod>
+    },
+    GenKey {
+    },
+    AddKey {
+        repo_path: String,
+        key_pair: Option<(PublicKey, SecretKey)>,
+        set_default: bool
+    },
     AlgoTest {
         file: String,
         bundle_size: usize,
         chunker: ChunkerType,
         compression: Option<Compression>,
+        encrypt: bool,
         hash: HashMethod
     }
 }
@@ -93,17 +110,16 @@ fn parse_float(num: &str, name: &str) -> f64 {
 }
 
 
-fn parse_chunker(val: Option<&str>) -> ChunkerType {
-    if let Ok(chunker) = ChunkerType::from_string(val.unwrap_or("fastcdc/8")) {
+fn parse_chunker(val: &str) -> ChunkerType {
+    if let Ok(chunker) = ChunkerType::from_string(val) {
         chunker
     } else {
-        error!("Invalid chunker method/size: {}", val.unwrap());
+        error!("Invalid chunker method/size: {}", val);
         exit(1);
     }
 }
 
-fn parse_compression(val: Option<&str>) -> Option<Compression> {
-    let val = val.unwrap_or("brotli/3");
+fn parse_compression(val: &str) -> Option<Compression> {
     if val == "none" {
         return None
     }
@@ -115,11 +131,43 @@ fn parse_compression(val: Option<&str>) -> Option<Compression> {
     }
 }
 
-fn parse_hash(val: Option<&str>) -> HashMethod {
-    if let Ok(hash) = HashMethod::from(val.unwrap_or("blake2")) {
+fn parse_public_key(val: &str) -> PublicKey {
+    let bytes = match parse_hex(val) {
+        Ok(bytes) => bytes,
+        Err(_) => {
+            error!("Invalid key: {}", val);
+            exit(1);
+        }
+    };
+    if let Some(key) = PublicKey::from_slice(&bytes) {
+        key
+    } else {
+        error!("Invalid key: {}", val);
+        exit(1);
+    }
+}
+
+fn parse_secret_key(val: &str) -> SecretKey {
+    let bytes = match parse_hex(val) {
+        Ok(bytes) => bytes,
+        Err(_) => {
+            error!("Invalid key: {}", val);
+            exit(1);
+        }
+    };
+    if let Some(key) = SecretKey::from_slice(&bytes) {
+        key
+    } else {
+        error!("Invalid key: {}", val);
+        exit(1);
+    }
+}
+
+fn parse_hash(val: &str) -> HashMethod {
+    if let Ok(hash) = HashMethod::from(val) {
         hash
     } else {
-        error!("Invalid hash method: {}", val.unwrap());
+        error!("Invalid hash method: {}", val);
         exit(1);
     }
 }
@@ -127,18 +175,19 @@ fn parse_hash(val: Option<&str>) -> HashMethod {
 
 pub fn parse() -> Arguments {
     let args = clap_app!(zvault =>
-        (version: env!("CARGO_PKG_VERSION"))
-        (author: "Dennis Schwerdel <schwerdel@googlemail.com>")
-        (about: "Deduplicating backup tool")
+        (version: crate_version!())
+        (author: crate_authors!(",\n"))
+        (about: crate_description!())
         (@setting SubcommandRequiredElseHelp)
         (@setting GlobalVersion)
         (@setting VersionlessSubcommands)
         (@setting UnifiedHelpMessage)
         (@subcommand init =>
             (about: "initializes a new repository")
-            (@arg bundle_size: --bundle-size +takes_value "maximal bundle size in MiB [default: 25]")
+            (@arg bundle_size: --bundlesize +takes_value "maximal bundle size in MiB [default: 25]")
             (@arg chunker: --chunker +takes_value "chunker algorithm [default: fastcdc/8]")
             (@arg compression: --compression -c +takes_value "compression to use [default: brotli/3]")
+            (@arg encryption: --encryption -e "generate a keypair and enable encryption")
             (@arg hash: --hash +takes_value "hash method to use [default: blake2]")
             (@arg REPO: +required "path of the repository")
         )
@@ -184,11 +233,32 @@ pub fn parse() -> Arguments {
             (about: "displays information on a repository, a backup or a path in a backup")
             (@arg PATH: +required "repository[::backup[::subpath]] path")
         )
-        (@subcommand algotest =>
-            (about: "test a specific algorithm combination")
-            (@arg bundle_size: --bundle-size +takes_value "maximal bundle size in MiB [default: 25]")
+        (@subcommand configure =>
+            (about: "changes the configuration")
+            (@arg REPO: +required "path of the repository")
+            (@arg bundle_size: --bundlesize +takes_value "maximal bundle size in MiB [default: 25]")
             (@arg chunker: --chunker +takes_value "chunker algorithm [default: fastcdc/8]")
             (@arg compression: --compression -c +takes_value "compression to use [default: brotli/3]")
+            (@arg encryption: --encryption -e +takes_value "the public key to use for encryption")
+            (@arg hash: --hash +takes_value "hash method to use [default: blake2]")
+        )
+        (@subcommand genkey =>
+            (about: "generates a new key pair")
+        )
+        (@subcommand addkey =>
+            (about: "adds a key to the respository")
+            (@arg REPO: +required "path of the repository")
+            (@arg generate: --generate "generate a new key")
+            (@arg set_default: --default "set this key as default")
+            (@arg PUBLIC: +takes_value "the public key")
+            (@arg SECRET: +takes_value "the secret key")
+        )
+        (@subcommand algotest =>
+            (about: "test a specific algorithm combination")
+            (@arg bundle_size: --bundlesize +takes_value "maximal bundle size in MiB [default: 25]")
+            (@arg chunker: --chunker +takes_value "chunker algorithm [default: fastcdc/8]")
+            (@arg compression: --compression -c +takes_value "compression to use [default: brotli/3]")
+            (@arg encrypt: --encrypt -e "enable encryption")
             (@arg hash: --hash +takes_value "hash method to use [default: blake2]")
             (@arg FILE: +required "the file to test the algorithms with")
         )
@@ -201,9 +271,10 @@ pub fn parse() -> Arguments {
         }
         return Arguments::Init {
             bundle_size: (parse_num(args.value_of("bundle_size").unwrap_or("25"), "Bundle size") * 1024 * 1024) as usize,
-            chunker: parse_chunker(args.value_of("chunker")),
-            compression: parse_compression(args.value_of("compression")),
-            hash: parse_hash(args.value_of("hash")),
+            chunker: parse_chunker(args.value_of("chunker").unwrap_or("fastcdc/8")),
+            compression: parse_compression(args.value_of("compression").unwrap_or("brotli/3")),
+            encryption: args.is_present("encryption"),
+            hash: parse_hash(args.value_of("hash").unwrap_or("blake2")),
             repo_path: repository.to_string(),
         }
     }
@@ -306,12 +377,63 @@ pub fn parse() -> Arguments {
             remote_path: args.value_of("REMOTE").unwrap().to_string()
         }
     }
+    if let Some(args) = args.subcommand_matches("configure") {
+        let (repository, backup, inode) = split_repo_path(args.value_of("REPO").unwrap());
+        if backup.is_some() || inode.is_some() {
+            println!("No backups or subpaths may be given here");
+            exit(1);
+        }
+        return Arguments::Configure {
+            bundle_size: args.value_of("bundle_size").map(|v| (parse_num(v, "Bundle size") * 1024 * 1024) as usize),
+            chunker: args.value_of("chunker").map(|v| parse_chunker(v)),
+            compression: args.value_of("compression").map(|v| parse_compression(v)),
+            encryption: args.value_of("encryption").map(|v| {
+                if v == "none" {
+                    None
+                } else {
+                    Some(parse_public_key(v))
+                }
+            }),
+            hash: args.value_of("hash").map(|v| parse_hash(v)),
+            repo_path: repository.to_string(),
+        }
+    }
+    if let Some(_args) = args.subcommand_matches("genkey") {
+        return Arguments::GenKey {}
+    }
+    if let Some(args) = args.subcommand_matches("addkey") {
+        let (repository, backup, inode) = split_repo_path(args.value_of("REPO").unwrap());
+        if backup.is_some() || inode.is_some() {
+            println!("No backups or subpaths may be given here");
+            exit(1);
+        }
+        let generate = args.is_present("generate");
+        if !generate && (!args.is_present("PUBLIC") || !args.is_present("SECRET")) {
+            println!("Without --generate, a public and secret key must be given");
+            exit(1);
+        }
+        if generate && (args.is_present("PUBLIC") || args.is_present("SECRET")) {
+            println!("With --generate, no public or secret key may be given");
+            exit(1);
+        }
+        let key_pair = if generate {
+            None
+        } else {
+            Some((parse_public_key(args.value_of("PUBLIC").unwrap()), parse_secret_key(args.value_of("SECRET").unwrap())))
+        };
+        return Arguments::AddKey {
+            repo_path: repository.to_string(),
+            set_default: args.is_present("set_default"),
+            key_pair: key_pair
+        }
+    }
     if let Some(args) = args.subcommand_matches("algotest") {
         return Arguments::AlgoTest {
             bundle_size: (parse_num(args.value_of("bundle_size").unwrap_or("25"), "Bundle size") * 1024 * 1024) as usize,
-            chunker: parse_chunker(args.value_of("chunker")),
-            compression: parse_compression(args.value_of("compression")),
-            hash: parse_hash(args.value_of("hash")),
+            chunker: parse_chunker(args.value_of("chunker").unwrap_or("fastcdc/8")),
+            compression: parse_compression(args.value_of("compression").unwrap_or("brotli/3")),
+            encrypt: args.is_present("encrypt"),
+            hash: parse_hash(args.value_of("hash").unwrap_or("blake2")),
             file: args.value_of("FILE").unwrap().to_string(),
         }
     }

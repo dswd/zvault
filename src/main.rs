@@ -12,6 +12,8 @@ extern crate chrono;
 #[macro_use] extern crate clap;
 #[macro_use] extern crate log;
 extern crate byteorder;
+extern crate sodiumoxide;
+extern crate ansi_term;
 
 
 pub mod util;
@@ -26,12 +28,11 @@ mod cli;
 // TODO: - Keep meta bundles also locally
 // TODO: - Load and compare remote bundles to bundle map
 // TODO: - Write backup files there as well
-// TODO: Store list of hashes and hash method in bundle
 // TODO: Remove backup subtrees
 // TODO: Recompress & combine bundles
 // TODO: Prune backups (based on age like attic)
 // TODO: Check backup integrity too
-// TODO: Encryption
+// TODO: Encrypt backup files too
 // TODO: list --tree
 // TODO: Partial backups
 // TODO: Import repository from remote folder

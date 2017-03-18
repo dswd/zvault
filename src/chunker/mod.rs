@@ -77,7 +77,7 @@ impl IChunker for Chunker {
 }
 
 
-#[derive(Debug)]
+#[derive(Debug, Clone, Copy)]
 pub enum ChunkerType {
     Ae(usize),
     Rabin((usize, u32)),
@@ -139,6 +139,11 @@ impl ChunkerType {
             ChunkerType::Rabin((size, _seed)) => size,
             ChunkerType::FastCdc((size, _seed)) => size
         }
+    }
+
+    #[inline]
+    pub fn to_string(&self) -> String {
+        format!("{}/{}", self.name(), self.avg_size()/1024)
     }
 
     #[inline]

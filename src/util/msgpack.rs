@@ -17,7 +17,7 @@ pub fn encode<T: Serialize>(t: &T) -> Result<Vec<u8>, EncodeError> {
     Ok(data)
 }
 
-pub fn encode_to_stream<T: Serialize>(t: T, w: &mut Write) -> Result<(), EncodeError> {
+pub fn encode_to_stream<T: Serialize>(t: &T, w: &mut Write) -> Result<(), EncodeError> {
     let mut writer = rmp_serde::Serializer::new(w);
     t.serialize(&mut writer)
 }
