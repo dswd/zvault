@@ -68,8 +68,22 @@ impl Repository {
     }
 
     pub fn save_backup(&mut self, backup: &Backup, name: &str) -> Result<(), RepositoryError> {
-        let mut file = try!(File::create(self.path.join("backups").join(name)));
+        let path = self.path.join("backups").join(name);
+        try!(fs::create_dir_all(path.parent().unwrap()));
+        let mut file = try!(File::create(path));
         Ok(try!(msgpack::encode_to_stream(backup, &mut file)))
+    }
+
+    pub fn delete_backup(&self, name: &str) -> Result<(), RepositoryError> {
+        let mut path = self.path.join("backups").join(name);
+        try!(fs::remove_file(&path));
+        loop {
+            path = path.parent().unwrap().to_owned();
+            if fs::remove_dir(&path).is_err() {
+                break
+            }
+        }
+        Ok(())
     }
 
     pub fn restore_inode_tree<P: AsRef<Path>>(&mut self, inode: Inode, path: P) -> Result<(), RepositoryError> {

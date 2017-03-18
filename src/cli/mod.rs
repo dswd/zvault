@@ -64,13 +64,13 @@ pub fn run() {
         },
         Arguments::Remove{repo_path, backup_name, inode} => {
             let repo = open_repository(&repo_path);
-            let _backup = get_backup(&repo, &backup_name);
             if let Some(_inode) = inode {
+                let _backup = get_backup(&repo, &backup_name);
                 error!("Removing backup subtrees is not implemented yet");
                 return
             } else {
-                error!("Removing backups is not implemented yet");
-                return
+                repo.delete_backup(&backup_name).unwrap();
+                info!("The backup has been deleted, run vacuum to reclaim space");
             }
         },
         Arguments::Vacuum{repo_path, ..} => {
