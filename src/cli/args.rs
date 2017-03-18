@@ -145,8 +145,8 @@ pub fn parse() -> Arguments {
         (@subcommand backup =>
             (about: "creates a new backup")
             (@arg full: --full "create a full backup")
-            (@arg BACKUP: +required "repository::backup path")
             (@arg SRC: +required "source path to backup")
+            (@arg BACKUP: +required "repository::backup path")
         )
         (@subcommand restore =>
             (about: "restores a backup (or subpath)")
@@ -177,8 +177,8 @@ pub fn parse() -> Arguments {
         )
         (@subcommand import =>
             (about: "reconstruct a repository from the remote files")
-            (@arg REPO: +required "path of the local repository to create")
             (@arg REMOTE: +required "remote repository path")
+            (@arg REPO: +required "path of the local repository to create")
         )
         (@subcommand info =>
             (about: "displays information on a repository, a backup or a path in a backup")

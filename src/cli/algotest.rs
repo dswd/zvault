@@ -74,7 +74,7 @@ pub fn run(path: &str, bundle_size: usize, chunker: ChunkerType, compression: Op
     assert_eq!(chunks.iter().map(|c| c.1).sum::<usize>(), size as usize);
     let chunk_size_avg = size as f32 / chunks.len() as f32;
     let chunk_size_stddev = (chunks.iter().map(|c| (c.1 as f32 - chunk_size_avg).powi(2)).sum::<f32>() / (chunks.len() as f32 - 1.0)).sqrt();
-    println!("- {} chunks, avg size: {}, stddev: {}", chunks.len(), to_file_size(chunk_size_avg as u64), to_file_size(chunk_size_stddev as u64));
+    println!("- {} chunks, avg size: {} ±{}", chunks.len(), to_file_size(chunk_size_avg as u64), to_file_size(chunk_size_stddev as u64));
 
     println!();
 
