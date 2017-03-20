@@ -17,7 +17,8 @@ pub enum Arguments {
         repo_path: String,
         backup_name: String,
         src_path: String,
-        full: bool
+        full: bool,
+        reference: Option<String>
     },
     Restore {
         repo_path: String,
@@ -204,6 +205,7 @@ pub fn parse() -> Arguments {
         (@subcommand backup =>
             (about: "creates a new backup")
             (@arg full: --full "create a full backup")
+            (@arg reference: --ref +takes_value "the reference backup to use for partial backup")
             (@arg SRC: +required "source path to backup")
             (@arg BACKUP: +required "repository::backup path")
         )
@@ -313,7 +315,8 @@ pub fn parse() -> Arguments {
             repo_path: repository.to_string(),
             backup_name: backup.unwrap().to_string(),
             full: args.is_present("full"),
-            src_path: args.value_of("SRC").unwrap().to_string()
+            src_path: args.value_of("SRC").unwrap().to_string(),
+            reference: args.value_of("reference").map(|v| v.to_string())
         }
     }
     if let Some(args) = args.subcommand_matches("restore") {

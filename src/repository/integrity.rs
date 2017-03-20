@@ -79,7 +79,7 @@ impl Repository {
         let mut new = false;
         for &(hash, _len) in chunks {
             if let Some(pos) = self.index.pos(&hash) {
-                new |= checked.get(pos);
+                new |= !checked.get(pos);
                 checked.set(pos);
             } else {
                 return Err(RepositoryIntegrityError::MissingChunk(hash).into())

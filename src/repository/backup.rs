@@ -23,7 +23,9 @@ pub struct Backup {
     pub date: i64,
     pub duration: f32,
     pub file_count: usize,
-    pub dir_count: usize
+    pub dir_count: usize,
+    pub host: String,
+    pub path: String
 }
 serde_impl!(Backup(u8) {
     root: Vec<Chunk> => 0,
@@ -37,7 +39,9 @@ serde_impl!(Backup(u8) {
     date: i64 => 8,
     duration: f32 => 9,
     file_count: usize => 10,
-    dir_count: usize => 11
+    dir_count: usize => 11,
+    host: String => 12,
+    path: String => 13
 });
 
 
@@ -168,19 +172,28 @@ impl Repository {
     }
 
     #[allow(dead_code)]
-    pub fn create_full_backup<P: AsRef<Path>>(&mut self, path: P) -> Result<Backup, RepositoryError> {
-        let mut scan_stack = vec![path.as_ref().to_owned()];
+    pub fn create_backup<P: AsRef<Path>>(&mut self, path: P, reference: Option<&Backup>) -> Result<Backup, RepositoryError> {
+        let reference_inode = reference.and_then(|b| self.get_inode(&b.root).ok());
+        let mut scan_stack = vec![(path.as_ref().to_owned(), reference_inode)];
         let mut save_stack = vec![];
         let mut directories = HashMap::new();
         let mut backup = Backup::default();
+        backup.host = get_hostname().unwrap_or_else(|_| "".to_string());
+        backup.path = path.as_ref().to_string_lossy().to_string();
         let info_before = self.info();
         let start = Local::now();
-        while let Some(path) = scan_stack.pop() {
+        while let Some((path, reference_inode)) = scan_stack.pop() {
             // Create an inode for this path containing all attributes and contents
             // (for files) but no children (for directories)
-            let mut inode = try!(self.create_inode(&path));
+            let mut inode = try!(self.create_inode(&path, reference_inode.as_ref()));
             backup.total_data_size += inode.size;
-            backup.changed_data_size += inode.size;
+            if let Some(ref ref_inode) = reference_inode {
+                if !ref_inode.is_unchanged(&inode) {
+                    backup.changed_data_size += inode.size;
+                }
+            } else {
+                backup.changed_data_size += inode.size;
+            }
             if inode.file_type == FileType::Directory {
                 backup.dir_count +=1;
                 // For directories we need to put all children on the stack too, so there will be inodes created for them
@@ -189,7 +202,13 @@ impl Repository {
                 inode.children = Some(HashMap::new());
                 directories.insert(path.clone(), inode);
                 for ch in try!(fs::read_dir(&path)) {
-                    scan_stack.push(try!(ch).path());
+                    let child = try!(ch);
+                    let name = child.file_name().to_string_lossy().to_string();
+                    let ref_child = reference_inode.as_ref()
+                        .and_then(|inode| inode.children.as_ref())
+                        .and_then(|map| map.get(&name))
+                        .and_then(|chunks| self.get_inode(chunks).ok());
+                    scan_stack.push((child.path(), ref_child));
                 }
             } else {
                 backup.file_count +=1;

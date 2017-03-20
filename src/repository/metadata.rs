@@ -24,7 +24,7 @@ serde_impl!(FileType(u8) {
 });
 
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub enum FileContents {
     Inline(msgpack::Bytes),
     ChunkedDirect(ChunkList),
@@ -84,6 +84,7 @@ serde_impl!(Inode(u8) {
     contents: Option<FileContents> => 10,
     children: HashMap<String, ChunkList> => 11
 });
+
 
 impl Inode {
     #[inline]
@@ -145,13 +146,25 @@ impl Inode {
         // https://crates.io/crates/filetime
         Ok(file)
     }
+
+    pub fn is_unchanged(&self, other: &Inode) -> bool {
+        self.modify_time == other.modify_time
+        && self.create_time == other.create_time
+        && self.file_type == other.file_type
+    }
 }
 
 
 impl Repository {
-    pub fn create_inode<P: AsRef<Path>>(&mut self, path: P) -> Result<Inode, RepositoryError> {
+    pub fn create_inode<P: AsRef<Path>>(&mut self, path: P, reference: Option<&Inode>) -> Result<Inode, RepositoryError> {
         let mut inode = try!(Inode::get_from(path.as_ref()));
         if inode.file_type == FileType::File && inode.size > 0 {
+            if let Some(reference) = reference {
+                if reference.is_unchanged(&inode) {
+                    inode.contents = reference.contents.clone();
+                    return Ok(inode)
+                }
+            }
             let mut file = try!(File::open(path));
             if inode.size < 100 {
                 let mut data = Vec::with_capacity(inode.size as usize);
@@ -164,7 +177,7 @@ impl Repository {
                 } else {
                     let mut chunk_data = Vec::with_capacity(chunks.encoded_size());
                     chunks.write_to(&mut chunk_data).unwrap();
-                    chunks = try!(self.put_data(BundleMode::Content, &chunk_data));
+                    chunks = try!(self.put_data(BundleMode::Meta, &chunk_data));
                     inode.contents = Some(FileContents::ChunkedIndirect(chunks));
                 }
             }

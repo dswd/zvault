@@ -254,7 +254,7 @@ impl Bundle {
 
     #[inline]
     fn load_encoded_contents(&self) -> Result<Vec<u8>, BundleError> {
-        debug!("Load bundle data {}", self.info.id);
+        debug!("Load bundle data {} ({:?})", self.info.id, self.info.mode);
         let mut file = BufReader::new(try!(File::open(&self.path).context(&self.path as &Path)));
         try!(file.seek(SeekFrom::Start(self.content_start as u64)).context(&self.path as &Path));
         let mut data = Vec::with_capacity(max(self.info.encoded_size, self.info.raw_size)+1024);

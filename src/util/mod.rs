@@ -7,6 +7,7 @@ mod chunk;
 mod bitmap;
 mod hex;
 mod cli;
+mod hostname;
 pub mod msgpack;
 
 pub use self::chunk::*;
@@ -17,3 +18,4 @@ pub use self::lru_cache::*;
 pub use self::bitmap::*;
 pub use self::hex::*;
 pub use self::cli::*;
+pub use self::hostname::*;

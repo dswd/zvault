@@ -21,6 +21,7 @@ log = "0.3"
 byteorder = "1.0"
 ansi_term = "0.9"
 sodiumoxide = "*"
+libc = "*"
 
 [build-dependencies]
 pkg-config = "0.3"

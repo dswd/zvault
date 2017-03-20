@@ -14,6 +14,7 @@ extern crate chrono;
 extern crate byteorder;
 extern crate sodiumoxide;
 extern crate ansi_term;
+extern crate libc;
 
 
 pub mod util;
@@ -33,7 +34,6 @@ mod cli;
 // TODO: Recompress & combine bundles
 // TODO: Encrypt backup files too
 // TODO: list --tree
-// TODO: Partial backups via reference inode
 // TODO: Import repository from remote folder
 // TODO: Continue on errors
 

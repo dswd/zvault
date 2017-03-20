@@ -30,6 +30,22 @@ fn get_backup(repo: &Repository, backup_name: &str) -> Backup {
     }
 }
 
+fn find_reference_backup(repo: &Repository, path: &str) -> Option<Backup> {
+    let mut matching = Vec::new();
+    let hostname = match get_hostname() {
+        Ok(hostname) => hostname,
+        Err(_) => return None
+    };
+    for (_, backup) in repo.list_backups().unwrap() {
+        if backup.host == hostname && backup.path == path {
+            matching.push(backup);
+        }
+    }
+    matching.sort_by_key(|b| b.date);
+    matching.pop()
+}
+
+
 #[allow(unknown_lints,cyclomatic_complexity)]
 pub fn run() {
     if let Err(err) = logger::init() {
@@ -54,12 +70,21 @@ pub fn run() {
                 repo.save_config().unwrap();
             }
         },
-        Arguments::Backup{repo_path, backup_name, src_path, full} => {
+        Arguments::Backup{repo_path, backup_name, src_path, full, reference} => {
             let mut repo = open_repository(&repo_path);
+            let mut reference_backup = None;
             if !full {
-                warn!("Partial backups are not implemented yet, creating full backup");
+                reference_backup = reference.map(|r| get_backup(&repo, &r));
+                if reference_backup.is_none() {
+                    reference_backup = find_reference_backup(&repo, &src_path);
+                }
+                if let Some(ref backup) = reference_backup {
+                    info!("Using backup from {} as reference", Local.timestamp(backup.date, 0).to_rfc2822());
+                } else {
+                    info!("No reference backup found, doing a full scan instead");
+                }
             }
-            let backup = repo.create_full_backup(&src_path).unwrap();
+            let backup = repo.create_backup(&src_path, reference_backup.as_ref()).unwrap();
             repo.save_backup(&backup, &backup_name).unwrap();
         },
         Arguments::Restore{repo_path, backup_name, inode, dst_path} => {
