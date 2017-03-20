@@ -31,7 +31,6 @@ mod cli;
 // TODO: Remove backup subtrees
 // TODO: Recompress & combine bundles
 // TODO: Prune backups (based on age like attic)
-// TODO: Check backup integrity too
 // TODO: Encrypt backup files too
 // TODO: list --tree
 // TODO: Partial backups

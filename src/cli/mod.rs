@@ -6,7 +6,6 @@ use chrono::prelude::*;
 use std::process::exit;
 
 use ::repository::{Repository, Config, Backup};
-use ::util::cli::*;
 use ::util::*;
 use self::args::Arguments;
 
@@ -72,8 +71,8 @@ pub fn run() {
                 repo.restore_backup(&backup, &dst_path).unwrap();
             }
         },
-        Arguments::Remove{repo_path, backup_name, inode} => {
-            let repo = open_repository(&repo_path);
+        Arguments::Remove{repo_path, backup_name, inode, vacuum} => {
+            let mut repo = open_repository(&repo_path);
             if let Some(_inode) = inode {
                 let _backup = get_backup(&repo, &backup_name);
                 error!("Removing backup subtrees is not implemented yet");
@@ -82,10 +81,13 @@ pub fn run() {
                 repo.delete_backup(&backup_name).unwrap();
                 info!("The backup has been deleted, run vacuum to reclaim space");
             }
+            if vacuum {
+                repo.vacuum(0.5, false).unwrap();
+            }
         },
-        Arguments::Vacuum{repo_path, ..} => {
-            let _repo = open_repository(&repo_path);
-            error!("Vaccum is not implemented yet");
+        Arguments::Vacuum{repo_path, ratio, simulate} => {
+            let mut repo = open_repository(&repo_path);
+            repo.vacuum(ratio, simulate).unwrap();
             return
         },
         Arguments::Check{repo_path, backup_name, inode, full} => {

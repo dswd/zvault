@@ -393,6 +393,15 @@ impl Index {
     }
 
     #[inline]
+    pub fn pos(&self, key: &Hash) -> Option<usize> {
+        debug_assert!(self.check().is_ok(), "Inconsistent before get");
+        match self.locate(key) {
+            LocateResult::Found(pos) => Some(pos),
+            _ => None
+        }
+    }
+
+    #[inline]
     pub fn get(&self, key: &Hash) -> Option<Location> {
         debug_assert!(self.check().is_ok(), "Inconsistent before get");
         match self.locate(key) {

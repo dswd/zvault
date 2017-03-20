@@ -28,11 +28,13 @@ pub enum Arguments {
     Remove {
         repo_path: String,
         backup_name: String,
+        vacuum: bool,
         inode: Option<String>
     },
     Vacuum {
         repo_path: String,
-        ratio: f32
+        ratio: f32,
+        simulate: bool
     },
     Check {
         repo_path: String,
@@ -204,11 +206,13 @@ pub fn parse() -> Arguments {
         )
         (@subcommand remove =>
             (about: "removes a backup or a subpath")
+            (@arg vacuum: --vacuum "run vacuum afterwards to reclaim space")
             (@arg BACKUP: +required "repository::backup[::subpath] path")
         )
         (@subcommand vacuum =>
             (about: "saves space by combining and recompressing bundles")
-            (@arg ratio: --ratio -r "ratio of unused chunks in a bundle to rewrite that bundle")
+            (@arg ratio: --ratio -r +takes_value "ratio of unused chunks in a bundle to rewrite that bundle")
+            (@arg ratio: --simulate "only simulate the vacuum, do not remove any bundles")
             (@arg REPO: +required "path of the repository")
         )
         (@subcommand check =>
@@ -317,6 +321,7 @@ pub fn parse() -> Arguments {
         return Arguments::Remove {
             repo_path: repository.to_string(),
             backup_name: backup.unwrap().to_string(),
+            vacuum: args.is_present("vacuum"),
             inode: inode.map(|v| v.to_string())
         }
     }
@@ -328,6 +333,7 @@ pub fn parse() -> Arguments {
         }
         return Arguments::Vacuum {
             repo_path: repository.to_string(),
+            simulate: args.is_present("simulate"),
             ratio: parse_float(args.value_of("ratio").unwrap_or("0.5"), "ratio") as f32
         }
     }

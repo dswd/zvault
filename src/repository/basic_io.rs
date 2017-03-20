@@ -32,11 +32,16 @@ impl Repository {
         Ok(Some(try!(self.bundles.get_chunk(&bundle_id, found.chunk as usize))))
     }
 
+    #[inline]
     pub fn put_chunk(&mut self, mode: BundleMode, hash: Hash, data: &[u8]) -> Result<(), RepositoryError> {
         // If this chunk is in the index, ignore it
         if self.index.contains(&hash) {
             return Ok(())
         }
+        self.put_chunk_override(mode, hash, data)
+    }
+
+    pub fn put_chunk_override(&mut self, mode: BundleMode, hash: Hash, data: &[u8]) -> Result<(), RepositoryError> {
         // Calculate the next free bundle id now (late lifetime prevents this)
         let next_free_bundle_id = self.next_free_bundle_id();
         // Select a bundle writer according to the mode and...

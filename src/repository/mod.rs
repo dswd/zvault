@@ -6,6 +6,7 @@ mod info;
 mod metadata;
 mod backup;
 mod error;
+mod vacuum;
 
 use std::mem;
 use std::cmp::max;
@@ -22,6 +23,7 @@ pub use self::error::RepositoryError;
 pub use self::config::Config;
 pub use self::metadata::{Inode, FileType};
 pub use self::backup::Backup;
+pub use self::integrity::RepositoryIntegrityError;
 use self::bundle_map::BundleMap;
 
 

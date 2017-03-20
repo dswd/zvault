@@ -6,7 +6,6 @@ use chrono::Duration;
 
 use ::chunker::*;
 use ::util::*;
-use ::util::cli::*;
 
 
 struct ChunkSink {

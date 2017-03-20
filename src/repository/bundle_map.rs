@@ -90,13 +90,18 @@ impl BundleMap {
     }
 
     #[inline]
+    pub fn remove(&mut self, id: u32) -> Option<BundleData> {
+        self.0.remove(&id)
+    }
+
+    #[inline]
     pub fn set(&mut self, id: u32, bundle: &Bundle) {
         let data = BundleData { info: bundle.info.clone() };
         self.0.insert(id, data);
     }
 
     #[inline]
-    pub fn bundles(&self) -> Vec<&BundleData> {
-        self.0.values().collect()
+    pub fn bundles(&self) -> Vec<(u32, &BundleData)> {
+        self.0.iter().map(|(id, bundle)| (*id, bundle)).collect()
     }
 }
