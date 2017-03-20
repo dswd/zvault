@@ -31,6 +31,16 @@ pub enum Arguments {
         vacuum: bool,
         inode: Option<String>
     },
+    Prune {
+        repo_path: String,
+        prefix: String,
+        daily: Option<usize>,
+        weekly: Option<usize>,
+        monthly: Option<usize>,
+        yearly: Option<usize>,
+        vacuum: bool,
+        simulate: bool
+    },
     Vacuum {
         repo_path: String,
         ratio: f32,
@@ -209,10 +219,21 @@ pub fn parse() -> Arguments {
             (@arg vacuum: --vacuum "run vacuum afterwards to reclaim space")
             (@arg BACKUP: +required "repository::backup[::subpath] path")
         )
+        (@subcommand prune =>
+            (about: "removes backups based on age")
+            (@arg prefix: --prefix +takes_value "only consider backups starting with this prefix")
+            (@arg daily: --daily +takes_value "keep this number of daily backups")
+            (@arg weekly: --weekly +takes_value "keep this number of weekly backups")
+            (@arg monthly: --monthly +takes_value "keep this number of monthly backups")
+            (@arg yearly: --yearly +takes_value  "keep this number of yearly backups")
+            (@arg vacuum: --vacuum "run vacuum afterwards to reclaim space")
+            (@arg simulate: --simulate "only simulate the prune, do not remove any backups")
+            (@arg REPO: +required "path of the repository")
+        )
         (@subcommand vacuum =>
             (about: "saves space by combining and recompressing bundles")
             (@arg ratio: --ratio -r +takes_value "ratio of unused chunks in a bundle to rewrite that bundle")
-            (@arg ratio: --simulate "only simulate the vacuum, do not remove any bundles")
+            (@arg simulate: --simulate "only simulate the vacuum, do not remove any bundles")
             (@arg REPO: +required "path of the repository")
         )
         (@subcommand check =>
@@ -323,6 +344,23 @@ pub fn parse() -> Arguments {
             backup_name: backup.unwrap().to_string(),
             vacuum: args.is_present("vacuum"),
             inode: inode.map(|v| v.to_string())
+        }
+    }
+    if let Some(args) = args.subcommand_matches("prune") {
+        let (repository, backup, inode) = split_repo_path(args.value_of("REPO").unwrap());
+        if backup.is_some() || inode.is_some() {
+            println!("No backups or subpaths may be given here");
+            exit(1);
+        }
+        return Arguments::Prune {
+            repo_path: repository.to_string(),
+            prefix: args.value_of("prefix").unwrap_or("").to_string(),
+            vacuum: args.is_present("vacuum"),
+            simulate: args.is_present("simulate"),
+            daily: args.value_of("daily").map(|v| parse_num(v, "daily backups") as usize),
+            weekly: args.value_of("weekly").map(|v| parse_num(v, "weekly backups") as usize),
+            monthly: args.value_of("monthly").map(|v| parse_num(v, "monthly backups") as usize),
+            yearly: args.value_of("yearly").map(|v| parse_num(v, "yearly backups") as usize),
         }
     }
     if let Some(args) = args.subcommand_matches("vacuum") {

@@ -42,8 +42,8 @@ serde_impl!(Backup(u8) {
 
 
 impl Repository {
-    pub fn list_backups(&self) -> Result<Vec<String>, RepositoryError> {
-        let mut backups = Vec::new();
+    pub fn list_backups(&self) -> Result<HashMap<String, Backup>, RepositoryError> {
+        let mut backups = HashMap::new();
         let mut paths = Vec::new();
         let base_path = self.path.join("backups");
         paths.push(base_path.clone());
@@ -55,7 +55,9 @@ impl Repository {
                     paths.push(path);
                 } else {
                     let relpath = path.strip_prefix(&base_path).unwrap();
-                    backups.push(relpath.to_string_lossy().to_string());
+                    let name = relpath.to_string_lossy().to_string();
+                    let backup = try!(self.get_backup(&name));
+                    backups.insert(name, backup);
                 }
             }
         }
@@ -81,6 +83,99 @@ impl Repository {
             path = path.parent().unwrap().to_owned();
             if fs::remove_dir(&path).is_err() {
                 break
+            }
+        }
+        Ok(())
+    }
+
+    pub fn prune_backups(&self, prefix: &str, daily: Option<usize>, weekly: Option<usize>, monthly: Option<usize>, yearly: Option<usize>, simulate: bool) -> Result<(), RepositoryError> {
+        let mut backups = Vec::new();
+        for (name, backup) in try!(self.list_backups()) {
+            if name.starts_with(prefix) {
+                let date = Local.timestamp(backup.date, 0);
+                backups.push((name, date, backup));
+            }
+        }
+        backups.sort_by_key(|backup| backup.2.date);
+        let mut keep = Bitmap::new(backups.len());
+        if let Some(max) = yearly {
+            let mut unique = VecDeque::with_capacity(max+1);
+            let mut last = None;
+            for (i, backup) in backups.iter().enumerate() {
+                let val = backup.1.year();
+                if Some(val) != last {
+                    last = Some(val);
+                    unique.push_back(i);
+                    if unique.len() > max {
+                        unique.pop_front();
+                    }
+                }
+            }
+            for i in unique {
+                keep.set(i);
+            }
+        }
+        if let Some(max) = monthly {
+            let mut unique = VecDeque::with_capacity(max+1);
+            let mut last = None;
+            for (i, backup) in backups.iter().enumerate() {
+                let val = (backup.1.year(), backup.1.month());
+                if Some(val) != last {
+                    last = Some(val);
+                    unique.push_back(i);
+                    if unique.len() > max {
+                        unique.pop_front();
+                    }
+                }
+            }
+            for i in unique {
+                keep.set(i);
+            }
+        }
+        if let Some(max) = weekly {
+            let mut unique = VecDeque::with_capacity(max+1);
+            let mut last = None;
+            for (i, backup) in backups.iter().enumerate() {
+                let val = (backup.1.isoweekdate().0, backup.1.isoweekdate().1);
+                if Some(val) != last {
+                    last = Some(val);
+                    unique.push_back(i);
+                    if unique.len() > max {
+                        unique.pop_front();
+                    }
+                }
+            }
+            for i in unique {
+                keep.set(i);
+            }
+        }
+        if let Some(max) = daily {
+            let mut unique = VecDeque::with_capacity(max+1);
+            let mut last = None;
+            for (i, backup) in backups.iter().enumerate() {
+                let val = (backup.1.year(), backup.1.month(), backup.1.day());
+                if Some(val) != last {
+                    last = Some(val);
+                    unique.push_back(i);
+                    if unique.len() > max {
+                        unique.pop_front();
+                    }
+                }
+            }
+            for i in unique {
+                keep.set(i);
+            }
+        }
+        let mut remove = Vec::new();
+        for (i, backup) in backups.into_iter().enumerate() {
+            if !keep.get(i) {
+                remove.push(backup.0);
+            }
+        }
+        info!("Removing the following backups: {:?}", remove);
+        if !simulate {
+            for name in remove {
+                try!(self.delete_backup(&name));
             }
         }
         Ok(())

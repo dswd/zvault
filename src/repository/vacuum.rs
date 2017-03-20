@@ -48,8 +48,7 @@ impl Repository {
                 used_size: 0
             });
         }
-        for name in try!(self.list_backups()) {
-            let backup = try!(self.get_backup(&name));
+        for (_name, backup) in try!(self.list_backups()).into_iter() {
             let mut todo = VecDeque::new();
             todo.push_back(backup.root);
             while let Some(chunks) = todo.pop_front() {

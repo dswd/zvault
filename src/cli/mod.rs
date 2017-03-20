@@ -85,6 +85,17 @@ pub fn run() {
                 repo.vacuum(0.5, false).unwrap();
             }
         },
+        Arguments::Prune{repo_path, prefix, daily, weekly, monthly, yearly, simulate, vacuum} => {
+            let mut repo = open_repository(&repo_path);
+            if daily.is_none() && weekly.is_none() && monthly.is_none() && yearly.is_none() {
+                error!("This would remove all those backups");
+                exit(1);
+            }
+            repo.prune_backups(&prefix, daily, weekly, monthly, yearly, simulate).unwrap();
+            if !simulate && vacuum {
+                repo.vacuum(0.5, false).unwrap();
+            }
+        },
         Arguments::Vacuum{repo_path, ratio, simulate} => {
             let mut repo = open_repository(&repo_path);
             repo.vacuum(ratio, simulate).unwrap();
@@ -118,8 +129,8 @@ pub fn run() {
                     }
                 }
             } else {
-                for backup in repo.list_backups().unwrap() {
-                    println!("{}", backup);
+                for (name, backup) in repo.list_backups().unwrap() {
+                    println!("{} - {} - {} files, {} dirs, {}", name, Local.timestamp(backup.date, 0).to_rfc2822(), backup.file_count, backup.dir_count, to_file_size(backup.total_data_size));
                 }
             }
         },
