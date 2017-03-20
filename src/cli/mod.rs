@@ -30,6 +30,7 @@ fn get_backup(repo: &Repository, backup_name: &str) -> Backup {
     }
 }
 
+#[allow(unknown_lints,cyclomatic_complexity)]
 pub fn run() {
     if let Err(err) = logger::init() {
         println!("Failed to initialize the logger: {}", err);
@@ -71,8 +72,8 @@ pub fn run() {
                 repo.restore_backup(&backup, &dst_path).unwrap();
             }
         },
-        Arguments::Remove{repo_path, backup_name, inode, vacuum} => {
-            let mut repo = open_repository(&repo_path);
+        Arguments::Remove{repo_path, backup_name, inode} => {
+            let repo = open_repository(&repo_path);
             if let Some(_inode) = inode {
                 let _backup = get_backup(&repo, &backup_name);
                 error!("Removing backup subtrees is not implemented yet");
@@ -81,24 +82,24 @@ pub fn run() {
                 repo.delete_backup(&backup_name).unwrap();
                 info!("The backup has been deleted, run vacuum to reclaim space");
             }
-            if vacuum {
-                repo.vacuum(0.5, false).unwrap();
-            }
         },
-        Arguments::Prune{repo_path, prefix, daily, weekly, monthly, yearly, simulate, vacuum} => {
-            let mut repo = open_repository(&repo_path);
+        Arguments::Prune{repo_path, prefix, daily, weekly, monthly, yearly, force} => {
+            let repo = open_repository(&repo_path);
             if daily.is_none() && weekly.is_none() && monthly.is_none() && yearly.is_none() {
                 error!("This would remove all those backups");
                 exit(1);
             }
-            repo.prune_backups(&prefix, daily, weekly, monthly, yearly, simulate).unwrap();
-            if !simulate && vacuum {
-                repo.vacuum(0.5, false).unwrap();
+            repo.prune_backups(&prefix, daily, weekly, monthly, yearly, force).unwrap();
+            if !force {
+                info!("Run with --force to actually execute this command");
             }
         },
-        Arguments::Vacuum{repo_path, ratio, simulate} => {
+        Arguments::Vacuum{repo_path, ratio, force} => {
             let mut repo = open_repository(&repo_path);
-            repo.vacuum(ratio, simulate).unwrap();
+            repo.vacuum(ratio, force).unwrap();
+            if !force {
+                info!("Run with --force to actually execute this command");
+            }
             return
         },
         Arguments::Check{repo_path, backup_name, inode, full} => {
@@ -130,7 +131,7 @@ pub fn run() {
                 }
             } else {
                 for (name, backup) in repo.list_backups().unwrap() {
-                    println!("{} - {} - {} files, {} dirs, {}", name, Local.timestamp(backup.date, 0).to_rfc2822(), backup.file_count, backup.dir_count, to_file_size(backup.total_data_size));
+                    println!("{:25}  {:>32}  {:5} files, {:4} dirs, {:>10}", name, Local.timestamp(backup.date, 0).to_rfc2822(), backup.file_count, backup.dir_count, to_file_size(backup.total_data_size));
                 }
             }
         },

@@ -28,7 +28,6 @@ pub enum Arguments {
     Remove {
         repo_path: String,
         backup_name: String,
-        vacuum: bool,
         inode: Option<String>
     },
     Prune {
@@ -38,13 +37,12 @@ pub enum Arguments {
         weekly: Option<usize>,
         monthly: Option<usize>,
         yearly: Option<usize>,
-        vacuum: bool,
-        simulate: bool
+        force: bool
     },
     Vacuum {
         repo_path: String,
         ratio: f32,
-        simulate: bool
+        force: bool
     },
     Check {
         repo_path: String,
@@ -216,7 +214,6 @@ pub fn parse() -> Arguments {
         )
         (@subcommand remove =>
             (about: "removes a backup or a subpath")
-            (@arg vacuum: --vacuum "run vacuum afterwards to reclaim space")
             (@arg BACKUP: +required "repository::backup[::subpath] path")
         )
         (@subcommand prune =>
@@ -226,14 +223,13 @@ pub fn parse() -> Arguments {
             (@arg weekly: --weekly +takes_value "keep this number of weekly backups")
             (@arg monthly: --monthly +takes_value "keep this number of monthly backups")
             (@arg yearly: --yearly +takes_value  "keep this number of yearly backups")
-            (@arg vacuum: --vacuum "run vacuum afterwards to reclaim space")
-            (@arg simulate: --simulate "only simulate the prune, do not remove any backups")
+            (@arg force: --force -f "actually run the prunce instead of simulating it")
             (@arg REPO: +required "path of the repository")
         )
         (@subcommand vacuum =>
             (about: "saves space by combining and recompressing bundles")
             (@arg ratio: --ratio -r +takes_value "ratio of unused chunks in a bundle to rewrite that bundle")
-            (@arg simulate: --simulate "only simulate the vacuum, do not remove any bundles")
+            (@arg force: --force -f "actually run the vacuum instead of simulating it")
             (@arg REPO: +required "path of the repository")
         )
         (@subcommand check =>
@@ -342,7 +338,6 @@ pub fn parse() -> Arguments {
         return Arguments::Remove {
             repo_path: repository.to_string(),
             backup_name: backup.unwrap().to_string(),
-            vacuum: args.is_present("vacuum"),
             inode: inode.map(|v| v.to_string())
         }
     }
@@ -355,8 +350,7 @@ pub fn parse() -> Arguments {
         return Arguments::Prune {
             repo_path: repository.to_string(),
             prefix: args.value_of("prefix").unwrap_or("").to_string(),
-            vacuum: args.is_present("vacuum"),
-            simulate: args.is_present("simulate"),
+            force: args.is_present("force"),
             daily: args.value_of("daily").map(|v| parse_num(v, "daily backups") as usize),
             weekly: args.value_of("weekly").map(|v| parse_num(v, "weekly backups") as usize),
             monthly: args.value_of("monthly").map(|v| parse_num(v, "monthly backups") as usize),
@@ -371,7 +365,7 @@ pub fn parse() -> Arguments {
         }
         return Arguments::Vacuum {
             repo_path: repository.to_string(),
-            simulate: args.is_present("simulate"),
+            force: args.is_present("force"),
             ratio: parse_float(args.value_of("ratio").unwrap_or("0.5"), "ratio") as f32
         }
     }

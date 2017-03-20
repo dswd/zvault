@@ -48,7 +48,7 @@ impl Repository {
                 used_size: 0
             });
         }
-        for (_name, backup) in try!(self.list_backups()).into_iter() {
+        for (_name, backup) in try!(self.list_backups()) {
             let mut todo = VecDeque::new();
             todo.push_back(backup.root);
             while let Some(chunks) = todo.pop_front() {
@@ -90,7 +90,7 @@ impl Repository {
         }
     }
 
-    pub fn vacuum(&mut self, ratio: f32, simulate: bool) -> Result<(), RepositoryError> {
+    pub fn vacuum(&mut self, ratio: f32, force: bool) -> Result<(), RepositoryError> {
         try!(self.flush());
         info!("Analyzing chunk usage");
         let usage = try!(self.analyze_usage());
@@ -106,11 +106,11 @@ impl Repository {
             }
         }
         info!("Reclaiming {} by rewriting {} bundles", to_file_size(reclaim_space as u64), rewrite_bundles.len());
-        if simulate {
+        if !force {
             return Ok(())
         }
         for id in &rewrite_bundles {
-            let bundle = usage.get(id).unwrap();
+            let bundle = &usage[id];
             let bundle_id = self.bundle_map.get(*id).unwrap().id();
             for chunk in 0..bundle.chunk_count {
                 let data = try!(self.bundles.get_chunk(&bundle_id, chunk));

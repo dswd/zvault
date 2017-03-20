@@ -107,7 +107,7 @@ pub struct Crypto {
 
 impl Crypto {
     #[inline]
-    pub fn new() -> Self {
+    pub fn dummy() -> Self {
         Crypto { path: PathBuf::new(), keys: HashMap::new() }
     }
 

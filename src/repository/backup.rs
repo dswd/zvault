@@ -88,7 +88,8 @@ impl Repository {
         Ok(())
     }
 
-    pub fn prune_backups(&self, prefix: &str, daily: Option<usize>, weekly: Option<usize>, monthly: Option<usize>, yearly: Option<usize>, simulate: bool) -> Result<(), RepositoryError> {
+
+    pub fn prune_backups(&self, prefix: &str, daily: Option<usize>, weekly: Option<usize>, monthly: Option<usize>, yearly: Option<usize>, force: bool) -> Result<(), RepositoryError> {
         let mut backups = Vec::new();
         for (name, backup) in try!(self.list_backups()) {
             if name.starts_with(prefix) {
@@ -98,13 +99,15 @@ impl Repository {
         }
         backups.sort_by_key(|backup| backup.2.date);
         let mut keep = Bitmap::new(backups.len());
-        if let Some(max) = yearly {
+
+        fn mark_needed<K: Eq, F: Fn(&DateTime<Local>) -> K>(backups: &[(String, DateTime<Local>, Backup)], keep: &mut Bitmap, max: usize, keyfn: F) {
             let mut unique = VecDeque::with_capacity(max+1);
             let mut last = None;
             for (i, backup) in backups.iter().enumerate() {
-                let val = backup.1.year();
-                if Some(val) != last {
-                    last = Some(val);
+                let val = keyfn(&backup.1);
+                let cur = Some(val);
+                if cur != last {
+                    last = cur;
                     unique.push_back(i);
                     if unique.len() > max {
                         unique.pop_front();
@@ -114,57 +117,18 @@ impl Repository {
             for i in unique {
                 keep.set(i);
             }
+        }
+        if let Some(max) = yearly {
+            mark_needed(&backups, &mut keep, max, |d| d.year());
         }
         if let Some(max) = monthly {
-            let mut unique = VecDeque::with_capacity(max+1);
-            let mut last = None;
-            for (i, backup) in backups.iter().enumerate() {
-                let val = (backup.1.year(), backup.1.month());
-                if Some(val) != last {
-                    last = Some(val);
-                    unique.push_back(i);
-                    if unique.len() > max {
-                        unique.pop_front();
-                    }
-                }
-            }
-            for i in unique {
-                keep.set(i);
-            }
+            mark_needed(&backups, &mut keep, max, |d| (d.year(), d.month()));
         }
         if let Some(max) = weekly {
-            let mut unique = VecDeque::with_capacity(max+1);
-            let mut last = None;
-            for (i, backup) in backups.iter().enumerate() {
-                let val = (backup.1.isoweekdate().0, backup.1.isoweekdate().1);
-                if Some(val) != last {
-                    last = Some(val);
-                    unique.push_back(i);
-                    if unique.len() > max {
-                        unique.pop_front();
-                    }
-                }
-            }
-            for i in unique {
-                keep.set(i);
-            }
+            mark_needed(&backups, &mut keep, max, |d| (d.isoweekdate().0, d.isoweekdate().1));
         }
         if let Some(max) = daily {
-            let mut unique = VecDeque::with_capacity(max+1);
-            let mut last = None;
-            for (i, backup) in backups.iter().enumerate() {
-                let val = (backup.1.year(), backup.1.month(), backup.1.day());
-                if Some(val) != last {
-                    last = Some(val);
-                    unique.push_back(i);
-                    if unique.len() > max {
-                        unique.pop_front();
-                    }
-                }
-            }
-            for i in unique {
-                keep.set(i);
-            }
+            mark_needed(&backups, &mut keep, max, |d| (d.year(), d.month(), d.day()));
         }
         let mut remove = Vec::new();
         for (i, backup) in backups.into_iter().enumerate() {
@@ -173,7 +137,7 @@ impl Repository {
             }
         }
         info!("Removing the following backups: {:?}", remove);
-        if !simulate {
+        if force {
             for name in remove {
                 try!(self.delete_backup(&name));
             }

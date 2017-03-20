@@ -239,8 +239,8 @@ impl Bundle {
         if version != HEADER_VERSION {
             return Err(BundleError::WrongVersion(path.clone(), version))
         }
-        let header: BundleInfo = try!(msgpack::decode_from_stream(&mut file)
-            .map_err(|e| BundleError::Decode(e, path.clone())));
+        let header: BundleInfo = try!(msgpack::decode_from_stream(&mut file).context(&path as &Path));
+        debug!("Load bundle {}", header.id);
         let mut chunk_data = Vec::with_capacity(header.chunk_info_size);
         chunk_data.resize(header.chunk_info_size, 0);
         try!(file.read_exact(&mut chunk_data).context(&path as &Path));
@@ -254,6 +254,7 @@ impl Bundle {
 
     #[inline]
     fn load_encoded_contents(&self) -> Result<Vec<u8>, BundleError> {
+        debug!("Load bundle data {}", self.info.id);
         let mut file = BufReader::new(try!(File::open(&self.path).context(&self.path as &Path)));
         try!(file.seek(SeekFrom::Start(self.content_start as u64)).context(&self.path as &Path));
         let mut data = Vec::with_capacity(max(self.info.encoded_size, self.info.raw_size)+1024);

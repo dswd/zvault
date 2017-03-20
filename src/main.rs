@@ -28,11 +28,12 @@ mod cli;
 // TODO: - Keep meta bundles also locally
 // TODO: - Load and compare remote bundles to bundle map
 // TODO: - Write backup files there as well
+// TODO: - Avoid loading remote backups
 // TODO: Remove backup subtrees
 // TODO: Recompress & combine bundles
 // TODO: Encrypt backup files too
 // TODO: list --tree
-// TODO: Partial backups
+// TODO: Partial backups via reference inode
 // TODO: Import repository from remote folder
 // TODO: Continue on errors
 
