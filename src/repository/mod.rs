@@ -47,6 +47,7 @@ impl Repository {
         try!(fs::create_dir(path.join("keys")));
         let crypto = Arc::new(Mutex::new(try!(Crypto::open(path.join("keys")))));
         let bundles = try!(BundleDb::create(
+            path.join("remote/bundles"),
             path.join("bundles"),
             crypto.clone()
         ));
@@ -75,6 +76,7 @@ impl Repository {
         let config = try!(Config::load(path.join("config.yaml")));
         let crypto = Arc::new(Mutex::new(try!(Crypto::open(path.join("keys")))));
         let bundles = try!(BundleDb::open(
+            path.join("remote/bundles"),
             path.join("bundles"),
             crypto.clone()
         ));

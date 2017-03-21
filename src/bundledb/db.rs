@@ -8,7 +8,8 @@ use std::sync::{Arc, Mutex};
 
 
 pub struct BundleDb {
-    path: PathBuf,
+    remote_path: PathBuf,
+    local_path: PathBuf,
     crypto: Arc<Mutex<Crypto>>,
     bundles: HashMap<BundleId, Bundle>,
     bundle_cache: LruCache<BundleId, Vec<u8>>
@@ -16,9 +17,10 @@ pub struct BundleDb {
 
 
 impl BundleDb {
-    fn new(path: PathBuf, crypto: Arc<Mutex<Crypto>>) -> Self {
+    fn new(remote_path: PathBuf, local_path: PathBuf, crypto: Arc<Mutex<Crypto>>) -> Self {
         BundleDb {
-            path: path,
+            remote_path: remote_path,
+            local_path: local_path,
             crypto: crypto,
             bundles: HashMap::new(),
             bundle_cache: LruCache::new(5, 10)
@@ -26,7 +28,7 @@ impl BundleDb {
     }
 
     pub fn bundle_path(&self, bundle: &BundleId) -> (PathBuf, PathBuf) {
-        let mut folder = self.path.clone();
+        let mut folder = self.remote_path.clone();
         let mut file = bundle.to_string().to_owned() + ".bundle";
         let mut count = self.bundles.len();
         while count >= 100 {
@@ -43,7 +45,7 @@ impl BundleDb {
     fn load_bundle_list(&mut self) -> Result<(), BundleError> {
         self.bundles.clear();
         let mut paths = Vec::new();
-        paths.push(self.path.clone());
+        paths.push(self.remote_path.clone());
         while let Some(path) = paths.pop() {
             for entry in try!(fs::read_dir(path).map_err(BundleError::List)) {
                 let entry = try!(entry.map_err(BundleError::List));
@@ -60,18 +62,21 @@ impl BundleDb {
     }
 
     #[inline]
-    pub fn open<P: AsRef<Path>>(path: P, crypto: Arc<Mutex<Crypto>>) -> Result<Self, BundleError> {
-        let path = path.as_ref().to_owned();
-        let mut self_ = Self::new(path, crypto);
+    pub fn open<R: AsRef<Path>, L: AsRef<Path>>(remote_path: R, local_path: L, crypto: Arc<Mutex<Crypto>>) -> Result<Self, BundleError> {
+        let remote_path = remote_path.as_ref().to_owned();
+        let local_path = local_path.as_ref().to_owned();
+        let mut self_ = Self::new(remote_path, local_path, crypto);
         try!(self_.load_bundle_list());
         Ok(self_)
     }
 
     #[inline]
-    pub fn create<P: AsRef<Path>>(path: P, crypto: Arc<Mutex<Crypto>>) -> Result<Self, BundleError> {
-        let path = path.as_ref().to_owned();
-        try!(fs::create_dir_all(&path).context(&path as &Path));
-        Ok(Self::new(path, crypto))
+    pub fn create<R: AsRef<Path>, L: AsRef<Path>>(remote_path: R, local_path: L, crypto: Arc<Mutex<Crypto>>) -> Result<Self, BundleError> {
+        let remote_path = remote_path.as_ref().to_owned();
+        let local_path = local_path.as_ref().to_owned();
+        try!(fs::create_dir_all(&remote_path).context(&remote_path as &Path));
+        try!(fs::create_dir_all(&local_path).context(&local_path as &Path));
+        Ok(Self::new(remote_path, local_path, crypto))
     }
 
     #[inline]
@@ -86,7 +91,7 @@ impl BundleDb {
     }
 
     pub fn get_chunk(&mut self, bundle_id: &BundleId, id: usize) -> Result<Vec<u8>, BundleError> {
-        let bundle = try!(self.bundles.get(bundle_id).ok_or(BundleError::NoSuchBundle(bundle_id.clone())));
+        let bundle = try!(self.bundles.get_mut(bundle_id).ok_or(BundleError::NoSuchBundle(bundle_id.clone())));
         let (pos, len) = try!(bundle.get_chunk_position(id));
         let mut chunk = Vec::with_capacity(len);
         if let Some(data) = self.bundle_cache.get(bundle_id) {
@@ -127,8 +132,8 @@ impl BundleDb {
     }
 
     #[inline]
-    pub fn check(&self, full: bool) -> Result<(), BundleError> {
-        for bundle in self.bundles.values() {
+    pub fn check(&mut self, full: bool) -> Result<(), BundleError> {
+        for bundle in self.bundles.values_mut() {
             try!(bundle.check(full))
         }
         Ok(())

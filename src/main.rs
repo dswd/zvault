@@ -36,6 +36,7 @@ mod prelude;
 // TODO: list --tree
 // TODO: Import repository from remote folder
 // TODO: Continue on errors
+// TODO: Allow to use tar files for backup and restore (--tar, http://alexcrichton.com/tar-rs/tar/index.html)
 
 fn main() {
     cli::run();

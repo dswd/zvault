@@ -102,30 +102,24 @@ impl Default for BundleInfo {
 
 pub struct Bundle {
     pub info: BundleInfo,
-    pub chunks: ChunkList,
     pub version: u8,
     pub path: PathBuf,
     crypto: Arc<Mutex<Crypto>>,
     pub content_start: usize,
-    pub chunk_positions: Vec<usize>
+    pub chunks: Option<ChunkList>,
+    pub chunk_positions: Option<Vec<usize>>
 }
 
 impl Bundle {
-    pub fn new(path: PathBuf, version: u8, content_start: usize, crypto: Arc<Mutex<Crypto>>, info: BundleInfo, chunks: ChunkList) -> Self {
-        let mut chunk_positions = Vec::with_capacity(chunks.len());
-        let mut pos = 0;
-        for &(_, len) in (&chunks).iter() {
-            chunk_positions.push(pos);
-            pos += len as usize;
-        }
+    pub fn new(path: PathBuf, version: u8, content_start: usize, crypto: Arc<Mutex<Crypto>>, info: BundleInfo) -> Self {
         Bundle {
             info: info,
-            chunks: chunks,
+            chunks: None,
             version: version,
             path: path,
             crypto: crypto,
             content_start: content_start,
-            chunk_positions: chunk_positions
+            chunk_positions: None
         }
     }
 
@@ -147,15 +141,32 @@ impl Bundle {
         }
         let header: BundleInfo = try!(msgpack::decode_from_stream(&mut file).context(&path as &Path));
         debug!("Load bundle {}", header.id);
-        let mut chunk_data = Vec::with_capacity(header.chunk_info_size);
-        chunk_data.resize(header.chunk_info_size, 0);
-        try!(file.read_exact(&mut chunk_data).context(&path as &Path));
-        if let Some(ref encryption) = header.encryption {
-            chunk_data = try!(crypto.lock().unwrap().decrypt(&encryption, &chunk_data).context(&path as &Path));
+        let content_start = file.seek(SeekFrom::Current(0)).unwrap() as usize + header.chunk_info_size;
+        Ok(Bundle::new(path, version, content_start, crypto, header))
+    }
+
+    pub fn load_chunklist(&mut self) -> Result<(), BundleError> {
+        debug!("Load bundle chunklist {} ({:?})", self.info.id, self.info.mode);
+        let mut file = BufReader::new(try!(File::open(&self.path).context(&self.path as &Path)));
+        let len = self.info.chunk_info_size;
+        let start = self.content_start - len;
+        try!(file.seek(SeekFrom::Start(start as u64)).context(&self.path as &Path));
+        let mut chunk_data = Vec::with_capacity(len);
+        chunk_data.resize(self.info.chunk_info_size, 0);
+        try!(file.read_exact(&mut chunk_data).context(&self.path as &Path));
+        if let Some(ref encryption) = self.info.encryption {
+            chunk_data = try!(self.crypto.lock().unwrap().decrypt(&encryption, &chunk_data).context(&self.path as &Path));
         }
         let chunks = ChunkList::read_from(&chunk_data);
-        let content_start = file.seek(SeekFrom::Current(0)).unwrap() as usize;
-        Ok(Bundle::new(path, version, content_start, crypto, header, chunks))
+        let mut chunk_positions = Vec::with_capacity(chunks.len());
+        let mut pos = 0;
+        for &(_, len) in (&chunks).iter() {
+            chunk_positions.push(pos);
+            pos += len as usize;
+        }
+        self.chunks = Some(chunks);
+        self.chunk_positions = Some(chunk_positions);
+        Ok(())
     }
 
     #[inline]
@@ -185,20 +196,27 @@ impl Bundle {
     }
 
     #[inline]
-    pub fn get_chunk_position(&self, id: usize) -> Result<(usize, usize), BundleError> {
+    pub fn get_chunk_position(&mut self, id: usize) -> Result<(usize, usize), BundleError> {
         if id >= self.info.chunk_count {
             return Err(BundleError::NoSuchChunk(self.id(), id))
         }
-        Ok((self.chunk_positions[id], self.chunks[id].1 as usize))
+        if self.chunks.is_none() || self.chunk_positions.is_none() {
+            try!(self.load_chunklist());
+        }
+        let pos = self.chunk_positions.as_ref().unwrap()[id];
+        let len = self.chunks.as_ref().unwrap()[id].1 as usize;
+        Ok((pos, len))
     }
 
-    pub fn check(&self, full: bool) -> Result<(), BundleError> {
-        //FIXME: adapt to new format
-        if self.info.chunk_count != self.chunks.len() {
+    pub fn check(&mut self, full: bool) -> Result<(), BundleError> {
+        if self.chunks.is_none() || self.chunk_positions.is_none() {
+            try!(self.load_chunklist());
+        }
+        if self.info.chunk_count != self.chunks.as_ref().unwrap().len() {
             return Err(BundleError::Integrity(self.id(),
                 "Chunk list size does not match chunk count"))
         }
-        if self.chunks.iter().map(|c| c.1 as usize).sum::<usize>() != self.info.raw_size {
+        if self.chunks.as_ref().unwrap().iter().map(|c| c.1 as usize).sum::<usize>() != self.info.raw_size {
             return Err(BundleError::Integrity(self.id(),
                 "Individual chunk sizes do not add up to total size"))
         }

@@ -93,7 +93,7 @@ impl BundleWriter {
         try!(file.write_all(&chunk_data).context(&path as &Path));
         let content_start = file.seek(SeekFrom::Current(0)).unwrap() as usize;
         try!(file.write_all(&self.data).context(&path as &Path));
-        Ok(Bundle::new(path, HEADER_VERSION, content_start, self.crypto, header, self.chunks))
+        Ok(Bundle::new(path, HEADER_VERSION, content_start, self.crypto, header))
     }
 
     #[inline]
