@@ -94,8 +94,8 @@ impl BundleMap {
     }
 
     #[inline]
-    pub fn set(&mut self, id: u32, bundle: &Bundle) {
-        let data = BundleData { info: bundle.info.clone() };
+    pub fn set(&mut self, id: u32, bundle: BundleInfo) {
+        let data = BundleData { info: bundle };
         self.0.insert(id, data);
     }
 

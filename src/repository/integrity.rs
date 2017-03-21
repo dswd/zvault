@@ -46,13 +46,13 @@ impl Repository {
             // Lookup bundle id from map
             let bundle_id = try!(self.get_bundle_id(entry.data.bundle));
             // Get bundle object from bundledb
-            let bundle = if let Some(bundle) = self.bundles.get_bundle(&bundle_id) {
+            let bundle = if let Some(bundle) = self.bundles.get_bundle_info(&bundle_id) {
                 bundle
             } else {
                 return Err(RepositoryIntegrityError::MissingBundle(bundle_id.clone()).into())
             };
             // Get chunk from bundle
-            if bundle.info.chunk_count <= entry.data.chunk as usize {
+            if bundle.chunk_count <= entry.data.chunk as usize {
                 return Err(RepositoryIntegrityError::NoSuchChunk(bundle_id.clone(), entry.data.chunk).into())
             }
             pos += 1;

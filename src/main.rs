@@ -26,10 +26,7 @@ mod prelude;
 
 // TODO: Seperate remote folder
 // TODO: - Copy/move backup files to remote folder
-// TODO: - Keep meta bundles also locally
 // TODO: - Load and compare remote bundles to bundle map
-// TODO: - Write backup files there as well
-// TODO: - Avoid loading remote backups
 // TODO: - Lock during vacuum
 // TODO: Remove backup subtrees
 // TODO: Recompress & combine bundles

@@ -75,7 +75,7 @@ impl Repository {
         let path = path.as_ref().to_owned();
         let config = try!(Config::load(path.join("config.yaml")));
         let crypto = Arc::new(Mutex::new(try!(Crypto::open(path.join("keys")))));
-        let bundles = try!(BundleDb::open(
+        let (bundles, new, gone) = try!(BundleDb::open(
             path.join("remote/bundles"),
             path.join("bundles"),
             crypto.clone()

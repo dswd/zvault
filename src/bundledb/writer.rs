@@ -2,8 +2,8 @@ use ::prelude::*;
 use super::*;
 
 use std::path::Path;
-use std::fs::{self, File};
-use std::io::{Write, Seek, SeekFrom, BufWriter};
+use std::fs::File;
+use std::io::{Write, BufWriter};
 use std::sync::{Arc, Mutex};
 
 
@@ -58,7 +58,7 @@ impl BundleWriter {
         Ok(self.chunk_count-1)
     }
 
-    pub fn finish(mut self, db: &BundleDb) -> Result<Bundle, BundleError> {
+    pub fn finish(mut self, db: &BundleDb) -> Result<StoredBundle, BundleError> {
         if let Some(stream) = self.compression_stream {
             try!(stream.finish(&mut self.data))
         }
@@ -72,9 +72,7 @@ impl BundleWriter {
         if let Some(ref encryption) = self.encryption {
             chunk_data = try!(self.crypto.lock().unwrap().encrypt(&encryption, &chunk_data));
         }
-        let (folder, file) = db.bundle_path(&id);
-        let path = folder.join(file);
-        try!(fs::create_dir_all(&folder).context(&path as &Path));
+        let path = db.temp_bundle_path(&id);
         let mut file = BufWriter::new(try!(File::create(&path).context(&path as &Path)));
         try!(file.write_all(&HEADER_STRING).context(&path as &Path));
         try!(file.write_all(&[HEADER_VERSION]).context(&path as &Path));
@@ -91,9 +89,8 @@ impl BundleWriter {
         };
         try!(msgpack::encode_to_stream(&header, &mut file).context(&path as &Path));
         try!(file.write_all(&chunk_data).context(&path as &Path));
-        let content_start = file.seek(SeekFrom::Current(0)).unwrap() as usize;
         try!(file.write_all(&self.data).context(&path as &Path));
-        Ok(Bundle::new(path, HEADER_VERSION, content_start, self.crypto, header))
+        Ok(StoredBundle { path: path, info: header })
     }
 
     #[inline]

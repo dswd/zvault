@@ -128,20 +128,32 @@ impl Bundle {
         self.info.id.clone()
     }
 
-    pub fn load(path: PathBuf, crypto: Arc<Mutex<Crypto>>) -> Result<Self, BundleError> {
-        let mut file = BufReader::new(try!(File::open(&path).context(&path as &Path)));
+    fn load_header<P: AsRef<Path>>(path: P) -> Result<(BundleInfo, u8, usize), BundleError> {
+        let path = path.as_ref();
+        let mut file = BufReader::new(try!(File::open(path).context(path)));
         let mut header = [0u8; 8];
-        try!(file.read_exact(&mut header).context(&path as &Path));
+        try!(file.read_exact(&mut header).context(path));
         if header[..HEADER_STRING.len()] != HEADER_STRING {
-            return Err(BundleError::WrongHeader(path.clone()))
+            return Err(BundleError::WrongHeader(path.to_path_buf()))
         }
         let version = header[HEADER_STRING.len()];
         if version != HEADER_VERSION {
-            return Err(BundleError::WrongVersion(path.clone(), version))
+            return Err(BundleError::WrongVersion(path.to_path_buf(), version))
         }
-        let header: BundleInfo = try!(msgpack::decode_from_stream(&mut file).context(&path as &Path));
+        let header: BundleInfo = try!(msgpack::decode_from_stream(&mut file).context(path));
         debug!("Load bundle {}", header.id);
         let content_start = file.seek(SeekFrom::Current(0)).unwrap() as usize + header.chunk_info_size;
+        Ok((header, version, content_start))
+    }
+
+    #[inline]
+    pub fn load_info<P: AsRef<Path>>(path: P) -> Result<BundleInfo, BundleError> {
+        Self::load_header(path).map(|b| b.0)
+    }
+
+    #[inline]
+    pub fn load(path: PathBuf, crypto: Arc<Mutex<Crypto>>) -> Result<Self, BundleError> {
+        let (header, version, content_start) = try!(Self::load_header(&path));
         Ok(Bundle::new(path, version, content_start, crypto, header))
     }
 

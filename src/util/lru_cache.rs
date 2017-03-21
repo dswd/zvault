@@ -42,6 +42,17 @@ impl<K: Eq+Hash, V> LruCache<K, V> {
     }
 
     #[inline]
+    pub fn get_mut(&mut self, key: &K) -> Option<&mut V> {
+        if let Some(&mut (ref mut item, ref mut n)) = self.items.get_mut(key) {
+            *n = self.next;
+            self.next += 1;
+            Some(item)
+        } else {
+            None
+        }
+    }
+
+    #[inline]
     fn shrink(&mut self) {
         let mut tags: Vec<u64> = self.items.values().map(|&(_, n)| n).collect();
         tags.sort();
