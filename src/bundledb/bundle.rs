@@ -1,3 +1,6 @@
+use ::prelude::*;
+use super::*;
+
 use std::path::{Path, PathBuf};
 use std::fs::{self, File};
 use std::io::{Read, Seek, SeekFrom, BufReader};
@@ -5,16 +8,7 @@ use std::cmp::max;
 use std::fmt::{self, Debug};
 use std::sync::{Arc, Mutex};
 
-use serde::{self, Serialize, Deserialize};
-use quick_error::ResultExt;
-
-use util::*;
-use super::*;
-
-
-static HEADER_STRING: [u8; 7] = *b"zvault\x01";
-static HEADER_VERSION: u8 = 1;
-
+use serde;
 
 
 #[derive(Hash, PartialEq, Eq, Clone, Default)]

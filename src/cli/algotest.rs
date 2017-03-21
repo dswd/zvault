@@ -1,11 +1,10 @@
+use ::prelude::*;
+
 use std::io::{self, Cursor, Read, Write};
 use std::fs::File;
 use std::collections::HashSet;
 
 use chrono::Duration;
-
-use ::chunker::*;
-use ::util::*;
 
 
 struct ChunkSink {

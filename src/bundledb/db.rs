@@ -1,12 +1,10 @@
+use ::prelude::*;
+use super::*;
+
 use std::path::{Path, PathBuf};
 use std::collections::HashMap;
 use std::fs;
 use std::sync::{Arc, Mutex};
-
-use quick_error::ResultExt;
-
-use util::*;
-use super::*;
 
 
 pub struct BundleDb {

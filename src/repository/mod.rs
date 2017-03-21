@@ -8,22 +8,20 @@ mod backup;
 mod error;
 mod vacuum;
 
+use ::prelude::*;
+
 use std::mem;
 use std::cmp::max;
 use std::path::{PathBuf, Path};
 use std::fs;
 use std::sync::{Arc, Mutex};
 
-use super::index::Index;
-use super::bundledb::{BundleDb, BundleWriter};
-use super::chunker::Chunker;
-use ::util::*;
-
 pub use self::error::RepositoryError;
 pub use self::config::Config;
 pub use self::metadata::{Inode, FileType};
 pub use self::backup::Backup;
 pub use self::integrity::RepositoryIntegrityError;
+pub use self::info::RepositoryInfo;
 use self::bundle_map::BundleMap;
 
 

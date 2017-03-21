@@ -16,13 +16,13 @@ extern crate sodiumoxide;
 extern crate ansi_term;
 extern crate libc;
 
-
 pub mod util;
 pub mod bundledb;
 pub mod index;
 mod chunker;
 mod repository;
 mod cli;
+mod prelude;
 
 // TODO: Seperate remote folder
 // TODO: - Copy/move backup files to remote folder

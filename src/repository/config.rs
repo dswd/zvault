@@ -1,11 +1,10 @@
+use ::prelude::*;
+
 use serde_yaml;
 
 use std::fs::File;
 use std::path::Path;
 use std::io;
-
-use ::util::*;
-use ::chunker::ChunkerType;
 
 
 quick_error!{

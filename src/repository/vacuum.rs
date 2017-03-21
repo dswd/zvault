@@ -1,10 +1,8 @@
-use super::{Repository, RepositoryError, RepositoryIntegrityError};
+use ::prelude::*;
+
 use super::metadata::FileContents;
 
 use std::collections::{HashMap, HashSet, VecDeque};
-
-use ::bundledb::BundleMode;
-use ::util::*;
 
 
 pub struct BundleUsage {

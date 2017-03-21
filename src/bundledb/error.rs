@@ -1,8 +1,8 @@
+use ::prelude::*;
+use super::*;
+
 use std::path::{Path, PathBuf};
 use std::io;
-
-use util::*;
-use super::*;
 
 quick_error!{
     #[derive(Debug)]

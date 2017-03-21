@@ -1,13 +1,7 @@
+use ::prelude::*;
+
 use std::mem;
 use std::io::{Read, Write, Cursor};
-
-use super::{Repository, RepositoryError};
-use ::index::Location;
-use ::bundledb::{BundleId, BundleMode};
-use super::integrity::RepositoryIntegrityError;
-
-use ::util::*;
-use ::chunker::{IChunker, ChunkerStatus};
 
 
 impl Repository {

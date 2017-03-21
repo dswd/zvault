@@ -2,11 +2,11 @@ mod args;
 mod logger;
 mod algotest;
 
+use ::prelude::*;
+
 use chrono::prelude::*;
 use std::process::exit;
 
-use ::repository::{Repository, Config, Backup};
-use ::util::*;
 use self::args::Arguments;
 
 

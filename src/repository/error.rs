@@ -1,14 +1,11 @@
+use ::prelude::*;
+
 use std::io;
 use std::path::PathBuf;
 
-use super::backup::{Backup, BackupError};
+use super::backup::BackupError;
 use super::bundle_map::BundleMapError;
 use super::config::ConfigError;
-use super::integrity::RepositoryIntegrityError;
-use ::index::IndexError;
-use ::bundledb::BundleError;
-use ::chunker::ChunkerError;
-use ::util::*;
 
 
 quick_error!{

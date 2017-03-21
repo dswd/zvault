@@ -1,16 +1,10 @@
+use ::prelude::*;
+use super::*;
+
 use std::path::Path;
 use std::fs::{self, File};
 use std::io::{Write, Seek, SeekFrom, BufWriter};
 use std::sync::{Arc, Mutex};
-
-use quick_error::ResultExt;
-
-use util::*;
-use super::*;
-
-
-static HEADER_STRING: [u8; 7] = *b"zvault\x01";
-static HEADER_VERSION: u8 = 1;
 
 
 pub struct BundleWriter {
