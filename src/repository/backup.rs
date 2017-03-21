@@ -3,11 +3,71 @@ use super::metadata::{FileType, Inode};
 
 use ::util::*;
 
+use std::io::{self, BufReader, BufWriter, Read, Write};
 use std::fs::{self, File};
-use std::path::{self, Path};
+use std::path::{self, Path, PathBuf};
 use std::collections::{HashMap, VecDeque};
 
+use quick_error::ResultExt;
 use chrono::prelude::*;
+
+
+static HEADER_STRING: [u8; 7] = *b"zvault\x03";
+static HEADER_VERSION: u8 = 1;
+
+
+quick_error!{
+    #[derive(Debug)]
+    pub enum BackupError {
+        Io(err: io::Error, path: PathBuf) {
+            cause(err)
+            context(path: &'a Path, err: io::Error) -> (err, path.to_path_buf())
+            description("Failed to read/write backup")
+            display("Failed to read/write backup {:?}: {}", path, err)
+        }
+        Decode(err: msgpack::DecodeError, path: PathBuf) {
+            cause(err)
+            context(path: &'a Path, err: msgpack::DecodeError) -> (err, path.to_path_buf())
+            description("Failed to decode backup")
+            display("Failed to decode backup of {:?}: {}", path, err)
+        }
+        Encode(err: msgpack::EncodeError, path: PathBuf) {
+            cause(err)
+            context(path: &'a Path, err: msgpack::EncodeError) -> (err, path.to_path_buf())
+            description("Failed to encode backup")
+            display("Failed to encode backup of {:?}: {}", path, err)
+        }
+        WrongHeader(path: PathBuf) {
+            description("Wrong header")
+            display("Wrong header on backup {:?}", path)
+        }
+        WrongVersion(path: PathBuf, version: u8) {
+            description("Wrong version")
+            display("Wrong version on backup {:?}: {}", path, version)
+        }
+        Decryption(err: EncryptionError, path: PathBuf) {
+            cause(err)
+            context(path: &'a Path, err: EncryptionError) -> (err, path.to_path_buf())
+            description("Decryption failed")
+            display("Decryption failed on backup {:?}: {}", path, err)
+        }
+        Encryption(err: EncryptionError) {
+            from()
+            cause(err)
+            description("Encryption failed")
+            display("Encryption failed: {}", err)
+        }
+    }
+}
+
+
+#[derive(Default, Debug, Clone)]
+struct BackupHeader {
+    pub encryption: Option<Encryption>
+}
+serde_impl!(BackupHeader(u8) {
+    encryption: Option<Encryption> => 0
+});
 
 
 #[derive(Default, Debug, Clone)]
@@ -44,13 +104,53 @@ serde_impl!(Backup(u8) {
     path: String => 13
 });
 
+impl Backup {
+    pub fn read_from<P: AsRef<Path>>(crypto: &Crypto, path: P) -> Result<Self, BackupError> {
+        let path = path.as_ref();
+        let mut file = BufReader::new(try!(File::open(path).context(path)));
+        let mut header = [0u8; 8];
+        try!(file.read_exact(&mut header).context(&path as &Path));
+        if header[..HEADER_STRING.len()] != HEADER_STRING {
+            return Err(BackupError::WrongHeader(path.to_path_buf()))
+        }
+        let version = header[HEADER_STRING.len()];
+        if version != HEADER_VERSION {
+            return Err(BackupError::WrongVersion(path.to_path_buf(), version))
+        }
+        let header: BackupHeader = try!(msgpack::decode_from_stream(&mut file).context(path));
+        let mut data = Vec::new();
+        try!(file.read_to_end(&mut data).context(path));
+        if let Some(ref encryption) = header.encryption {
+            data = try!(crypto.decrypt(encryption, &data));
+        }
+        Ok(try!(msgpack::decode(&data).context(path)))
+    }
+
+    pub fn save_to<P: AsRef<Path>>(&self, crypto: &Crypto, encryption: Option<Encryption>, path: P) -> Result<(), BackupError> {
+        let path = path.as_ref();
+        let mut data = try!(msgpack::encode(self).context(path));
+        if let Some(ref encryption) = encryption {
+            data = try!(crypto.encrypt(encryption, &data));
+        }
+        let mut file = BufWriter::new(try!(File::create(path).context(path)));
+        try!(file.write_all(&HEADER_STRING).context(path));
+        try!(file.write_all(&[HEADER_VERSION]).context(path));
+        let header = BackupHeader { encryption: encryption };
+        try!(msgpack::encode_to_stream(&header, &mut file).context(path));
+        try!(file.write_all(&data).context(path));
+        Ok(())
+    }
+}
+
+
 
 impl Repository {
-    pub fn list_backups(&self) -> Result<HashMap<String, Backup>, RepositoryError> {
+    pub fn get_backups(&self) -> Result<(HashMap<String, Backup>, bool), RepositoryError> {
         let mut backups = HashMap::new();
         let mut paths = Vec::new();
         let base_path = self.path.join("backups");
         paths.push(base_path.clone());
+        let mut some_failed = false;
         while let Some(path) = paths.pop() {
             for entry in try!(fs::read_dir(path)) {
                 let entry = try!(entry);
@@ -60,24 +160,28 @@ impl Repository {
                 } else {
                     let relpath = path.strip_prefix(&base_path).unwrap();
                     let name = relpath.to_string_lossy().to_string();
-                    let backup = try!(self.get_backup(&name));
-                    backups.insert(name, backup);
+                    if let Ok(backup) = self.get_backup(&name) {
+                        backups.insert(name, backup);
+                    } else {
+                        some_failed = true;
+                    }
                 }
             }
         }
-        Ok(backups)
+        if some_failed {
+            warn!("Some backups could not be read");
+        }
+        Ok((backups, some_failed))
     }
 
     pub fn get_backup(&self, name: &str) -> Result<Backup, RepositoryError> {
-        let mut file = try!(File::open(self.path.join("backups").join(name)));
-        Ok(try!(msgpack::decode_from_stream(&mut file)))
+        Ok(try!(Backup::read_from(&self.crypto.lock().unwrap(), self.path.join("backups").join(name))))
     }
 
     pub fn save_backup(&mut self, backup: &Backup, name: &str) -> Result<(), RepositoryError> {
         let path = self.path.join("backups").join(name);
         try!(fs::create_dir_all(path.parent().unwrap()));
-        let mut file = try!(File::create(path));
-        Ok(try!(msgpack::encode_to_stream(backup, &mut file)))
+        Ok(try!(backup.save_to(&self.crypto.lock().unwrap(), self.config.encryption.clone(), path)))
     }
 
     pub fn delete_backup(&self, name: &str) -> Result<(), RepositoryError> {
@@ -95,7 +199,11 @@ impl Repository {
 
     pub fn prune_backups(&self, prefix: &str, daily: Option<usize>, weekly: Option<usize>, monthly: Option<usize>, yearly: Option<usize>, force: bool) -> Result<(), RepositoryError> {
         let mut backups = Vec::new();
-        for (name, backup) in try!(self.list_backups()) {
+        let (backup_map, some_failed) = try!(self.get_backups());
+        if some_failed {
+            info!("Ignoring backups that can not be read");
+        }
+        for (name, backup) in backup_map {
             if name.starts_with(prefix) {
                 let date = Local.timestamp(backup.date, 0);
                 backups.push((name, date, backup));

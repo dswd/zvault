@@ -37,7 +37,7 @@ impl Repository {
         Ok(new)
     }
 
-    pub fn analyze_usage(&mut self) -> Result<HashMap<u32, BundleUsage>, RepositoryError> {
+    pub fn analyze_usage(&mut self) -> Result<(HashMap<u32, BundleUsage>, bool), RepositoryError> {
         let mut usage = HashMap::new();
         for (id, bundle) in self.bundle_map.bundles() {
             usage.insert(id, BundleUsage {
@@ -48,7 +48,8 @@ impl Repository {
                 used_size: 0
             });
         }
-        for (_name, backup) in try!(self.list_backups()) {
+        let (backups, some_failed) = try!(self.get_backups());
+        for (_name, backup) in backups {
             let mut todo = VecDeque::new();
             todo.push_back(backup.root);
             while let Some(chunks) = todo.pop_front() {
@@ -78,7 +79,7 @@ impl Repository {
                 }
             }
         }
-        Ok(usage)
+        Ok((usage, some_failed))
     }
 
     fn delete_bundle(&mut self, id: u32) -> Result<(), RepositoryError> {
@@ -93,7 +94,10 @@ impl Repository {
     pub fn vacuum(&mut self, ratio: f32, force: bool) -> Result<(), RepositoryError> {
         try!(self.flush());
         info!("Analyzing chunk usage");
-        let usage = try!(self.analyze_usage());
+        let (usage, some_failed) = try!(self.analyze_usage());
+        if some_failed {
+            return Err(RepositoryError::UnsafeVacuum);
+        }
         let total = usage.values().map(|b| b.total_size).sum::<usize>();
         let used = usage.values().map(|b| b.used_size).sum::<usize>();
         info!("Usage: {} of {}, {:.1}%", to_file_size(used as u64), to_file_size(total as u64), used as f32/total as f32*100.0);

@@ -9,7 +9,7 @@ use std::os::unix::io::AsRawFd;
 
 use mmap::{MemoryMap, MapOption, MapError};
 
-const MAGIC: [u8; 7] = *b"zcindex";
+const MAGIC: [u8; 7] = *b"zvault\x02";
 const VERSION: u8 = 1;
 pub const MAX_USAGE: f64 = 0.9;
 pub const MIN_USAGE: f64 = 0.25;

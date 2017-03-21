@@ -36,7 +36,7 @@ fn find_reference_backup(repo: &Repository, path: &str) -> Option<Backup> {
         Ok(hostname) => hostname,
         Err(_) => return None
     };
-    for (_, backup) in repo.list_backups().unwrap() {
+    for (_name, backup) in repo.get_backups().unwrap().0 {
         if backup.host == hostname && backup.path == path {
             matching.push(backup);
         }
@@ -155,8 +155,10 @@ pub fn run() {
                     }
                 }
             } else {
-                for (name, backup) in repo.list_backups().unwrap() {
-                    println!("{:25}  {:>32}  {:5} files, {:4} dirs, {:>10}", name, Local.timestamp(backup.date, 0).to_rfc2822(), backup.file_count, backup.dir_count, to_file_size(backup.total_data_size));
+                for (name, backup) in repo.get_backups().unwrap().0 {
+                    println!("{:25}  {:>32}  {:5} files, {:4} dirs, {:>10}",
+                        name, Local.timestamp(backup.date, 0).to_rfc2822(), backup.file_count,
+                        backup.dir_count, to_file_size(backup.total_data_size));
                 }
             }
         },

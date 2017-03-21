@@ -1,7 +1,7 @@
 use std::io;
 use std::path::PathBuf;
 
-use super::backup::Backup;
+use super::backup::{Backup, BackupError};
 use super::bundle_map::BundleMapError;
 use super::config::ConfigError;
 use super::integrity::RepositoryIntegrityError;
@@ -44,6 +44,12 @@ quick_error!{
             description("Bundle error")
             display("Bundle error: {}", err)
         }
+        Backup(err: BackupError) {
+            from()
+            cause(err)
+            description("Backup error")
+            display("Backup error: {}", err)
+        }
         Chunker(err: ChunkerError) {
             from()
             cause(err)
@@ -81,6 +87,9 @@ quick_error!{
         NoSuchFileInBackup(backup: Backup, path: PathBuf) {
             description("No such file in backup")
             display("The backup does not contain the file {:?}", path)
+        }
+        UnsafeVacuum {
+            description("Not all backups can be read, refusing to run vacuum")
         }
     }
 }

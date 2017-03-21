@@ -11,7 +11,7 @@ use quick_error::ResultExt;
 
 use util::*;
 
-static HEADER_STRING: [u8; 7] = *b"zbundle";
+static HEADER_STRING: [u8; 7] = *b"zvault\x01";
 static HEADER_VERSION: u8 = 1;
 
 /*
@@ -37,8 +37,8 @@ quick_error!{
         Io(err: io::Error, path: PathBuf) {
             cause(err)
             context(path: &'a Path, err: io::Error) -> (err, path.to_path_buf())
-            description("Failed to read bundle")
-            display("Failed to read bundle {:?}: {}", path, err)
+            description("Failed to read/write bundle")
+            display("Failed to read/write bundle {:?}: {}", path, err)
         }
         Decode(err: msgpack::DecodeError, path: PathBuf) {
             cause(err)
@@ -411,8 +411,7 @@ impl BundleWriter {
             encoded_size: encoded_size,
             chunk_info_size: chunk_data.len()
         };
-        try!(msgpack::encode_to_stream(&header, &mut file)
-            .map_err(|e| BundleError::Encode(e, path.clone())));
+        try!(msgpack::encode_to_stream(&header, &mut file).context(&path as &Path));
         try!(file.write_all(&chunk_data).context(&path as &Path));
         let content_start = file.seek(SeekFrom::Current(0)).unwrap() as usize;
         try!(file.write_all(&self.data).context(&path as &Path));

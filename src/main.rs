@@ -30,9 +30,9 @@ mod cli;
 // TODO: - Load and compare remote bundles to bundle map
 // TODO: - Write backup files there as well
 // TODO: - Avoid loading remote backups
+// TODO: - Lock during vacuum
 // TODO: Remove backup subtrees
 // TODO: Recompress & combine bundles
-// TODO: Encrypt backup files too
 // TODO: list --tree
 // TODO: Import repository from remote folder
 // TODO: Continue on errors
