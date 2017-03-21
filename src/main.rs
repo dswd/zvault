@@ -24,15 +24,14 @@ mod repository;
 mod cli;
 mod prelude;
 
-// TODO: Seperate remote folder
-// TODO: - Copy/move backup files to remote folder
-// TODO: - Load and compare remote bundles to bundle map
-// TODO: - Lock during vacuum
+// TODO: React on changes in remote bundles
+// TODO: Lock during backup and vacuum
 // TODO: Remove backup subtrees
 // TODO: Recompress & combine bundles
 // TODO: list --tree
 // TODO: Import repository from remote folder
-// TODO: Continue on errors
+// TODO: Continue on errors (return summary as error)
+// TODO: More detailed errors with nicer text
 // TODO: Allow to use tar files for backup and restore (--tar, http://alexcrichton.com/tar-rs/tar/index.html)
 
 fn main() {

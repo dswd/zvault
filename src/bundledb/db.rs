@@ -3,8 +3,13 @@ use super::*;
 
 use std::path::{Path, PathBuf};
 use std::collections::{HashMap, HashSet};
-use std::fs;
+use std::fs::{self, File};
 use std::sync::{Arc, Mutex};
+use std::io::{BufReader, BufWriter, Read, Write};
+
+
+pub static CACHE_FILE_STRING: [u8; 7] = *b"zvault\x04";
+pub static CACHE_FILE_VERSION: u8 = 1;
 
 
 pub fn bundle_path(bundle: &BundleId, mut folder: PathBuf, mut count: usize) -> (PathBuf, PathBuf) {
@@ -89,12 +94,38 @@ impl StoredBundle {
         bundle.path = path.to_path_buf();
         Ok(bundle)
     }
+
+    pub fn read_list_from<P: AsRef<Path>>(path: P) -> Result<Vec<Self>, BundleError> {
+        let path = path.as_ref();
+        let mut file = BufReader::new(try!(File::open(path).context(path)));
+        let mut header = [0u8; 8];
+        try!(file.read_exact(&mut header).context(&path as &Path));
+        if header[..CACHE_FILE_STRING.len()] != CACHE_FILE_STRING {
+            return Err(BundleError::WrongHeader(path.to_path_buf()))
+        }
+        let version = header[HEADER_STRING.len()];
+        if version != HEADER_VERSION {
+            return Err(BundleError::WrongVersion(path.to_path_buf(), version))
+        }
+        Ok(try!(msgpack::decode_from_stream(&mut file).context(path)))
+    }
+
+    pub fn save_list_to<P: AsRef<Path>>(list: &[Self], path: P) -> Result<(), BundleError> {
+        let path = path.as_ref();
+        let mut file = BufWriter::new(try!(File::create(path).context(path)));
+        try!(file.write_all(&HEADER_STRING).context(path));
+        try!(file.write_all(&[HEADER_VERSION]).context(path));
+        try!(msgpack::encode_to_stream(&list, &mut file).context(path));
+        Ok(())
+    }
 }
 
 
 pub struct BundleDb {
     remote_path: PathBuf,
-    local_path: PathBuf,
+    local_bundles_path: PathBuf,
+    temp_path: PathBuf,
+    remote_cache_path: PathBuf,
     crypto: Arc<Mutex<Crypto>>,
     local_bundles: HashMap<BundleId, StoredBundle>,
     remote_bundles: HashMap<BundleId, StoredBundle>,
@@ -105,8 +136,10 @@ pub struct BundleDb {
 impl BundleDb {
     fn new(remote_path: PathBuf, local_path: PathBuf, crypto: Arc<Mutex<Crypto>>) -> Self {
         BundleDb {
+            remote_cache_path: local_path.join("bundle_info.cache"),
+            local_bundles_path: local_path.join("cached"),
+            temp_path: local_path.join("temp"),
             remote_path: remote_path,
-            local_path: local_path,
             crypto: crypto,
             local_bundles: HashMap::new(),
             remote_bundles: HashMap::new(),
@@ -115,12 +148,23 @@ impl BundleDb {
     }
 
     fn load_bundle_list(&mut self) -> Result<(Vec<BundleId>, Vec<BundleInfo>), BundleError> {
-        try!(load_bundles(self.local_path.join("cached"), &mut self.local_bundles));
-        load_bundles(&self.remote_path, &mut self.remote_bundles)
+        let bundle_info_cache = &self.remote_cache_path;
+        if let Ok(list) = StoredBundle::read_list_from(&bundle_info_cache) {
+            for bundle in list {
+                self.remote_bundles.insert(bundle.id(), bundle);
+            }
+        }
+        try!(load_bundles(&self.local_bundles_path, &mut self.local_bundles));
+        let (new, gone) = try!(load_bundles(&self.remote_path, &mut self.remote_bundles));
+        if !new.is_empty() || !gone.is_empty() {
+            let bundles: Vec<_> = self.remote_bundles.values().cloned().collect();
+            try!(StoredBundle::save_list_to(&bundles, &bundle_info_cache));
+        }
+        Ok((new, gone))
     }
 
     pub fn temp_bundle_path(&self, id: &BundleId) -> PathBuf {
-        self.local_path.join("temp").join(id.to_string().to_owned() + ".bundle")
+        self.temp_path.join(id.to_string().to_owned() + ".bundle")
     }
 
     #[inline]
@@ -136,10 +180,11 @@ impl BundleDb {
     pub fn create<R: AsRef<Path>, L: AsRef<Path>>(remote_path: R, local_path: L, crypto: Arc<Mutex<Crypto>>) -> Result<Self, BundleError> {
         let remote_path = remote_path.as_ref().to_owned();
         let local_path = local_path.as_ref().to_owned();
-        try!(fs::create_dir_all(&remote_path).context(&remote_path as &Path));
-        try!(fs::create_dir_all(local_path.join("cached")).context(&local_path as &Path));
-        try!(fs::create_dir_all(local_path.join("temp")).context(&local_path as &Path));
-        Ok(Self::new(remote_path, local_path, crypto))
+        let self_ = Self::new(remote_path, local_path, crypto);
+        try!(fs::create_dir_all(&self_.remote_path).context(&self_.remote_path as &Path));
+        try!(fs::create_dir_all(&self_.local_bundles_path).context(&self_.local_bundles_path as &Path));
+        try!(fs::create_dir_all(&self_.temp_path).context(&self_.temp_path as &Path));
+        Ok(self_)
     }
 
     #[inline]
@@ -186,7 +231,7 @@ impl BundleDb {
         let bundle = try!(bundle.finish(&self));
         let id = bundle.id();
         if bundle.info.mode == BundleMode::Meta {
-            let (folder, filename) = bundle_path(&id, self.local_path.join("cached"), self.local_bundles.len());
+            let (folder, filename) = bundle_path(&id, self.local_bundles_path.clone(), self.local_bundles.len());
             try!(fs::create_dir_all(&folder).context(&folder as &Path));
             let bundle = try!(bundle.copy_to(folder.join(filename)));
             self.local_bundles.insert(id.clone(), bundle);
