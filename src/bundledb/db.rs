@@ -42,7 +42,7 @@ pub fn load_bundles<P: AsRef<Path>>(path: P, bundles: &mut HashMap<BundleId, Sto
             bundle_paths.remove(&bundle.path);
         }
     }
-    let gone = gone.iter().map(|id| bundles.remove(&id).unwrap().info).collect();
+    let gone = gone.iter().map(|id| bundles.remove(id).unwrap().info).collect();
     let mut new = vec![];
     for path in bundle_paths {
         let bundle = StoredBundle {
