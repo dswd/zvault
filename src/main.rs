@@ -18,7 +18,7 @@ extern crate libc;
 
 
 pub mod util;
-pub mod bundle;
+pub mod bundledb;
 pub mod index;
 mod chunker;
 mod repository;

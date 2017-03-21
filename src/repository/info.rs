@@ -1,5 +1,5 @@
 use super::Repository;
-use ::bundle::BundleInfo;
+use ::bundledb::BundleInfo;
 
 pub struct RepositoryInfo {
     pub bundle_count: usize,

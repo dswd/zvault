@@ -8,7 +8,7 @@ use std::io::{Read, Write};
 use ::util::*;
 use super::{Repository, RepositoryError};
 use super::integrity::RepositoryIntegrityError;
-use ::bundle::BundleMode;
+use ::bundledb::BundleMode;
 
 
 #[derive(Debug, Eq, PartialEq)]

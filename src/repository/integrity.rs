@@ -1,7 +1,7 @@
 use super::{Repository, RepositoryError};
 use super::metadata::FileContents;
 
-use ::bundle::BundleId;
+use ::bundledb::BundleId;
 use ::util::*;
 
 use std::collections::VecDeque;

@@ -3,7 +3,7 @@ use super::metadata::FileContents;
 
 use std::collections::{HashMap, HashSet, VecDeque};
 
-use ::bundle::BundleMode;
+use ::bundledb::BundleMode;
 use ::util::*;
 
 

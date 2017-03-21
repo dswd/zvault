@@ -3,7 +3,7 @@ use std::path::Path;
 use std::io::{self, BufReader, Read, Write, BufWriter};
 use std::fs::File;
 
-use ::bundle::{Bundle, BundleId, BundleInfo};
+use ::bundledb::{Bundle, BundleId, BundleInfo};
 use ::util::*;
 
 

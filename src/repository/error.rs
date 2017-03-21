@@ -6,7 +6,7 @@ use super::bundle_map::BundleMapError;
 use super::config::ConfigError;
 use super::integrity::RepositoryIntegrityError;
 use ::index::IndexError;
-use ::bundle::BundleError;
+use ::bundledb::BundleError;
 use ::chunker::ChunkerError;
 use ::util::*;
 

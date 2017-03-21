@@ -3,7 +3,7 @@ use std::io::{Read, Write, Cursor};
 
 use super::{Repository, RepositoryError};
 use ::index::Location;
-use ::bundle::{BundleId, BundleMode};
+use ::bundledb::{BundleId, BundleMode};
 use super::integrity::RepositoryIntegrityError;
 
 use ::util::*;

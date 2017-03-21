@@ -15,7 +15,7 @@ use std::fs;
 use std::sync::{Arc, Mutex};
 
 use super::index::Index;
-use super::bundle::{BundleDb, BundleWriter};
+use super::bundledb::{BundleDb, BundleWriter};
 use super::chunker::Chunker;
 use ::util::*;
 
