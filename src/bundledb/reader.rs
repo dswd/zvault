@@ -113,7 +113,7 @@ impl BundleReader {
         Ok(BundleReader::new(path, version, content_start, crypto, header))
     }
 
-    pub fn load_chunklist(&mut self) -> Result<(), BundleReaderError> {
+    fn load_chunklist(&mut self) -> Result<(), BundleReaderError> {
         debug!("Load bundle chunklist {} ({:?})", self.info.id, self.info.mode);
         let mut file = BufReader::new(try!(File::open(&self.path).context(&self.path as &Path)));
         let len = self.info.chunk_info_size;
@@ -135,6 +135,14 @@ impl BundleReader {
         self.chunks = Some(chunks);
         self.chunk_positions = Some(chunk_positions);
         Ok(())
+    }
+
+    #[inline]
+    pub fn get_chunk_list(&mut self) -> Result<&ChunkList, BundleReaderError> {
+        if self.chunks.is_none() {
+            try!(self.load_chunklist());
+        }
+        Ok(self.chunks.as_ref().unwrap())
     }
 
     #[inline]

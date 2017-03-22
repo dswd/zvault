@@ -95,6 +95,12 @@ impl Repository {
             content_bundle: None,
             meta_bundle: None,
         };
+        for bundle in new {
+            try!(repo.add_new_remote_bundle(bundle))
+        }
+        for bundle in gone {
+            try!(repo.remove_gone_remote_bundle(bundle))
+        }
         repo.next_meta_bundle = repo.next_free_bundle_id();
         repo.next_content_bundle = repo.next_free_bundle_id();
         Ok(repo)
@@ -142,7 +148,7 @@ impl Repository {
             mem::swap(&mut self.content_bundle, &mut finished);
             {
                 let bundle = try!(self.bundles.add_bundle(finished.unwrap()));
-                self.bundle_map.set(self.next_content_bundle, bundle);
+                self.bundle_map.set(self.next_content_bundle, bundle.id.clone());
             }
             self.next_content_bundle = self.next_free_bundle_id()
         }
@@ -151,11 +157,39 @@ impl Repository {
             mem::swap(&mut self.meta_bundle, &mut finished);
             {
                 let bundle = try!(self.bundles.add_bundle(finished.unwrap()));
-                self.bundle_map.set(self.next_meta_bundle, bundle);
+                self.bundle_map.set(self.next_meta_bundle, bundle.id.clone());
             }
             self.next_meta_bundle = self.next_free_bundle_id()
         }
         try!(self.save_bundle_map());
+        Ok(())
+    }
+
+    fn add_new_remote_bundle(&mut self, bundle: BundleInfo) -> Result<(), RepositoryError> {
+        info!("Adding new bundle to index: {}", bundle.id);
+        let bundle_id = match bundle.mode {
+            BundleMode::Content => self.next_content_bundle,
+            BundleMode::Meta => self.next_meta_bundle
+        };
+        let chunks = try!(self.bundles.get_chunk_list(&bundle.id));
+        self.bundle_map.set(bundle_id, bundle.id);
+        if self.next_meta_bundle == bundle_id {
+            self.next_meta_bundle = self.next_free_bundle_id()
+        }
+        if self.next_content_bundle == bundle_id {
+            self.next_content_bundle = self.next_free_bundle_id()
+        }
+        for (i, (hash, _len)) in chunks.into_inner().into_iter().enumerate() {
+            try!(self.index.set(&hash, &Location{bundle: bundle_id as u32, chunk: i as u32}));
+        }
+        Ok(())
+    }
+
+    fn remove_gone_remote_bundle(&mut self, bundle: BundleInfo) -> Result<(), RepositoryError> {
+        if let Some(id) = self.bundle_map.find(&bundle.id) {
+            info!("Removing bundle from index: {}", bundle.id);
+            self.bundle_map.remove(id);
+        }
         Ok(())
     }
 }

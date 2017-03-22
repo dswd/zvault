@@ -38,11 +38,12 @@ impl Repository {
     pub fn analyze_usage(&mut self) -> Result<HashMap<u32, BundleUsage>, RepositoryError> {
         let mut usage = HashMap::new();
         for (id, bundle) in self.bundle_map.bundles() {
+            let bundle = try!(self.bundles.get_bundle_info(&bundle).ok_or_else(|| RepositoryIntegrityError::MissingBundle(bundle)));
             usage.insert(id, BundleUsage {
-                used: Bitmap::new(bundle.info.chunk_count),
-                mode: Bitmap::new(bundle.info.chunk_count),
-                chunk_count: bundle.info.chunk_count,
-                total_size: bundle.info.raw_size,
+                used: Bitmap::new(bundle.chunk_count),
+                mode: Bitmap::new(bundle.chunk_count),
+                chunk_count: bundle.chunk_count,
+                total_size: bundle.raw_size,
                 used_size: 0
             });
         }
@@ -82,7 +83,7 @@ impl Repository {
 
     fn delete_bundle(&mut self, id: u32) -> Result<(), RepositoryError> {
         if let Some(bundle) = self.bundle_map.remove(id) {
-            try!(self.bundles.delete_bundle(&bundle.id()));
+            try!(self.bundles.delete_bundle(&bundle));
             Ok(())
         } else {
             Err(RepositoryIntegrityError::MissingBundleId(id).into())
@@ -110,7 +111,7 @@ impl Repository {
         }
         for id in &rewrite_bundles {
             let bundle = &usage[id];
-            let bundle_id = self.bundle_map.get(*id).unwrap().id();
+            let bundle_id = self.bundle_map.get(*id).unwrap();
             for chunk in 0..bundle.chunk_count {
                 let data = try!(self.bundles.get_chunk(&bundle_id, chunk));
                 let hash = self.config.hash.hash(&data);

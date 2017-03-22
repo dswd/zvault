@@ -39,23 +39,7 @@ quick_error!{
 }
 
 
-#[derive(Default)]
-pub struct BundleData {
-    pub info: BundleInfo
-}
-serde_impl!(BundleData(u64) {
-    info: BundleInfo => 0
-});
-
-impl BundleData {
-    #[inline]
-    pub fn id(&self) -> BundleId {
-        self.info.id.clone()
-    }
-}
-
-
-pub struct BundleMap(HashMap<u32, BundleData>);
+pub struct BundleMap(HashMap<u32, BundleId>);
 
 impl BundleMap {
     pub fn create() -> Self {
@@ -84,23 +68,32 @@ impl BundleMap {
     }
 
     #[inline]
-    pub fn get(&self, id: u32) -> Option<&BundleData> {
-        self.0.get(&id)
+    pub fn get(&self, id: u32) -> Option<BundleId> {
+        self.0.get(&id).cloned()
     }
 
     #[inline]
-    pub fn remove(&mut self, id: u32) -> Option<BundleData> {
+    pub fn remove(&mut self, id: u32) -> Option<BundleId> {
         self.0.remove(&id)
     }
 
     #[inline]
-    pub fn set(&mut self, id: u32, bundle: BundleInfo) {
-        let data = BundleData { info: bundle };
-        self.0.insert(id, data);
+    pub fn find(&self, bundle: &BundleId) -> Option<u32> {
+        for (id, bundle_id) in &self.0 {
+            if bundle == bundle_id {
+                return Some(*id)
+            }
+        }
+        None
     }
 
     #[inline]
-    pub fn bundles(&self) -> Vec<(u32, &BundleData)> {
-        self.0.iter().map(|(id, bundle)| (*id, bundle)).collect()
+    pub fn set(&mut self, id: u32, bundle: BundleId) {
+        self.0.insert(id, bundle);
+    }
+
+    #[inline]
+    pub fn bundles(&self) -> Vec<(u32, BundleId)> {
+        self.0.iter().map(|(id, bundle)| (*id, bundle.clone())).collect()
     }
 }

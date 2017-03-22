@@ -6,11 +6,7 @@ use std::io::{Read, Write, Cursor};
 
 impl Repository {
     pub fn get_bundle_id(&self, id: u32) -> Result<BundleId, RepositoryError> {
-        if let Some(bundle_info) = self.bundle_map.get(id) {
-            Ok(bundle_info.id())
-        } else {
-            Err(RepositoryIntegrityError::MissingBundleId(id).into())
-        }
+        self.bundle_map.get(id).ok_or_else(|| RepositoryIntegrityError::MissingBundleId(id).into())
     }
 
     pub fn get_chunk(&mut self, hash: Hash) -> Result<Option<Vec<u8>>, RepositoryError> {
@@ -72,7 +68,7 @@ impl Repository {
             let mut finished = None;
             mem::swap(writer, &mut finished);
             let bundle = try!(self.bundles.add_bundle(finished.unwrap()));
-            self.bundle_map.set(bundle_id, bundle);
+            self.bundle_map.set(bundle_id, bundle.id.clone());
             if self.next_meta_bundle == bundle_id {
                 self.next_meta_bundle = next_free_bundle_id
             }

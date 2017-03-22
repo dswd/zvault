@@ -72,6 +72,11 @@ impl ChunkList {
     pub fn encoded_size(&self) -> usize {
         self.0.len() * 20
     }
+
+    #[inline]
+    pub fn into_inner(self) -> Vec<Chunk> {
+        self.0
+    }
 }
 
 impl Default for ChunkList {

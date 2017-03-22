@@ -17,7 +17,7 @@ pub struct RepositoryInfo {
 impl Repository {
     #[inline]
     pub fn list_bundles(&self) -> Vec<&BundleInfo> {
-        self.bundle_map.bundles().into_iter().map(|(_id, b)| &b.info).collect()
+        self.bundles.list_bundles()
     }
 
     pub fn info(&self) -> RepositoryInfo {

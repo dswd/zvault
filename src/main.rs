@@ -25,7 +25,7 @@ mod repository;
 mod cli;
 mod prelude;
 
-// TODO: React on changes in remote bundles
+// TODO: Keep backup files also remotely and sync them
 // TODO: Lock during backup and vacuum
 // TODO: Remove backup subtrees
 // TODO: Recompress & combine bundles
