@@ -2,9 +2,9 @@ use ::prelude::*;
 
 use filetime::{self, FileTime};
 
-use std::collections::HashMap;
+use std::collections::BTreeMap;
 use std::path::{Path, PathBuf};
-use std::fs::{self, Metadata, File, Permissions};
+use std::fs::{self, File, Permissions};
 use std::os::linux::fs::MetadataExt;
 use std::os::unix::fs::{PermissionsExt, symlink};
 use std::io::{self, Read, Write};
@@ -106,7 +106,7 @@ pub struct Inode {
     pub create_time: i64,
     pub symlink_target: Option<String>,
     pub contents: Option<FileContents>,
-    pub children: Option<HashMap<String, ChunkList>>
+    pub children: Option<BTreeMap<String, ChunkList>>
 }
 impl Default for Inode {
     fn default() -> Self {
@@ -138,22 +138,11 @@ serde_impl!(Inode(u8) {
     create_time: i64 => 8,
     symlink_target: Option<String> => 9,
     contents: Option<FileContents> => 10,
-    children: HashMap<String, ChunkList> => 11
+    children: BTreeMap<String, ChunkList> => 11
 });
 
 
 impl Inode {
-    #[inline]
-    fn get_extended_attrs_from(&mut self, meta: &Metadata) -> Result<(), InodeError> {
-        self.mode = meta.st_mode();
-        self.user = meta.st_uid();
-        self.group = meta.st_gid();
-        self.access_time = meta.st_atime();
-        self.modify_time = meta.st_mtime();
-        self.create_time = meta.st_ctime();
-        Ok(())
-    }
-
     pub fn get_from<P: AsRef<Path>>(path: P) -> Result<Self, InodeError> {
         let path = path.as_ref();
         let name = try!(path.file_name()
@@ -162,7 +151,9 @@ impl Inode {
         let meta = try!(fs::symlink_metadata(path).map_err(|e| InodeError::ReadMetadata(e, path.to_owned())));
         let mut inode = Inode::default();
         inode.name = name;
-        inode.size = meta.len();
+        if meta.is_file() {
+            inode.size = meta.len();
+        }
         inode.file_type = if meta.is_file() {
             FileType::File
         } else if meta.is_dir() {
@@ -175,7 +166,12 @@ impl Inode {
         if meta.file_type().is_symlink() {
             inode.symlink_target = Some(try!(fs::read_link(path).map_err(|e| InodeError::ReadLinkTarget(e, path.to_owned()))).to_string_lossy().to_string());
         }
-        try!(inode.get_extended_attrs_from(&meta));
+        inode.mode = meta.st_mode();
+        inode.user = meta.st_uid();
+        inode.group = meta.st_gid();
+        inode.access_time = meta.st_atime();
+        inode.modify_time = meta.st_mtime();
+        inode.create_time = meta.st_ctime();
         Ok(inode)
     }
 

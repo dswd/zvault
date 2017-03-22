@@ -3,7 +3,7 @@ use ::prelude::*;
 use std::io::{self, BufReader, BufWriter, Read, Write};
 use std::fs::{self, File};
 use std::path::{self, Path, PathBuf};
-use std::collections::{HashMap, VecDeque};
+use std::collections::{HashMap, BTreeMap, VecDeque};
 
 use chrono::prelude::*;
 
@@ -327,20 +327,21 @@ impl Repository {
                 },
                 Err(err) => return Err(err)
             };
-            backup.total_data_size += inode.size;
+            let meta_size = 1000; // add 1000 for encoded metadata
+            backup.total_data_size += inode.size + meta_size;
             if let Some(ref ref_inode) = reference_inode {
                 if !ref_inode.is_unchanged(&inode) {
-                    backup.changed_data_size += inode.size;
+                    backup.changed_data_size += inode.size + meta_size;
                 }
             } else {
-                backup.changed_data_size += inode.size;
+                backup.changed_data_size += inode.size + meta_size;
             }
             if inode.file_type == FileType::Directory {
                 backup.dir_count +=1;
                 // For directories we need to put all children on the stack too, so there will be inodes created for them
                 // Also we put directories on the save stack to save them in order
                 save_stack.push(path.clone());
-                inode.children = Some(HashMap::new());
+                inode.children = Some(BTreeMap::new());
                 directories.insert(path.clone(), inode);
                 let dirlist = match fs::read_dir(&path) {
                     Ok(dirlist) => dirlist,
