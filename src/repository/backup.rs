@@ -178,6 +178,10 @@ impl Backup {
 quick_error!{
     #[derive(Debug)]
     pub enum BackupError {
+        FailedPaths(backup: Backup, failed: Vec<PathBuf>) {
+            description("Some paths could not be backed up")
+            display("Backup error: some paths could not be backed up")
+        }
     }
 }
 
@@ -307,10 +311,19 @@ impl Repository {
         backup.path = path.as_ref().to_string_lossy().to_string();
         let info_before = self.info();
         let start = Local::now();
+        let mut failed_paths = vec![];
         while let Some((path, reference_inode)) = scan_stack.pop() {
             // Create an inode for this path containing all attributes and contents
             // (for files) but no children (for directories)
-            let mut inode = try!(self.create_inode(&path, reference_inode.as_ref()));
+            let mut inode = match self.create_inode(&path, reference_inode.as_ref()) {
+                Ok(inode) => inode,
+                Err(RepositoryError::Inode(err)) => {
+                    warn!("Failed to backup inode {}", err);
+                    failed_paths.push(path);
+                    continue
+                },
+                Err(err) => return Err(err)
+            };
             backup.total_data_size += inode.size;
             if let Some(ref ref_inode) = reference_inode {
                 if !ref_inode.is_unchanged(&inode) {
@@ -326,8 +339,22 @@ impl Repository {
                 save_stack.push(path.clone());
                 inode.children = Some(HashMap::new());
                 directories.insert(path.clone(), inode);
-                for ch in try!(fs::read_dir(&path)) {
-                    let child = try!(ch);
+                let dirlist = match fs::read_dir(&path) {
+                    Ok(dirlist) => dirlist,
+                    Err(err) => {
+                        warn!("Failed to read {:?}: {}", &path, err);
+                        failed_paths.push(path);
+                        continue
+                    }
+                };
+                for ch in dirlist {
+                    let child = match ch {
+                        Ok(child) => child,
+                        Err(err) => {
+                            warn!("Failed to read {:?}: {}", &path, err);
+                            continue
+                        }
+                    };
                     let name = child.file_name().to_string_lossy().to_string();
                     let ref_child = reference_inode.as_ref()
                         .and_then(|inode| inode.children.as_ref())
@@ -383,7 +410,11 @@ impl Repository {
         backup.bundle_count = info_after.bundle_count - info_before.bundle_count;
         backup.chunk_count = info_after.chunk_count - info_before.chunk_count;
         backup.avg_chunk_size = backup.deduplicated_data_size as f32 / backup.chunk_count as f32;
-        Ok(backup)
+        if failed_paths.is_empty() {
+            Ok(backup)
+        } else {
+            Err(BackupError::FailedPaths(backup, failed_paths).into())
+        }
     }
 
     pub fn get_backup_inode<P: AsRef<Path>>(&mut self, backup: &Backup, path: P) -> Result<Inode, RepositoryError> {

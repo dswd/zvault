@@ -6,6 +6,7 @@ use ::prelude::*;
 
 use chrono::prelude::*;
 use std::process::exit;
+use std::collections::HashMap;
 
 use self::args::Arguments;
 
@@ -63,6 +64,70 @@ fn find_reference_backup(repo: &Repository, path: &str) -> Option<Backup> {
     matching.pop()
 }
 
+fn print_backup(backup: &Backup) {
+    println!("Date: {}", Local.timestamp(backup.date, 0).to_rfc2822());
+    println!("Duration: {}", to_duration(backup.duration));
+    println!("Entries: {} files, {} dirs", backup.file_count, backup.dir_count);
+    println!("Total backup size: {}", to_file_size(backup.total_data_size));
+    println!("Modified data size: {}", to_file_size(backup.changed_data_size));
+    let dedup_ratio = backup.deduplicated_data_size as f32 / backup.changed_data_size as f32;
+    println!("Deduplicated size: {}, {:.1}% saved", to_file_size(backup.deduplicated_data_size), (1.0 - dedup_ratio)*100.0);
+    let compress_ratio = backup.encoded_data_size as f32 / backup.deduplicated_data_size as f32;
+    println!("Compressed size: {} in {} bundles, {:.1}% saved", to_file_size(backup.encoded_data_size), backup.bundle_count, (1.0 - compress_ratio)*100.0);
+    println!("Chunk count: {}, avg size: {}", backup.chunk_count, to_file_size(backup.avg_chunk_size as u64));
+}
+
+fn print_backups(backup_map: &HashMap<String, Backup>) {
+    for (name, backup) in backup_map {
+        println!("{:25}  {:>32}  {:5} files, {:4} dirs, {:>10}",
+            name, Local.timestamp(backup.date, 0).to_rfc2822(), backup.file_count,
+            backup.dir_count, to_file_size(backup.total_data_size));
+    }
+}
+
+fn print_repoinfo(info: &RepositoryInfo) {
+    println!("Bundles: {}", info.bundle_count);
+    println!("Total size: {}", to_file_size(info.encoded_data_size));
+    println!("Uncompressed size: {}", to_file_size(info.raw_data_size));
+    println!("Compression ratio: {:.1}%", info.compression_ratio * 100.0);
+    println!("Chunk count: {}", info.chunk_count);
+    println!("Average chunk size: {}", to_file_size(info.avg_chunk_size as u64));
+    let index_usage = info.index_entries as f32 / info.index_capacity as f32;
+    println!("Index: {}, {:.0}% full", to_file_size(info.index_size as u64), index_usage * 100.0);
+}
+
+fn print_bundle(bundle: &BundleInfo) {
+    println!("Bundle {}", bundle.id);
+    println!("  - Mode: {:?}", bundle.mode);
+    println!("  - Hash method: {:?}", bundle.hash_method);
+    println!("  - Chunks: {}", bundle.chunk_count);
+    println!("  - Size: {}", to_file_size(bundle.encoded_size as u64));
+    println!("  - Data size: {}", to_file_size(bundle.raw_size as u64));
+    let ratio = bundle.encoded_size as f32 / bundle.raw_size as f32;
+    let compression = if let Some(ref c) = bundle.compression {
+        c.to_string()
+    } else {
+        "none".to_string()
+    };
+    println!("  - Compression: {}, ratio: {:.1}%", compression, ratio * 100.0);
+}
+
+fn print_config(config: &Config) {
+    println!("Bundle size: {}", to_file_size(config.bundle_size as u64));
+    println!("Chunker: {}", config.chunker.to_string());
+    if let Some(ref compression) = config.compression {
+        println!("Compression: {}", compression.to_string());
+    } else {
+        println!("Compression: none");
+    }
+    if let Some(ref encryption) = config.encryption {
+        println!("Encryption: {}", to_hex(&encryption.1[..]));
+    } else {
+        println!("Encryption: none");
+    }
+    println!("Hash method: {}", config.hash.name());
+}
+
 
 #[allow(unknown_lints,cyclomatic_complexity)]
 pub fn run() {
@@ -86,6 +151,7 @@ pub fn run() {
                 repo.set_encryption(Some(&public));
                 repo.register_key(public, secret).unwrap();
                 repo.save_config().unwrap();
+                print_config(&repo.config);
             }
         },
         Arguments::Backup{repo_path, backup_name, src_path, full, reference} => {
@@ -102,8 +168,19 @@ pub fn run() {
                     info!("No reference backup found, doing a full scan instead");
                 }
             }
-            let backup = repo.create_backup(&src_path, reference_backup.as_ref()).unwrap();
+            let backup = match repo.create_backup(&src_path, reference_backup.as_ref()) {
+                Ok(backup) => backup,
+                Err(RepositoryError::Backup(BackupError::FailedPaths(backup, _failed_paths))) => {
+                    warn!("Some files are missing form the backup");
+                    backup
+                },
+                Err(err) => {
+                    error!("Backup failed: {}", err);
+                    exit(3)
+                }
+            };
             repo.save_backup(&backup, &backup_name).unwrap();
+            print_backup(&backup);
         },
         Arguments::Restore{repo_path, backup_name, inode, dst_path} => {
             let mut repo = open_repository(&repo_path);
@@ -148,13 +225,12 @@ pub fn run() {
         Arguments::Check{repo_path, backup_name, inode, full} => {
             let mut repo = open_repository(&repo_path);
             if let Some(backup_name) = backup_name {
-                let _backup = get_backup(&repo, &backup_name);
-                if let Some(_inode) = inode {
-                    error!("Checking backup subtrees is not implemented yet");
-                    return
+                let backup = get_backup(&repo, &backup_name);
+                if let Some(inode) = inode {
+                    let inode = repo.get_backup_inode(&backup, inode).unwrap();
+                    repo.check_inode(&inode).unwrap()
                 } else {
-                    error!("Checking backups is not implemented yet");
-                    return
+                    repo.check_backup(&backup).unwrap()
                 }
             } else {
                 repo.check(full).unwrap()
@@ -184,11 +260,7 @@ pub fn run() {
                         exit(3)
                     }
                 };
-                for (name, backup) in backup_map {
-                    println!("{:25}  {:>32}  {:5} files, {:4} dirs, {:>10}",
-                        name, Local.timestamp(backup.date, 0).to_rfc2822(), backup.file_count,
-                        backup.dir_count, to_file_size(backup.total_data_size));
-                }
+                print_backups(&backup_map);
             }
         },
         Arguments::Info{repo_path, backup_name, inode} => {
@@ -199,45 +271,16 @@ pub fn run() {
                     error!("Displaying information on single inodes is not implemented yet");
                     return
                 } else {
-                    println!("Date: {}", Local.timestamp(backup.date, 0).to_rfc2822());
-                    println!("Duration: {}", to_duration(backup.duration));
-                    println!("Entries: {} files, {} dirs", backup.file_count, backup.dir_count);
-                    println!("Total backup size: {}", to_file_size(backup.total_data_size));
-                    println!("Modified data size: {}", to_file_size(backup.changed_data_size));
-                    let dedup_ratio = backup.deduplicated_data_size as f32 / backup.changed_data_size as f32;
-                    println!("Deduplicated size: {}, {:.1}% saved", to_file_size(backup.deduplicated_data_size), (1.0 - dedup_ratio)*100.0);
-                    let compress_ratio = backup.encoded_data_size as f32 / backup.deduplicated_data_size as f32;
-                    println!("Compressed size: {} in {} bundles, {:.1}% saved", to_file_size(backup.encoded_data_size), backup.bundle_count, (1.0 - compress_ratio)*100.0);
-                    println!("Chunk count: {}, avg size: {}", backup.chunk_count, to_file_size(backup.avg_chunk_size as u64));
+                    print_backup(&backup);
                 }
             } else {
-                let info = repo.info();
-                println!("Bundles: {}", info.bundle_count);
-                println!("Total size: {}", to_file_size(info.encoded_data_size));
-                println!("Uncompressed size: {}", to_file_size(info.raw_data_size));
-                println!("Compression ratio: {:.1}%", info.compression_ratio * 100.0);
-                println!("Chunk count: {}", info.chunk_count);
-                println!("Average chunk size: {}", to_file_size(info.avg_chunk_size as u64));
-                let index_usage = info.index_entries as f32 / info.index_capacity as f32;
-                println!("Index: {}, {:.0}% full", to_file_size(info.index_size as u64), index_usage * 100.0);
+                print_repoinfo(&repo.info());
             }
         },
         Arguments::ListBundles{repo_path} => {
             let repo = open_repository(&repo_path);
             for bundle in repo.list_bundles() {
-                println!("Bundle {}", bundle.id);
-                println!("  - Mode: {:?}", bundle.mode);
-                println!("  - Hash method: {:?}", bundle.hash_method);
-                println!("  - Chunks: {}", bundle.chunk_count);
-                println!("  - Size: {}", to_file_size(bundle.encoded_size as u64));
-                println!("  - Data size: {}", to_file_size(bundle.raw_size as u64));
-                let ratio = bundle.encoded_size as f32 / bundle.raw_size as f32;
-                let compression = if let Some(ref c) = bundle.compression {
-                    c.to_string()
-                } else {
-                    "none".to_string()
-                };
-                println!("  - Compression: {}, ratio: {:.1}%", compression, ratio * 100.0);
+                print_bundle(bundle);
                 println!();
             }
         },
@@ -265,19 +308,7 @@ pub fn run() {
                 repo.config.hash = hash
             }
             repo.save_config().unwrap();
-            println!("Bundle size: {}", to_file_size(repo.config.bundle_size as u64));
-            println!("Chunker: {}", repo.config.chunker.to_string());
-            if let Some(ref compression) = repo.config.compression {
-                println!("Compression: {}", compression.to_string());
-            } else {
-                println!("Compression: none");
-            }
-            if let Some(ref encryption) = repo.config.encryption {
-                println!("Encryption: {}", to_hex(&encryption.1[..]));
-            } else {
-                println!("Encryption: none");
-            }
-            println!("Hash method: {}", repo.config.hash.name());
+            print_config(&repo.config);
         },
         Arguments::GenKey{} => {
             let (public, secret) = gen_keypair();

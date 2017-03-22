@@ -31,7 +31,6 @@ mod prelude;
 // TODO: Recompress & combine bundles
 // TODO: list --tree
 // TODO: Import repository from remote folder
-// TODO: Continue on errors (return summary as error)
 // TODO: More detailed errors with nicer text
 // TODO: Allow to use tar files for backup and restore (--tar, http://alexcrichton.com/tar-rs/tar/index.html)
 

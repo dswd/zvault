@@ -3,7 +3,7 @@ use ::prelude::*;
 use std::io;
 use std::path::PathBuf;
 
-use super::backup::BackupFileError;
+use super::backup::{BackupFileError, BackupError};
 use super::bundle_map::BundleMapError;
 use super::config::ConfigError;
 use super::metadata::InodeError;
@@ -71,6 +71,12 @@ quick_error!{
             cause(err)
             description("Integrity error")
             display("Repository error: integrity error\n\tcaused by: {}", err)
+        }
+        Backup(err: BackupError) {
+            from()
+            cause(err)
+            description("Failed to create a backup")
+            display("Repository error: failed to create backup\n\tcaused by: {}", err)
         }
 
         Io(err: io::Error) {

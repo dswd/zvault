@@ -83,6 +83,59 @@ impl Repository {
         Ok(new)
     }
 
+    fn check_inode_contents(&mut self, inode: &Inode, checked: &mut Bitmap) -> Result<(), RepositoryError> {
+        match inode.contents {
+            Some(FileContents::ChunkedDirect(ref chunks)) => {
+                try!(self.check_chunks(checked, chunks));
+            },
+            Some(FileContents::ChunkedIndirect(ref chunks)) => {
+                if try!(self.check_chunks(checked, chunks)) {
+                    let chunk_data = try!(self.get_data(&chunks));
+                    let chunks = ChunkList::read_from(&chunk_data);
+                    try!(self.check_chunks(checked, &chunks));
+                }
+            }
+            _ => ()
+        }
+        Ok(())
+    }
+
+    fn check_subtree(&mut self, chunks: &[Chunk], checked: &mut Bitmap) -> Result<(), RepositoryError> {
+        let mut todo = VecDeque::new();
+        todo.push_back(ChunkList::from(chunks.to_vec()));
+        while let Some(chunks) = todo.pop_front() {
+            if !try!(self.check_chunks(checked, &chunks)) {
+                continue
+            }
+            let inode = try!(self.get_inode(&chunks));
+            // Mark the content chunks as used
+            try!(self.check_inode_contents(&inode, checked));
+            // Put children in todo
+            if let Some(children) = inode.children {
+                for (_name, chunks) in children {
+                    todo.push_back(chunks);
+                }
+            }
+        }
+        Ok(())
+    }
+
+    pub fn check_backup(&mut self, backup: &Backup) -> Result<(), RepositoryError> {
+        let mut checked = Bitmap::new(self.index.capacity());
+        self.check_subtree(&backup.root, &mut checked)
+    }
+
+    pub fn check_inode(&mut self, inode: &Inode) -> Result<(), RepositoryError> {
+        let mut checked = Bitmap::new(self.index.capacity());
+        try!(self.check_inode_contents(inode, &mut checked));
+        if let Some(ref children) = inode.children {
+            for chunks in children.values() {
+                try!(self.check_subtree(chunks, &mut checked))
+            }
+        }
+        Ok(())
+    }
+
     fn check_backups(&mut self) -> Result<(), RepositoryError> {
         let mut checked = Bitmap::new(self.index.capacity());
         let backup_map = match self.get_backups() {
@@ -94,34 +147,7 @@ impl Repository {
             Err(err) => return Err(err)
         };
         for (_name, backup) in backup_map {
-            let mut todo = VecDeque::new();
-            todo.push_back(backup.root);
-            while let Some(chunks) = todo.pop_front() {
-                if !try!(self.check_chunks(&mut checked, &chunks)) {
-                    continue
-                }
-                let inode = try!(self.get_inode(&chunks));
-                // Mark the content chunks as used
-                match inode.contents {
-                    Some(FileContents::ChunkedDirect(chunks)) => {
-                        try!(self.check_chunks(&mut checked, &chunks));
-                    },
-                    Some(FileContents::ChunkedIndirect(chunks)) => {
-                        if try!(self.check_chunks(&mut checked, &chunks)) {
-                            let chunk_data = try!(self.get_data(&chunks));
-                            let chunks = ChunkList::read_from(&chunk_data);
-                            try!(self.check_chunks(&mut checked, &chunks));
-                        }
-                    }
-                    _ => ()
-                }
-                // Put children in todo
-                if let Some(children) = inode.children {
-                    for (_name, chunks) in children {
-                        todo.push_back(chunks);
-                    }
-                }
-            }
+            try!(self.check_subtree(&backup.root, &mut checked));
         }
         Ok(())
     }
