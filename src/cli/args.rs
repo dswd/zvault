@@ -261,8 +261,8 @@ pub fn parse() -> Arguments {
         (@subcommand addkey =>
             (about: "adds a key to the respository")
             (@arg REPO: +required "path of the repository")
-            (@arg generate: --generate "generate a new key")
-            (@arg set_default: --default "set this key as default")
+            (@arg generate: --generate -g "generate a new key")
+            (@arg set_default: --default -d "set this key as default")
             (@arg FILE: +takes_value "the file containing the keypair")
         )
         (@subcommand algotest =>

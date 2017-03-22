@@ -146,13 +146,14 @@ pub fn run() {
             }, remote_path).unwrap();
             if encryption {
                 let (public, secret) = gen_keypair();
-                println!("Public key: {}", to_hex(&public[..]));
-                println!("Secret key: {}", to_hex(&secret[..]));
+                println!("public: {}", to_hex(&public[..]));
+                println!("secret: {}", to_hex(&secret[..]));
                 repo.set_encryption(Some(&public));
                 repo.register_key(public, secret).unwrap();
                 repo.save_config().unwrap();
-                print_config(&repo.config);
+                println!();
             }
+            print_config(&repo.config);
         },
         Arguments::Backup{repo_path, backup_name, src_path, full, reference} => {
             let mut repo = open_repository(&repo_path);
