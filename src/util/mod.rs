@@ -8,8 +8,10 @@ mod bitmap;
 mod hex;
 mod cli;
 mod hostname;
+mod fs;
 pub mod msgpack;
 
+pub use self::fs::*;
 pub use self::chunk::*;
 pub use self::compression::*;
 pub use self::encryption::*;

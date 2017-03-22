@@ -1,5 +1,7 @@
 use ::prelude::*;
 
+use filetime::{self, FileTime};
+
 use std::collections::HashMap;
 use std::path::{Path, PathBuf};
 use std::fs::{self, Metadata, File, Permissions};
@@ -34,6 +36,16 @@ quick_error!{
             cause(err)
             description("Failed to set permissions")
             display("Inode error: failed to set permissions to {:3o} on {:?}\n\tcaused by: {}", mode, path, err)
+        }
+        SetTimes(err: io::Error, path: PathBuf) {
+            cause(err)
+            description("Failed to set file times")
+            display("Inode error: failed to set file times on {:?}\n\tcaused by: {}", path, err)
+        }
+        SetOwnership(err: io::Error, path: PathBuf) {
+            cause(err)
+            description("Failed to set file ownership")
+            display("Inode error: failed to set file ownership on {:?}\n\tcaused by: {}", path, err)
         }
         Integrity(reason: &'static str) {
             description("Integrity error")
@@ -186,15 +198,21 @@ impl Inode {
                 }
             }
         }
-        try!(fs::set_permissions(&full_path, Permissions::from_mode(self.mode)).map_err(|e| InodeError::SetPermissions(e, full_path.clone(), self.mode)));
-        //FIXME: set times and gid/uid
-        // https://crates.io/crates/filetime
+        try!(fs::set_permissions(
+            &full_path,
+            Permissions::from_mode(self.mode)
+        ).map_err(|e| InodeError::SetPermissions(e, full_path.clone(), self.mode)));
+        try!(filetime::set_file_times(
+            &full_path,
+            FileTime::from_seconds_since_1970(self.access_time as u64, 0),
+            FileTime::from_seconds_since_1970(self.modify_time as u64, 0)
+        ).map_err(|e| InodeError::SetTimes(e, full_path.clone())));
+        try!(chown(&full_path, self.user, self.group).map_err(|e| InodeError::SetOwnership(e, full_path.clone())));
         Ok(file)
     }
 
     pub fn is_unchanged(&self, other: &Inode) -> bool {
         self.modify_time == other.modify_time
-        && self.create_time == other.create_time
         && self.file_type == other.file_type
     }
 
