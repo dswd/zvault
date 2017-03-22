@@ -11,7 +11,8 @@ pub enum Arguments {
         chunker: ChunkerType,
         compression: Option<Compression>,
         encryption: bool,
-        hash: HashMethod
+        hash: HashMethod,
+        remote: String
     },
     Backup {
         repo_path: String,
@@ -200,6 +201,7 @@ pub fn parse() -> Arguments {
             (@arg compression: --compression -c +takes_value "compression to use [default: brotli/3]")
             (@arg encryption: --encryption -e "generate a keypair and enable encryption")
             (@arg hash: --hash +takes_value "hash method to use [default: blake2]")
+            (@arg remote: --remote -r +takes_value +required "path to the mounted remote storage")
             (@arg REPO: +required "path of the repository")
         )
         (@subcommand backup =>
@@ -299,6 +301,7 @@ pub fn parse() -> Arguments {
             encryption: args.is_present("encryption"),
             hash: parse_hash(args.value_of("hash").unwrap_or(DEFAULT_HASH)),
             repo_path: repository.to_string(),
+            remote: args.value_of("remote").unwrap().to_string()
         }
     }
     if let Some(args) = args.subcommand_matches("backup") {

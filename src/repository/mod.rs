@@ -15,6 +15,7 @@ use std::cmp::max;
 use std::path::{PathBuf, Path};
 use std::fs;
 use std::sync::{Arc, Mutex};
+use std::os::unix::fs::symlink;
 
 pub use self::error::RepositoryError;
 pub use self::config::Config;
@@ -41,11 +42,12 @@ pub struct Repository {
 
 
 impl Repository {
-    pub fn create<P: AsRef<Path>>(path: P, config: Config) -> Result<Self, RepositoryError> {
+    pub fn create<P: AsRef<Path>, R: AsRef<Path>>(path: P, config: Config, remote: R) -> Result<Self, RepositoryError> {
         let path = path.as_ref().to_owned();
         try!(fs::create_dir(&path));
         try!(fs::create_dir(path.join("keys")));
         let crypto = Arc::new(Mutex::new(try!(Crypto::open(path.join("keys")))));
+        try!(symlink(remote, path.join("remote")));
         let bundles = try!(BundleDb::create(
             path.join("remote/bundles"),
             path.join("bundles"),
@@ -101,6 +103,7 @@ impl Repository {
         for bundle in gone {
             try!(repo.remove_gone_remote_bundle(bundle))
         }
+        try!(repo.save_bundle_map());
         repo.next_meta_bundle = repo.next_free_bundle_id();
         repo.next_content_bundle = repo.next_free_bundle_id();
         Ok(repo)
@@ -162,6 +165,7 @@ impl Repository {
             self.next_meta_bundle = self.next_free_bundle_id()
         }
         try!(self.save_bundle_map());
+        try!(self.bundles.save_cache());
         Ok(())
     }
 

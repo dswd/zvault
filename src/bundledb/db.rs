@@ -145,6 +145,11 @@ impl BundleDb {
         Ok((new, gone))
     }
 
+    pub fn save_cache(&self) -> Result<(), BundleDbError> {
+        let bundles: Vec<_> = self.remote_bundles.values().cloned().collect();
+        Ok(try!(StoredBundle::save_list_to(&bundles, &self.remote_cache_path)))
+    }
+
     pub fn update_cache(&mut self, new: &[StoredBundle], gone: &[StoredBundle]) -> Result<(), BundleDbError> {
         for bundle in new {
             if bundle.info.mode == BundleMode::Meta {
@@ -237,7 +242,7 @@ impl BundleDb {
         }
         let (folder, filename) = bundle_path(&id, self.remote_path.clone(), self.remote_bundles.len());
         try!(fs::create_dir_all(&folder).context(&folder as &Path));
-        let bundle = try!(bundle.copy_to(folder.join(filename)));
+        let bundle = try!(bundle.move_to(folder.join(filename)));
         self.remote_bundles.insert(bundle.id(), bundle.clone());
         Ok(bundle.info)
     }

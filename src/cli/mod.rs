@@ -136,14 +136,14 @@ pub fn run() {
         exit(-1)
     }
     match args::parse() {
-        Arguments::Init{repo_path, bundle_size, chunker, compression, encryption, hash} => {
+        Arguments::Init{repo_path, bundle_size, chunker, compression, encryption, hash, remote} => {
             let mut repo = Repository::create(repo_path, Config {
                 bundle_size: bundle_size,
                 chunker: chunker,
                 compression: compression,
                 encryption: None,
                 hash: hash
-            }).unwrap();
+            }, remote).unwrap();
             if encryption {
                 let (public, secret) = gen_keypair();
                 println!("Public key: {}", to_hex(&public[..]));

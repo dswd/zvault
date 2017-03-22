@@ -138,7 +138,7 @@ impl Repository {
             };
             let entry = self.index.get_entry(pos).unwrap();
             if rewrite_bundles.contains(&entry.data.bundle) {
-                panic!("Removed bundle is still referenced from index");
+                panic!("Removed bundle is still referenced in index");
             }
             pos += 1;
         }
