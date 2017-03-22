@@ -1,3 +1,4 @@
+#![recursion_limit="128"]
 extern crate serde;
 extern crate rmp_serde;
 #[macro_use] extern crate serde_utils;

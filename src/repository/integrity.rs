@@ -27,9 +27,6 @@ quick_error!{
         InvalidNextBundleId {
             description("Invalid next bundle id")
         }
-        SymlinkWithoutTarget {
-            description("Symlink without target")
-        }
     }
 }
 
@@ -88,7 +85,15 @@ impl Repository {
 
     fn check_backups(&mut self) -> Result<(), RepositoryError> {
         let mut checked = Bitmap::new(self.index.capacity());
-        for (_name, backup) in try!(self.get_backups()).0 {
+        let backup_map = match self.get_backups() {
+            Ok(backup_map) => backup_map,
+            Err(RepositoryError::BackupFile(BackupFileError::PartialBackupsList(backup_map, _failed))) => {
+                warn!("Some backups could not be read, ignoring them");
+                backup_map
+            },
+            Err(err) => return Err(err)
+        };
+        for (_name, backup) in backup_map {
             let mut todo = VecDeque::new();
             todo.push_back(backup.root);
             while let Some(chunks) = todo.pop_front() {

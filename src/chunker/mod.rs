@@ -21,18 +21,19 @@ quick_error!{
     #[derive(Debug)]
     pub enum ChunkerError {
         Read(err: io::Error) {
-            from(err)
             cause(err)
-            description("Failed to read")
+            description("Failed to read input")
+            display("Chunker error: failed to read input\n\tcaused by: {}", err)
         }
         Write(err: io::Error) {
-            from(err)
             cause(err)
-            description("Failed to write")
+            description("Failed to write to output")
+            display("Chunker error: failed to write to output\n\tcaused by: {}", err)
         }
-        Custom {
-            from(&'static str)
+        Custom(reason: &'static str) {
+            from()
             description("Custom error")
+            display("Chunker error: {}", reason)
         }
     }
 }

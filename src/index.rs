@@ -9,11 +9,48 @@ use std::os::unix::io::AsRawFd;
 
 use mmap::{MemoryMap, MapOption, MapError};
 
+
 const MAGIC: [u8; 7] = *b"zvault\x02";
 const VERSION: u8 = 1;
 pub const MAX_USAGE: f64 = 0.9;
 pub const MIN_USAGE: f64 = 0.25;
 pub const INITIAL_SIZE: usize = 1024;
+
+
+quick_error!{
+    #[derive(Debug)]
+    pub enum IndexError {
+        Io(err: io::Error) {
+            from()
+            cause(err)
+            description("Failed to open index file")
+            display("Index error: failed to open the index file\n\tcaused by: {}", err)
+        }
+        Mmap(err: MapError) {
+            from()
+            cause(err)
+            description("Failed to memory-map the index file")
+            display("Index error: failed to memory-map the index file\n\tcaused by: {}", err)
+        }
+        WrongMagic {
+            description("Wrong header")
+            display("Index error: file has the wrong magic header")
+        }
+        UnsupportedVersion(version: u8) {
+            description("Unsupported version")
+            display("Index error: index file has unsupported version: {}", version)
+        }
+        WrongPosition(key: Hash, should: usize, is: LocateResult) {
+            description("Key at wrong position")
+            display("Index error: key {} has wrong position, expected at: {}, but is at: {:?}", key, should, is)
+        }
+        WrongEntryCount(header: usize, actual: usize) {
+            description("Wrong entry count")
+            display("Index error: index has wrong entry count, expected {}, but is {}", header, actual)
+        }
+    }
+}
+
 
 #[repr(packed)]
 pub struct Header {
@@ -65,39 +102,6 @@ pub struct Index {
     data: &'static mut [Entry]
 }
 
-quick_error!{
-    #[derive(Debug)]
-    pub enum IndexError {
-        Io(err: io::Error) {
-            from()
-            cause(err)
-            description("Failed to open index file")
-        }
-        Mmap(err: MapError) {
-            from()
-            cause(err)
-            description("Failed to write bundle map")
-        }
-        NoHeader {
-            description("Index file does not contain a header")
-        }
-        WrongHeader {
-            description("Wrong header")
-        }
-        WrongVersion(version: u8) {
-            description("Wrong version")
-            display("Wrong version: {}", version)
-        }
-        WrongPosition(key: Hash, should: usize, is: LocateResult) {
-            description("Key at wrong position")
-            display("Key {} has wrong position, expected at: {}, but is at: {:?}", key, should, is)
-        }
-        WrongEntryCount(header: usize, actual: usize) {
-            description("Wrong entry count")
-            display("Wrong entry count, expected {}, but is {}", header, actual)
-        }
-    }
-}
 
 #[derive(Debug)]
 pub enum LocateResult {
@@ -114,7 +118,7 @@ impl Index {
         }
         let mmap = try!(Index::map_fd(&fd));
         if mmap.len() < mem::size_of::<Header>() {
-            return Err(IndexError::NoHeader);
+            return Err(IndexError::WrongMagic);
         }
         let data = Index::mmap_as_slice(&mmap, INITIAL_SIZE as usize);
         let mut index = Index{capacity: 0, max_entries: 0, min_entries: 0, entries: 0, fd: fd, mmap: mmap, data: data};
@@ -130,10 +134,10 @@ impl Index {
                     header.capacity = INITIAL_SIZE as u64;
                 } else {
                     if header.magic != MAGIC {
-                        return Err(IndexError::WrongHeader);
+                        return Err(IndexError::WrongMagic);
                     }
                     if header.version != VERSION {
-                        return Err(IndexError::WrongVersion(header.version));
+                        return Err(IndexError::UnsupportedVersion(header.version));
                     }
                 }
                 capacity = header.capacity;

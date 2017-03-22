@@ -14,48 +14,55 @@ static HEADER_VERSION: u8 = 1;
 
 quick_error!{
     #[derive(Debug)]
-    pub enum BackupError {
-        Io(err: io::Error, path: PathBuf) {
+    pub enum BackupFileError {
+        Read(err: io::Error, path: PathBuf) {
             cause(err)
-            context(path: &'a Path, err: io::Error) -> (err, path.to_path_buf())
+            description("Failed to write backup")
+            display("Backup file error: failed to write backup file {:?}\n\tcaused by: {}", path, err)
+        }
+        Write(err: io::Error, path: PathBuf) {
+            cause(err)
             description("Failed to read/write backup")
-            display("Failed to read/write backup {:?}: {}", path, err)
+            display("Backup file error: failed to read backup file {:?}\n\tcaused by: {}", path, err)
         }
         Decode(err: msgpack::DecodeError, path: PathBuf) {
             cause(err)
             context(path: &'a Path, err: msgpack::DecodeError) -> (err, path.to_path_buf())
             description("Failed to decode backup")
-            display("Failed to decode backup of {:?}: {}", path, err)
+            display("Backup file error: failed to decode backup of {:?}\n\tcaused by: {}", path, err)
         }
         Encode(err: msgpack::EncodeError, path: PathBuf) {
             cause(err)
             context(path: &'a Path, err: msgpack::EncodeError) -> (err, path.to_path_buf())
             description("Failed to encode backup")
-            display("Failed to encode backup of {:?}: {}", path, err)
+            display("Backup file error: failed to encode backup of {:?}\n\tcaused by: {}", path, err)
         }
         WrongHeader(path: PathBuf) {
             description("Wrong header")
-            display("Wrong header on backup {:?}", path)
+            display("Backup file error: wrong header on backup {:?}", path)
         }
-        WrongVersion(path: PathBuf, version: u8) {
+        UnsupportedVersion(path: PathBuf, version: u8) {
             description("Wrong version")
-            display("Wrong version on backup {:?}: {}", path, version)
+            display("Backup file error: unsupported version on backup {:?}: {}", path, version)
         }
         Decryption(err: EncryptionError, path: PathBuf) {
             cause(err)
             context(path: &'a Path, err: EncryptionError) -> (err, path.to_path_buf())
             description("Decryption failed")
-            display("Decryption failed on backup {:?}: {}", path, err)
+            display("Backup file error: decryption failed on backup {:?}\n\tcaused by: {}", path, err)
         }
         Encryption(err: EncryptionError) {
             from()
             cause(err)
             description("Encryption failed")
-            display("Encryption failed: {}", err)
+            display("Backup file error: encryption failed\n\tcaused by: {}", err)
+        }
+        PartialBackupsList(partial: HashMap<String, Backup>, failed: Vec<PathBuf>) {
+            description("Some backups could not be loaded")
+            display("Backup file error: some backups could not be loaded: {:?}", failed)
         }
     }
 }
-
 
 #[derive(Default, Debug, Clone)]
 struct BackupHeader {
@@ -101,73 +108,83 @@ serde_impl!(Backup(u8) {
 });
 
 impl Backup {
-    pub fn read_from<P: AsRef<Path>>(crypto: &Crypto, path: P) -> Result<Self, BackupError> {
+    pub fn read_from<P: AsRef<Path>>(crypto: &Crypto, path: P) -> Result<Self, BackupFileError> {
         let path = path.as_ref();
-        let mut file = BufReader::new(try!(File::open(path).context(path)));
+        let mut file = BufReader::new(try!(File::open(path).map_err(|err| BackupFileError::Read(err, path.to_path_buf()))));
         let mut header = [0u8; 8];
-        try!(file.read_exact(&mut header).context(&path as &Path));
+        try!(file.read_exact(&mut header).map_err(|err| BackupFileError::Read(err, path.to_path_buf())));
         if header[..HEADER_STRING.len()] != HEADER_STRING {
-            return Err(BackupError::WrongHeader(path.to_path_buf()))
+            return Err(BackupFileError::WrongHeader(path.to_path_buf()))
         }
         let version = header[HEADER_STRING.len()];
         if version != HEADER_VERSION {
-            return Err(BackupError::WrongVersion(path.to_path_buf(), version))
+            return Err(BackupFileError::UnsupportedVersion(path.to_path_buf(), version))
         }
         let header: BackupHeader = try!(msgpack::decode_from_stream(&mut file).context(path));
         let mut data = Vec::new();
-        try!(file.read_to_end(&mut data).context(path));
+        try!(file.read_to_end(&mut data).map_err(|err| BackupFileError::Read(err, path.to_path_buf())));
         if let Some(ref encryption) = header.encryption {
             data = try!(crypto.decrypt(encryption, &data));
         }
         Ok(try!(msgpack::decode(&data).context(path)))
     }
 
-    pub fn save_to<P: AsRef<Path>>(&self, crypto: &Crypto, encryption: Option<Encryption>, path: P) -> Result<(), BackupError> {
+    pub fn save_to<P: AsRef<Path>>(&self, crypto: &Crypto, encryption: Option<Encryption>, path: P) -> Result<(), BackupFileError> {
         let path = path.as_ref();
         let mut data = try!(msgpack::encode(self).context(path));
         if let Some(ref encryption) = encryption {
             data = try!(crypto.encrypt(encryption, &data));
         }
-        let mut file = BufWriter::new(try!(File::create(path).context(path)));
-        try!(file.write_all(&HEADER_STRING).context(path));
-        try!(file.write_all(&[HEADER_VERSION]).context(path));
+        let mut file = BufWriter::new(try!(File::create(path).map_err(|err| BackupFileError::Write(err, path.to_path_buf()))));
+        try!(file.write_all(&HEADER_STRING).map_err(|err| BackupFileError::Write(err, path.to_path_buf())));
+        try!(file.write_all(&[HEADER_VERSION]).map_err(|err| BackupFileError::Write(err, path.to_path_buf())));
         let header = BackupHeader { encryption: encryption };
         try!(msgpack::encode_to_stream(&header, &mut file).context(path));
-        try!(file.write_all(&data).context(path));
+        try!(file.write_all(&data).map_err(|err| BackupFileError::Write(err, path.to_path_buf())));
         Ok(())
     }
-}
 
-
-
-impl Repository {
-    pub fn get_backups(&self) -> Result<(HashMap<String, Backup>, bool), RepositoryError> {
+    pub fn get_all_from<P: AsRef<Path>>(crypto: &Crypto, path: P) -> Result<HashMap<String, Backup>, BackupFileError> {
         let mut backups = HashMap::new();
-        let mut paths = Vec::new();
-        let base_path = self.path.join("backups");
-        paths.push(base_path.clone());
-        let mut some_failed = false;
+        let base_path = path.as_ref();
+        let mut paths = vec![path.as_ref().to_path_buf()];
+        let mut failed_paths = vec![];
         while let Some(path) = paths.pop() {
-            for entry in try!(fs::read_dir(path)) {
-                let entry = try!(entry);
+            for entry in try!(fs::read_dir(&path).map_err(|e| BackupFileError::Read(e, path.clone()))) {
+                let entry = try!(entry.map_err(|e| BackupFileError::Read(e, path.clone())));
                 let path = entry.path();
                 if path.is_dir() {
                     paths.push(path);
                 } else {
                     let relpath = path.strip_prefix(&base_path).unwrap();
                     let name = relpath.to_string_lossy().to_string();
-                    if let Ok(backup) = self.get_backup(&name) {
+                    if let Ok(backup) = Backup::read_from(crypto, &path) {
                         backups.insert(name, backup);
                     } else {
-                        some_failed = true;
+                        failed_paths.push(path.clone());
                     }
                 }
             }
         }
-        if some_failed {
-            warn!("Some backups could not be read");
+        if failed_paths.is_empty() {
+            Ok(backups)
+        } else {
+            Err(BackupFileError::PartialBackupsList(backups, failed_paths))
         }
-        Ok((backups, some_failed))
+    }
+}
+
+
+quick_error!{
+    #[derive(Debug)]
+    pub enum BackupError {
+    }
+}
+
+
+impl Repository {
+    pub fn get_backups(&self) -> Result<HashMap<String, Backup>, RepositoryError> {
+        Ok(try!(Backup::get_all_from(&self.crypto.lock().unwrap(), self.path.join("backups"))))
     }
 
     pub fn get_backup(&self, name: &str) -> Result<Backup, RepositoryError> {
@@ -195,10 +212,14 @@ impl Repository {
 
     pub fn prune_backups(&self, prefix: &str, daily: Option<usize>, weekly: Option<usize>, monthly: Option<usize>, yearly: Option<usize>, force: bool) -> Result<(), RepositoryError> {
         let mut backups = Vec::new();
-        let (backup_map, some_failed) = try!(self.get_backups());
-        if some_failed {
-            info!("Ignoring backups that can not be read");
-        }
+        let backup_map = match self.get_backups() {
+            Ok(backup_map) => backup_map,
+            Err(RepositoryError::BackupFile(BackupFileError::PartialBackupsList(backup_map, _failed))) => {
+                warn!("Some backups could not be read, ignoring them");
+                backup_map
+            },
+            Err(err) => return Err(err)
+        };
         for (name, backup) in backup_map {
             if name.starts_with(prefix) {
                 let date = Local.timestamp(backup.date, 0);

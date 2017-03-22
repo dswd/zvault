@@ -1,10 +1,45 @@
 use ::prelude::*;
 use super::*;
 
-use std::path::Path;
+use std::path::{Path, PathBuf};
 use std::fs::File;
-use std::io::{Write, BufWriter};
+use std::io::{self, Write, BufWriter};
 use std::sync::{Arc, Mutex};
+
+
+quick_error!{
+    #[derive(Debug)]
+    pub enum BundleWriterError {
+        CompressionSetup(err: CompressionError) {
+            cause(err)
+            description("Failed to setup compression")
+            display("Bundle writer error: failed to setup compression\n\tcaused by: {}", err)
+        }
+        Compression(err: CompressionError) {
+            cause(err)
+            description("Failed to compress data")
+            display("Bundle writer error: failed to compress data\n\tcaused by: {}", err)
+        }
+        Encryption(err: EncryptionError) {
+            from()
+            cause(err)
+            description("Encryption failed")
+            display("Bundle writer error: failed to encrypt data\n\tcaused by: {}", err)
+        }
+        Encode(err: msgpack::EncodeError, path: PathBuf) {
+            cause(err)
+            context(path: &'a Path, err: msgpack::EncodeError) -> (err, path.to_path_buf())
+            description("Failed to encode bundle header to file")
+            display("Bundle writer error: failed to encode bundle header to file {:?}\n\tcaused by: {}", path, err)
+        }
+        Write(err: io::Error, path: PathBuf) {
+            cause(err)
+            context(path: &'a Path, err: io::Error) -> (err, path.to_path_buf())
+            description("Failed to write data to file")
+            display("Bundle writer error: failed to write data to file {:?}\n\tcaused by: {}", path, err)
+        }
+    }
+}
 
 
 pub struct BundleWriter {
@@ -21,15 +56,9 @@ pub struct BundleWriter {
 }
 
 impl BundleWriter {
-    pub fn new(
-        mode: BundleMode,
-        hash_method: HashMethod,
-        compression: Option<Compression>,
-        encryption: Option<Encryption>,
-        crypto: Arc<Mutex<Crypto>>
-    ) -> Result<Self, BundleError> {
+    pub fn new(mode: BundleMode, hash_method: HashMethod, compression: Option<Compression>, encryption: Option<Encryption>, crypto: Arc<Mutex<Crypto>>) -> Result<Self, BundleWriterError> {
         let compression_stream = match compression {
-            Some(ref compression) => Some(try!(compression.compress_stream())),
+            Some(ref compression) => Some(try!(compression.compress_stream().map_err(BundleWriterError::CompressionSetup))),
             None => None
         };
         Ok(BundleWriter {
@@ -46,9 +75,9 @@ impl BundleWriter {
         })
     }
 
-    pub fn add(&mut self, chunk: &[u8], hash: Hash) -> Result<usize, BundleError> {
+    pub fn add(&mut self, chunk: &[u8], hash: Hash) -> Result<usize, BundleWriterError> {
         if let Some(ref mut stream) = self.compression_stream {
-            try!(stream.process(chunk, &mut self.data))
+            try!(stream.process(chunk, &mut self.data).map_err(BundleWriterError::Compression))
         } else {
             self.data.extend_from_slice(chunk)
         }
@@ -58,9 +87,9 @@ impl BundleWriter {
         Ok(self.chunk_count-1)
     }
 
-    pub fn finish(mut self, db: &BundleDb) -> Result<StoredBundle, BundleError> {
+    pub fn finish(mut self, db: &BundleDb) -> Result<StoredBundle, BundleWriterError> {
         if let Some(stream) = self.compression_stream {
-            try!(stream.finish(&mut self.data))
+            try!(stream.finish(&mut self.data).map_err(BundleWriterError::Compression))
         }
         if let Some(ref encryption) = self.encryption {
             self.data = try!(self.crypto.lock().unwrap().encrypt(&encryption, &self.data));

@@ -1,11 +1,58 @@
 use ::prelude::*;
 
 use std::collections::HashMap;
-use std::path::Path;
+use std::path::{Path, PathBuf};
 use std::fs::{self, Metadata, File, Permissions};
 use std::os::linux::fs::MetadataExt;
 use std::os::unix::fs::{PermissionsExt, symlink};
-use std::io::{Read, Write};
+use std::io::{self, Read, Write};
+
+
+quick_error!{
+    #[derive(Debug)]
+    pub enum InodeError {
+        UnsupportedFiletype(path: PathBuf) {
+            description("Unsupported file type")
+            display("Inode error: file {:?} has an unsupported type", path)
+        }
+        ReadMetadata(err: io::Error, path: PathBuf) {
+            cause(err)
+            description("Failed to obtain metadata for file")
+            display("Inode error: failed to obtain metadata for file {:?}\n\tcaused by: {}", path, err)
+        }
+        ReadLinkTarget(err: io::Error, path: PathBuf) {
+            cause(err)
+            description("Failed to obtain link target for file")
+            display("Inode error: failed to obtain link target for file {:?}\n\tcaused by: {}", path, err)
+        }
+        Create(err: io::Error, path: PathBuf) {
+            cause(err)
+            description("Failed to create entity")
+            display("Inode error: failed to create entity {:?}\n\tcaused by: {}", path, err)
+        }
+        SetPermissions(err: io::Error, path: PathBuf, mode: u32) {
+            cause(err)
+            description("Failed to set permissions")
+            display("Inode error: failed to set permissions to {:3o} on {:?}\n\tcaused by: {}", mode, path, err)
+        }
+        Integrity(reason: &'static str) {
+            description("Integrity error")
+            display("Inode error: inode integrity error: {}", reason)
+        }
+        Decode(err: msgpack::DecodeError) {
+            from()
+            cause(err)
+            description("Failed to decode metadata")
+            display("Inode error: failed to decode metadata\n\tcaused by: {}", err)
+        }
+        Encode(err: msgpack::EncodeError) {
+            from()
+            cause(err)
+            description("Failed to encode metadata")
+            display("Inode error: failed to encode metadata\n\tcaused by: {}", err)
+        }
+    }
+}
 
 
 #[derive(Debug, Eq, PartialEq)]
@@ -85,7 +132,7 @@ serde_impl!(Inode(u8) {
 
 impl Inode {
     #[inline]
-    fn get_extended_attrs_from(&mut self, meta: &Metadata) -> Result<(), RepositoryError> {
+    fn get_extended_attrs_from(&mut self, meta: &Metadata) -> Result<(), InodeError> {
         self.mode = meta.st_mode();
         self.user = meta.st_uid();
         self.group = meta.st_gid();
@@ -95,11 +142,12 @@ impl Inode {
         Ok(())
     }
 
-    pub fn get_from<P: AsRef<Path>>(path: P) -> Result<Self, RepositoryError> {
-        let name = try!(path.as_ref().file_name()
-            .ok_or_else(|| RepositoryError::InvalidFileType(path.as_ref().to_owned())))
+    pub fn get_from<P: AsRef<Path>>(path: P) -> Result<Self, InodeError> {
+        let path = path.as_ref();
+        let name = try!(path.file_name()
+            .ok_or_else(|| InodeError::UnsupportedFiletype(path.to_owned())))
             .to_string_lossy().to_string();
-        let meta = try!(fs::symlink_metadata(path.as_ref()));
+        let meta = try!(fs::symlink_metadata(path).map_err(|e| InodeError::ReadMetadata(e, path.to_owned())));
         let mut inode = Inode::default();
         inode.name = name;
         inode.size = meta.len();
@@ -110,35 +158,35 @@ impl Inode {
         } else if meta.file_type().is_symlink() {
             FileType::Symlink
         } else {
-            return Err(RepositoryError::InvalidFileType(path.as_ref().to_owned()));
+            return Err(InodeError::UnsupportedFiletype(path.to_owned()));
         };
         if meta.file_type().is_symlink() {
-            inode.symlink_target = Some(try!(fs::read_link(path)).to_string_lossy().to_string());
+            inode.symlink_target = Some(try!(fs::read_link(path).map_err(|e| InodeError::ReadLinkTarget(e, path.to_owned()))).to_string_lossy().to_string());
         }
         try!(inode.get_extended_attrs_from(&meta));
         Ok(inode)
     }
 
     #[allow(dead_code)]
-    pub fn create_at<P: AsRef<Path>>(&self, path: P) -> Result<Option<File>, RepositoryError> {
+    pub fn create_at<P: AsRef<Path>>(&self, path: P) -> Result<Option<File>, InodeError> {
         let full_path = path.as_ref().join(&self.name);
         let mut file = None;
         match self.file_type {
             FileType::File => {
-                file = Some(try!(File::create(&full_path)));
+                file = Some(try!(File::create(&full_path).map_err(|e| InodeError::Create(e, full_path.clone()))));
             },
             FileType::Directory => {
-                try!(fs::create_dir(&full_path));
+                try!(fs::create_dir(&full_path).map_err(|e| InodeError::Create(e, full_path.clone())));
             },
             FileType::Symlink => {
                 if let Some(ref src) = self.symlink_target {
-                    try!(symlink(src, &full_path));
+                    try!(symlink(src, &full_path).map_err(|e| InodeError::Create(e, full_path.clone())));
                 } else {
-                    return Err(RepositoryIntegrityError::SymlinkWithoutTarget.into())
+                    return Err(InodeError::Integrity("Symlink without target"))
                 }
             }
         }
-        try!(fs::set_permissions(&full_path, Permissions::from_mode(self.mode)));
+        try!(fs::set_permissions(&full_path, Permissions::from_mode(self.mode)).map_err(|e| InodeError::SetPermissions(e, full_path.clone(), self.mode)));
         //FIXME: set times and gid/uid
         // https://crates.io/crates/filetime
         Ok(file)
@@ -148,6 +196,16 @@ impl Inode {
         self.modify_time == other.modify_time
         && self.create_time == other.create_time
         && self.file_type == other.file_type
+    }
+
+    #[inline]
+    pub fn encode(&self) -> Result<Vec<u8>, InodeError> {
+        Ok(try!(msgpack::encode(&self)))
+    }
+
+    #[inline]
+    pub fn decode(data: &[u8]) -> Result<Self, InodeError> {
+        Ok(try!(msgpack::decode(&data)))
     }
 }
 
@@ -184,12 +242,12 @@ impl Repository {
 
     #[inline]
     pub fn put_inode(&mut self, inode: &Inode) -> Result<ChunkList, RepositoryError> {
-        self.put_data(BundleMode::Meta, &try!(msgpack::encode(inode)))
+        self.put_data(BundleMode::Meta, &try!(inode.encode()))
     }
 
     #[inline]
     pub fn get_inode(&mut self, chunks: &[Chunk]) -> Result<Inode, RepositoryError> {
-        Ok(try!(msgpack::decode(&try!(self.get_data(chunks)))))
+        Ok(try!(Inode::decode(&try!(self.get_data(chunks)))))
     }
 
     #[inline]

@@ -1,4 +1,5 @@
 use ::prelude::*;
+use super::*;
 
 use std::process::exit;
 
@@ -259,7 +260,7 @@ pub fn parse() -> Arguments {
             (about: "changes the configuration")
             (@arg REPO: +required "path of the repository")
             (@arg bundle_size: --bundlesize +takes_value "maximal bundle size in MiB [default: 25]")
-            (@arg chunker: --chunker +takes_value "chunker algorithm [default: fastcdc/8]")
+            (@arg chunker: --chunker +takes_value "chunker algorithm [default: fastcdc/16]")
             (@arg compression: --compression -c +takes_value "compression to use [default: brotli/3]")
             (@arg encryption: --encryption -e +takes_value "the public key to use for encryption")
             (@arg hash: --hash +takes_value "hash method to use [default: blake2]")
@@ -278,7 +279,7 @@ pub fn parse() -> Arguments {
         (@subcommand algotest =>
             (about: "test a specific algorithm combination")
             (@arg bundle_size: --bundlesize +takes_value "maximal bundle size in MiB [default: 25]")
-            (@arg chunker: --chunker +takes_value "chunker algorithm [default: fastcdc/8]")
+            (@arg chunker: --chunker +takes_value "chunker algorithm [default: fastcdc/16]")
             (@arg compression: --compression -c +takes_value "compression to use [default: brotli/3]")
             (@arg encrypt: --encrypt -e "enable encryption")
             (@arg hash: --hash +takes_value "hash method to use [default: blake2]")
@@ -292,11 +293,11 @@ pub fn parse() -> Arguments {
             exit(1);
         }
         return Arguments::Init {
-            bundle_size: (parse_num(args.value_of("bundle_size").unwrap_or("25"), "Bundle size") * 1024 * 1024) as usize,
-            chunker: parse_chunker(args.value_of("chunker").unwrap_or("fastcdc/8")),
-            compression: parse_compression(args.value_of("compression").unwrap_or("brotli/3")),
+            bundle_size: (parse_num(args.value_of("bundle_size").unwrap_or(&DEFAULT_BUNDLE_SIZE.to_string()), "Bundle size") * 1024 * 1024) as usize,
+            chunker: parse_chunker(args.value_of("chunker").unwrap_or(DEFAULT_CHUNKER)),
+            compression: parse_compression(args.value_of("compression").unwrap_or(DEFAULT_COMPRESSION)),
             encryption: args.is_present("encryption"),
-            hash: parse_hash(args.value_of("hash").unwrap_or("blake2")),
+            hash: parse_hash(args.value_of("hash").unwrap_or(DEFAULT_HASH)),
             repo_path: repository.to_string(),
         }
     }
@@ -368,7 +369,7 @@ pub fn parse() -> Arguments {
         return Arguments::Vacuum {
             repo_path: repository.to_string(),
             force: args.is_present("force"),
-            ratio: parse_float(args.value_of("ratio").unwrap_or("0.5"), "ratio") as f32
+            ratio: parse_float(args.value_of("ratio").unwrap_or(&DEFAULT_VACUUM_RATIO.to_string()), "ratio") as f32
         }
     }
     if let Some(args) = args.subcommand_matches("check") {
@@ -469,11 +470,11 @@ pub fn parse() -> Arguments {
     }
     if let Some(args) = args.subcommand_matches("algotest") {
         return Arguments::AlgoTest {
-            bundle_size: (parse_num(args.value_of("bundle_size").unwrap_or("25"), "Bundle size") * 1024 * 1024) as usize,
-            chunker: parse_chunker(args.value_of("chunker").unwrap_or("fastcdc/8")),
-            compression: parse_compression(args.value_of("compression").unwrap_or("brotli/3")),
+            bundle_size: (parse_num(args.value_of("bundle_size").unwrap_or(&DEFAULT_BUNDLE_SIZE.to_string()), "Bundle size") * 1024 * 1024) as usize,
+            chunker: parse_chunker(args.value_of("chunker").unwrap_or(DEFAULT_CHUNKER)),
+            compression: parse_compression(args.value_of("compression").unwrap_or(DEFAULT_COMPRESSION)),
             encrypt: args.is_present("encrypt"),
-            hash: parse_hash(args.value_of("hash").unwrap_or("blake2")),
+            hash: parse_hash(args.value_of("hash").unwrap_or(DEFAULT_HASH)),
             file: args.value_of("FILE").unwrap().to_string(),
         }
     }

@@ -10,6 +10,13 @@ use std::process::exit;
 use self::args::Arguments;
 
 
+pub const DEFAULT_CHUNKER: &'static str = "fastcdc/16";
+pub const DEFAULT_HASH: &'static str = "blake2";
+pub const DEFAULT_COMPRESSION: &'static str = "brotli/3";
+pub const DEFAULT_BUNDLE_SIZE: usize = 25;
+pub const DEFAULT_VACUUM_RATIO: f32 = 0.5;
+
+
 fn open_repository(path: &str) -> Repository {
     match Repository::open(path) {
         Ok(repo) => repo,
@@ -36,7 +43,18 @@ fn find_reference_backup(repo: &Repository, path: &str) -> Option<Backup> {
         Ok(hostname) => hostname,
         Err(_) => return None
     };
-    for (_name, backup) in repo.get_backups().unwrap().0 {
+    let backup_map = match repo.get_backups() {
+        Ok(backup_map) => backup_map,
+        Err(RepositoryError::BackupFile(BackupFileError::PartialBackupsList(backup_map, _failed))) => {
+            warn!("Some backups could not be read, ignoring them");
+            backup_map
+        },
+        Err(err) => {
+            error!("Failed to load backup files: {}", err);
+            exit(3)
+        }
+    };
+    for (_name, backup) in backup_map {
         if backup.host == hostname && backup.path == path {
             matching.push(backup);
         }
@@ -155,7 +173,18 @@ pub fn run() {
                     }
                 }
             } else {
-                for (name, backup) in repo.get_backups().unwrap().0 {
+                let backup_map = match repo.get_backups() {
+                    Ok(backup_map) => backup_map,
+                    Err(RepositoryError::BackupFile(BackupFileError::PartialBackupsList(backup_map, _failed))) => {
+                        warn!("Some backups could not be read, ignoring them");
+                        backup_map
+                    },
+                    Err(err) => {
+                        error!("Failed to load backup files: {}", err);
+                        exit(3)
+                    }
+                };
+                for (name, backup) in backup_map {
                     println!("{:25}  {:>32}  {:5} files, {:4} dirs, {:>10}",
                         name, Local.timestamp(backup.date, 0).to_rfc2822(), backup.file_count,
                         backup.dir_count, to_file_size(backup.total_data_size));

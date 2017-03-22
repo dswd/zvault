@@ -4,9 +4,10 @@ use super::*;
 use std::path::{Path, PathBuf};
 use std::io;
 
+
 quick_error!{
     #[derive(Debug)]
-    pub enum BundleError {
+    pub enum BundleDbError {
         List(err: io::Error) {
             cause(err)
             description("Failed to list bundles")
@@ -78,6 +79,18 @@ quick_error!{
             cause(err)
             description("Failed to remove bundle")
             display("Failed to remove bundle {}", bundle)
+        }
+        Writer(err: BundleWriterError) {
+            from()
+            cause(err)
+            description("Failed to write new bundle")
+            display("Bundle db error: failed to write new bundle\n\tcaused by: {}", err)
+        }
+        Reader(err: BundleReaderError) {
+            from()
+            cause(err)
+            description("Failed to read bundle")
+            display("Bundle db error: failed to read a bundle\n\tcaused by: {}", err)
         }
     }
 }
