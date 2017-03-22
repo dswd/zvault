@@ -133,10 +133,30 @@ impl Crypto {
     }
 
     #[inline]
+    pub fn register_keyfile<P: AsRef<Path>>(&mut self, path: P) -> Result<(), EncryptionError> {
+        let (public, secret) = try!(Self::load_keypair_from_file(path));
+        self.register_secret_key(public, secret)
+    }
+
+    #[inline]
+    pub fn load_keypair_from_file<P: AsRef<Path>>(path: P) -> Result<(PublicKey, SecretKey), EncryptionError> {
+        let keyfile = try!(KeyfileYaml::load(path));
+        let public = try!(parse_hex(&keyfile.public).map_err(|_| EncryptionError::InvalidKey));
+        let public = try!(PublicKey::from_slice(&public).ok_or(EncryptionError::InvalidKey));
+        let secret = try!(parse_hex(&keyfile.secret).map_err(|_| EncryptionError::InvalidKey));
+        let secret = try!(SecretKey::from_slice(&secret).ok_or(EncryptionError::InvalidKey));
+        Ok((public, secret))
+    }
+
+    #[inline]
+    pub fn save_keypair_to_file<P: AsRef<Path>>(public: &PublicKey, secret: &SecretKey, path: P) -> Result<(), EncryptionError> {
+        KeyfileYaml { public: to_hex(&public[..]), secret: to_hex(&secret[..]) }.save(path)
+    }
+
+    #[inline]
     pub fn register_secret_key(&mut self, public: PublicKey, secret: SecretKey) -> Result<(), EncryptionError> {
-        let keyfile = KeyfileYaml { public: to_hex(&public[..]), secret: to_hex(&secret[..]) };
         let path = self.path.join(to_hex(&public[..]) + ".yaml");
-        try!(keyfile.save(path));
+        try!(Self::save_keypair_to_file(&public, &secret, path));
         self.keys.insert(public, secret);
         Ok(())
     }

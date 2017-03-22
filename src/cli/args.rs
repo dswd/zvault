@@ -67,7 +67,8 @@ pub enum Arguments {
     },
     Import {
         repo_path: String,
-        remote_path: String
+        remote_path: String,
+        key_files: Vec<String>
     },
     Configure {
         repo_path: String,
@@ -78,10 +79,11 @@ pub enum Arguments {
         hash: Option<HashMethod>
     },
     GenKey {
+        file: Option<String>
     },
     AddKey {
         repo_path: String,
-        key_pair: Option<(PublicKey, SecretKey)>,
+        file: Option<String>,
         set_default: bool
     },
     AlgoTest {
@@ -152,22 +154,6 @@ fn parse_public_key(val: &str) -> PublicKey {
         }
     };
     if let Some(key) = PublicKey::from_slice(&bytes) {
-        key
-    } else {
-        error!("Invalid key: {}", val);
-        exit(1);
-    }
-}
-
-fn parse_secret_key(val: &str) -> SecretKey {
-    let bytes = match parse_hex(val) {
-        Ok(bytes) => bytes,
-        Err(_) => {
-            error!("Invalid key: {}", val);
-            exit(1);
-        }
-    };
-    if let Some(key) = SecretKey::from_slice(&bytes) {
         key
     } else {
         error!("Invalid key: {}", val);
@@ -251,6 +237,7 @@ pub fn parse() -> Arguments {
         )
         (@subcommand import =>
             (about: "reconstruct a repository from the remote files")
+            (@arg key: --key -k ... +takes_value "a file with a needed to read the bundles")
             (@arg REMOTE: +required "remote repository path")
             (@arg REPO: +required "path of the local repository to create")
         )
@@ -269,14 +256,14 @@ pub fn parse() -> Arguments {
         )
         (@subcommand genkey =>
             (about: "generates a new key pair")
+            (@arg FILE: +takes_value "the destination file for the keypair")
         )
         (@subcommand addkey =>
             (about: "adds a key to the respository")
             (@arg REPO: +required "path of the repository")
             (@arg generate: --generate "generate a new key")
             (@arg set_default: --default "set this key as default")
-            (@arg PUBLIC: +takes_value "the public key")
-            (@arg SECRET: +takes_value "the secret key")
+            (@arg FILE: +takes_value "the file containing the keypair")
         )
         (@subcommand algotest =>
             (about: "test a specific algorithm combination")
@@ -418,7 +405,8 @@ pub fn parse() -> Arguments {
         }
         return Arguments::Import {
             repo_path: repository.to_string(),
-            remote_path: args.value_of("REMOTE").unwrap().to_string()
+            remote_path: args.value_of("REMOTE").unwrap().to_string(),
+            key_files: args.values_of("key").map(|v| v.map(|k| k.to_string()).collect()).unwrap_or_else(|| vec![])
         }
     }
     if let Some(args) = args.subcommand_matches("configure") {
@@ -442,8 +430,10 @@ pub fn parse() -> Arguments {
             repo_path: repository.to_string(),
         }
     }
-    if let Some(_args) = args.subcommand_matches("genkey") {
-        return Arguments::GenKey {}
+    if let Some(args) = args.subcommand_matches("genkey") {
+        return Arguments::GenKey {
+            file: args.value_of("FILE").map(|v| v.to_string())
+        }
     }
     if let Some(args) = args.subcommand_matches("addkey") {
         let (repository, backup, inode) = split_repo_path(args.value_of("REPO").unwrap());
@@ -452,23 +442,18 @@ pub fn parse() -> Arguments {
             exit(1);
         }
         let generate = args.is_present("generate");
-        if !generate && (!args.is_present("PUBLIC") || !args.is_present("SECRET")) {
-            println!("Without --generate, a public and secret key must be given");
+        if !generate && !args.is_present("FILE") {
+            println!("Without --generate, a file containing the key pair must be given");
             exit(1);
         }
-        if generate && (args.is_present("PUBLIC") || args.is_present("SECRET")) {
-            println!("With --generate, no public or secret key may be given");
+        if generate && args.is_present("FILE") {
+            println!("With --generate, no file may be given");
             exit(1);
         }
-        let key_pair = if generate {
-            None
-        } else {
-            Some((parse_public_key(args.value_of("PUBLIC").unwrap()), parse_secret_key(args.value_of("SECRET").unwrap())))
-        };
         return Arguments::AddKey {
             repo_path: repository.to_string(),
             set_default: args.is_present("set_default"),
-            key_pair: key_pair
+            file: args.value_of("FILE").map(|v| v.to_string())
         }
     }
     if let Some(args) = args.subcommand_matches("algotest") {

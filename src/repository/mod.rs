@@ -109,10 +109,13 @@ impl Repository {
         Ok(repo)
     }
 
-    pub fn import<P: AsRef<Path>, R: AsRef<Path>>(path: P, remote: R) -> Result<Self, RepositoryError> {
+    pub fn import<P: AsRef<Path>, R: AsRef<Path>>(path: P, remote: R, key_files: Vec<String>) -> Result<Self, RepositoryError> {
         let path = path.as_ref();
-        try!(Repository::create(path, Config::default(), remote));
-        let mut repo = try!(Repository::open(path));
+        let mut repo = try!(Repository::create(path, Config::default(), remote));
+        for file in key_files {
+            try!(repo.crypto.lock().unwrap().register_keyfile(file));
+        }
+        repo = try!(Repository::open(path));
         let mut backups: Vec<Backup> = try!(repo.get_backups()).into_iter().map(|(_, v)| v).collect();
         backups.sort_by_key(|b| b.date);
         if let Some(backup) = backups.pop() {

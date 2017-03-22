@@ -25,14 +25,6 @@ mod repository;
 mod cli;
 mod prelude;
 
-// TODO: Keep backup files also remotely and sync them
-// TODO: Lock during backup and vacuum
-// TODO: Remove backup subtrees
-// TODO: Recompress & combine bundles
-// TODO: list --tree
-// TODO: Give crypto keys for import
-// TODO: More detailed errors with nicer text
-// TODO: Allow to use tar files for backup and restore (--tar, http://alexcrichton.com/tar-rs/tar/index.html)
 
 fn main() {
     cli::run();

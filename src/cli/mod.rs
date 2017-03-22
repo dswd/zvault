@@ -284,8 +284,8 @@ pub fn run() {
                 println!();
             }
         },
-        Arguments::Import{repo_path, remote_path} => {
-            Repository::import(repo_path, remote_path).unwrap();
+        Arguments::Import{repo_path, remote_path, key_files} => {
+            Repository::import(repo_path, remote_path, key_files).unwrap();
         },
         Arguments::Configure{repo_path, bundle_size, chunker, compression, encryption, hash} => {
             let mut repo = open_repository(&repo_path);
@@ -309,26 +309,29 @@ pub fn run() {
             repo.save_config().unwrap();
             print_config(&repo.config);
         },
-        Arguments::GenKey{} => {
+        Arguments::GenKey{file} => {
             let (public, secret) = gen_keypair();
-            println!("Public key: {}", to_hex(&public[..]));
-            println!("Secret key: {}", to_hex(&secret[..]));
+            println!("public: {}", to_hex(&public[..]));
+            println!("secret: {}", to_hex(&secret[..]));
+            if let Some(file) = file {
+                Crypto::save_keypair_to_file(&public, &secret, file).unwrap();
+            }
         },
-        Arguments::AddKey{repo_path, set_default, key_pair} => {
+        Arguments::AddKey{repo_path, set_default, file} => {
             let mut repo = open_repository(&repo_path);
-            let (public, secret) = if let Some(key_pair) = key_pair {
-                key_pair
+            let (public, secret) = if let Some(file) = file {
+                Crypto::load_keypair_from_file(file).unwrap()
             } else {
                 let (public, secret) = gen_keypair();
-                println!("Public key: {}", to_hex(&public[..]));
-                println!("Secret key: {}", to_hex(&secret[..]));
+                println!("public: {}", to_hex(&public[..]));
+                println!("secret: {}", to_hex(&secret[..]));
                 (public, secret)
             };
+            repo.register_key(public, secret).unwrap();
             if set_default {
                 repo.set_encryption(Some(&public));
                 repo.save_config().unwrap();
             }
-            repo.register_key(public, secret).unwrap();
         },
         Arguments::AlgoTest{bundle_size, chunker, compression, encrypt, hash, file} => {
             algotest::run(&file, bundle_size, chunker, compression, encrypt, hash);
