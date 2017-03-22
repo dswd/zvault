@@ -11,6 +11,7 @@ use super::metadata::InodeError;
 
 quick_error!{
     #[derive(Debug)]
+    #[allow(unknown_lints,large_enum_variant)]
     pub enum RepositoryError {
         Index(err: IndexError) {
             from()

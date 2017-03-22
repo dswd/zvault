@@ -109,6 +109,19 @@ impl Repository {
         Ok(repo)
     }
 
+    pub fn import<P: AsRef<Path>, R: AsRef<Path>>(path: P, remote: R) -> Result<Self, RepositoryError> {
+        let path = path.as_ref();
+        try!(Repository::create(path, Config::default(), remote));
+        let mut repo = try!(Repository::open(path));
+        let mut backups: Vec<Backup> = try!(repo.get_backups()).into_iter().map(|(_, v)| v).collect();
+        backups.sort_by_key(|b| b.date);
+        if let Some(backup) = backups.pop() {
+            repo.config = backup.config;
+            try!(repo.save_config())
+        }
+        Ok(repo)
+    }
+
     #[inline]
     pub fn register_key(&mut self, public: PublicKey, secret: SecretKey) -> Result<(), RepositoryError> {
         Ok(try!(self.crypto.lock().unwrap().register_secret_key(public, secret)))

@@ -30,7 +30,7 @@ mod prelude;
 // TODO: Remove backup subtrees
 // TODO: Recompress & combine bundles
 // TODO: list --tree
-// TODO: Import repository from remote folder
+// TODO: Give crypto keys for import
 // TODO: More detailed errors with nicer text
 // TODO: Allow to use tar files for backup and restore (--tar, http://alexcrichton.com/tar-rs/tar/index.html)
 

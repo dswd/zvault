@@ -136,14 +136,14 @@ pub fn run() {
         exit(-1)
     }
     match args::parse() {
-        Arguments::Init{repo_path, bundle_size, chunker, compression, encryption, hash, remote} => {
+        Arguments::Init{repo_path, bundle_size, chunker, compression, encryption, hash, remote_path} => {
             let mut repo = Repository::create(repo_path, Config {
                 bundle_size: bundle_size,
                 chunker: chunker,
                 compression: compression,
                 encryption: None,
                 hash: hash
-            }, remote).unwrap();
+            }, remote_path).unwrap();
             if encryption {
                 let (public, secret) = gen_keypair();
                 println!("Public key: {}", to_hex(&public[..]));
@@ -284,9 +284,8 @@ pub fn run() {
                 println!();
             }
         },
-        Arguments::Import{..} => {
-            error!("Import is not implemented yet");
-            return
+        Arguments::Import{repo_path, remote_path} => {
+            Repository::import(repo_path, remote_path).unwrap();
         },
         Arguments::Configure{repo_path, bundle_size, chunker, compression, encryption, hash} => {
             let mut repo = open_repository(&repo_path);

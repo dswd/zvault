@@ -88,7 +88,8 @@ pub struct Backup {
     pub file_count: usize,
     pub dir_count: usize,
     pub host: String,
-    pub path: String
+    pub path: String,
+    pub config: Config,
 }
 serde_impl!(Backup(u8) {
     root: Vec<Chunk> => 0,
@@ -104,7 +105,8 @@ serde_impl!(Backup(u8) {
     file_count: usize => 10,
     dir_count: usize => 11,
     host: String => 12,
-    path: String => 13
+    path: String => 13,
+    config: Config => 14
 });
 
 impl Backup {
@@ -307,6 +309,7 @@ impl Repository {
         let mut save_stack = vec![];
         let mut directories = HashMap::new();
         let mut backup = Backup::default();
+        backup.config = self.config.clone();
         backup.host = get_hostname().unwrap_or_else(|_| "".to_string());
         backup.path = path.as_ref().to_string_lossy().to_string();
         let info_before = self.info();

@@ -149,7 +149,7 @@ serde_impl!(ConfigYaml(String) {
 
 
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct Config {
     pub compression: Option<Compression>,
     pub encryption: Option<Encryption>,
@@ -157,6 +157,25 @@ pub struct Config {
     pub chunker: ChunkerType,
     pub hash: HashMethod
 }
+impl Default for Config {
+    fn default() -> Self {
+        Config {
+            compression: None,
+            encryption: None,
+            bundle_size: 25,
+            chunker: ChunkerType::from_string("fastcdc/16").unwrap(),
+            hash: HashMethod::Blake2
+        }
+    }
+}
+serde_impl!(Config(u64) {
+    compression: Option<Compression> => 0,
+    encryption: Option<Encryption> => 1,
+    bundle_size: usize => 2,
+    chunker: ChunkerType => 3,
+    hash: HashMethod => 4
+});
+
 impl Config {
     fn from_yaml(yaml: ConfigYaml) -> Result<Self, ConfigError> {
         let compression = if let Some(c) = yaml.compression {

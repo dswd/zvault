@@ -12,7 +12,7 @@ pub enum Arguments {
         compression: Option<Compression>,
         encryption: bool,
         hash: HashMethod,
-        remote: String
+        remote_path: String
     },
     Backup {
         repo_path: String,
@@ -301,7 +301,7 @@ pub fn parse() -> Arguments {
             encryption: args.is_present("encryption"),
             hash: parse_hash(args.value_of("hash").unwrap_or(DEFAULT_HASH)),
             repo_path: repository.to_string(),
-            remote: args.value_of("remote").unwrap().to_string()
+            remote_path: args.value_of("remote").unwrap().to_string()
         }
     }
     if let Some(args) = args.subcommand_matches("backup") {
