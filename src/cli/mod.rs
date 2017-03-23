@@ -7,6 +7,7 @@ use ::prelude::*;
 use chrono::prelude::*;
 use std::process::exit;
 use std::collections::HashMap;
+use std::fmt::Display;
 
 use self::args::Arguments;
 
@@ -18,24 +19,22 @@ pub const DEFAULT_BUNDLE_SIZE: usize = 25;
 pub const DEFAULT_VACUUM_RATIO: f32 = 0.5;
 
 
-fn open_repository(path: &str) -> Repository {
-    match Repository::open(path) {
-        Ok(repo) => repo,
+fn checked<T, E: Display>(result: Result<T, E>, msg: &'static str) -> T {
+    match result {
+        Ok(val) => val,
         Err(err) => {
-            error!("Failed to open repository: {}", err);
-            exit(2);
+            error!("Failed to {}\n\tcaused by: {}", msg, err);
+            exit(3);
         }
     }
 }
 
+fn open_repository(path: &str) -> Repository {
+    checked(Repository::open(path), "load repository")
+}
+
 fn get_backup(repo: &Repository, backup_name: &str) -> Backup {
-    match repo.get_backup(backup_name) {
-        Ok(backup) => backup,
-        Err(err) => {
-            error!("Failed to load backup: {}", err);
-            exit(3);
-        }
-    }
+    checked(repo.get_backup(backup_name), "load backup")
 }
 
 fn find_reference_backup(repo: &Repository, path: &str) -> Option<Backup> {
@@ -137,20 +136,20 @@ pub fn run() {
     }
     match args::parse() {
         Arguments::Init{repo_path, bundle_size, chunker, compression, encryption, hash, remote_path} => {
-            let mut repo = Repository::create(repo_path, Config {
+            let mut repo = checked(Repository::create(repo_path, Config {
                 bundle_size: bundle_size,
                 chunker: chunker,
                 compression: compression,
                 encryption: None,
                 hash: hash
-            }, remote_path).unwrap();
+            }, remote_path), "create repository");
             if encryption {
                 let (public, secret) = gen_keypair();
                 println!("public: {}", to_hex(&public[..]));
                 println!("secret: {}", to_hex(&secret[..]));
                 repo.set_encryption(Some(&public));
-                repo.register_key(public, secret).unwrap();
-                repo.save_config().unwrap();
+                checked(repo.register_key(public, secret), "add key");
+                checked(repo.save_config(), "save config");
                 println!();
             }
             print_config(&repo.config);
@@ -180,17 +179,17 @@ pub fn run() {
                     exit(3)
                 }
             };
-            repo.save_backup(&backup, &backup_name).unwrap();
+            checked(repo.save_backup(&backup, &backup_name), "save backup file");
             print_backup(&backup);
         },
         Arguments::Restore{repo_path, backup_name, inode, dst_path} => {
             let mut repo = open_repository(&repo_path);
             let backup = get_backup(&repo, &backup_name);
             if let Some(inode) = inode {
-                let inode = repo.get_backup_inode(&backup, &inode).unwrap();
-                repo.restore_inode_tree(inode, &dst_path).unwrap();
+                let inode = checked(repo.get_backup_inode(&backup, &inode), "load subpath inode");
+                checked(repo.restore_inode_tree(inode, &dst_path), "restore subpath");
             } else {
-                repo.restore_backup(&backup, &dst_path).unwrap();
+                checked(repo.restore_backup(&backup, &dst_path), "restore backup");
             }
         },
         Arguments::Remove{repo_path, backup_name, inode} => {
@@ -200,7 +199,7 @@ pub fn run() {
                 error!("Removing backup subtrees is not implemented yet");
                 return
             } else {
-                repo.delete_backup(&backup_name).unwrap();
+                checked(repo.delete_backup(&backup_name), "delete backup");
                 info!("The backup has been deleted, run vacuum to reclaim space");
             }
         },
@@ -210,14 +209,14 @@ pub fn run() {
                 error!("This would remove all those backups");
                 exit(1);
             }
-            repo.prune_backups(&prefix, daily, weekly, monthly, yearly, force).unwrap();
+            checked(repo.prune_backups(&prefix, daily, weekly, monthly, yearly, force), "prune backups");
             if !force {
                 info!("Run with --force to actually execute this command");
             }
         },
         Arguments::Vacuum{repo_path, ratio, force} => {
             let mut repo = open_repository(&repo_path);
-            repo.vacuum(ratio, force).unwrap();
+            checked(repo.vacuum(ratio, force), "vacuum");
             if !force {
                 info!("Run with --force to actually execute this command");
             }
@@ -228,24 +227,24 @@ pub fn run() {
             if let Some(backup_name) = backup_name {
                 let backup = get_backup(&repo, &backup_name);
                 if let Some(inode) = inode {
-                    let inode = repo.get_backup_inode(&backup, inode).unwrap();
-                    repo.check_inode(&inode).unwrap()
+                    let inode = checked(repo.get_backup_inode(&backup, inode), "load subpath inode");
+                    checked(repo.check_inode(&inode), "check inode")
                 } else {
-                    repo.check_backup(&backup).unwrap()
+                    checked(repo.check_backup(&backup), "check backup")
                 }
             } else {
-                repo.check(full).unwrap()
+                checked(repo.check(full), "check repository")
             }
         },
         Arguments::List{repo_path, backup_name, inode} => {
             let mut repo = open_repository(&repo_path);
             if let Some(backup_name) = backup_name {
                 let backup = get_backup(&repo, &backup_name);
-                let inode = repo.get_backup_inode(&backup, inode.as_ref().map(|v| v as &str).unwrap_or("/")).unwrap();
+                let inode = checked(repo.get_backup_inode(&backup, inode.as_ref().map(|v| v as &str).unwrap_or("/")), "load subpath inode");
                 println!("{}", format_inode_one_line(&inode));
                 if let Some(children) = inode.children {
                     for chunks in children.values() {
-                        let inode = repo.get_inode(chunks).unwrap();
+                        let inode = checked(repo.get_inode(chunks), "load child inode");
                         println!("- {}", format_inode_one_line(&inode));
                     }
                 }
@@ -286,7 +285,7 @@ pub fn run() {
             }
         },
         Arguments::Import{repo_path, remote_path, key_files} => {
-            Repository::import(repo_path, remote_path, key_files).unwrap();
+            checked(Repository::import(repo_path, remote_path, key_files), "import repository");
         },
         Arguments::Configure{repo_path, bundle_size, chunker, compression, encryption, hash} => {
             let mut repo = open_repository(&repo_path);
@@ -307,7 +306,7 @@ pub fn run() {
                 warn!("Changing the hash makes it impossible to use existing data for deduplication");
                 repo.config.hash = hash
             }
-            repo.save_config().unwrap();
+            checked(repo.save_config(), "save config");
             print_config(&repo.config);
         },
         Arguments::GenKey{file} => {
@@ -315,23 +314,23 @@ pub fn run() {
             println!("public: {}", to_hex(&public[..]));
             println!("secret: {}", to_hex(&secret[..]));
             if let Some(file) = file {
-                Crypto::save_keypair_to_file(&public, &secret, file).unwrap();
+                checked(Crypto::save_keypair_to_file(&public, &secret, file), "save key pair");
             }
         },
         Arguments::AddKey{repo_path, set_default, file} => {
             let mut repo = open_repository(&repo_path);
             let (public, secret) = if let Some(file) = file {
-                Crypto::load_keypair_from_file(file).unwrap()
+                checked(Crypto::load_keypair_from_file(file), "load key pair")
             } else {
                 let (public, secret) = gen_keypair();
                 println!("public: {}", to_hex(&public[..]));
                 println!("secret: {}", to_hex(&secret[..]));
                 (public, secret)
             };
-            repo.register_key(public, secret).unwrap();
+            checked(repo.register_key(public, secret), "add key pair");
             if set_default {
                 repo.set_encryption(Some(&public));
-                repo.save_config().unwrap();
+                checked(repo.save_config(), "save config");
             }
         },
         Arguments::AlgoTest{bundle_size, chunker, compression, encrypt, hash, file} => {

@@ -112,7 +112,6 @@ Recommended: Brotli/2-7
 ### CLI functionality
 - Remove backup subtrees
 - list --tree
-- More detailed errors with nicer text
 
 ### Other
 - Stability
