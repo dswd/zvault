@@ -3,6 +3,7 @@ use std::ffi::{CStr, CString};
 use std::io::{self, Write};
 use std::str::FromStr;
 
+use libc;
 use squash::*;
 
 
@@ -203,7 +204,7 @@ impl Compression {
         if stream.is_null() {
             return Err(CompressionError::InitializeStream);
         }
-        Ok(CompressionStream::new(unsafe { Box::from_raw(stream) }))
+        Ok(CompressionStream::new(stream))
     }
 
     #[inline]
@@ -215,19 +216,19 @@ impl Compression {
         if stream.is_null() {
             return Err(CompressionError::InitializeStream);
         }
-        Ok(CompressionStream::new(unsafe { Box::from_raw(stream) }))
+        Ok(CompressionStream::new(stream))
     }
 }
 
 
 pub struct CompressionStream {
-    stream: Box<SquashStream>,
+    stream: *mut SquashStream,
     buffer: [u8; 16*1024]
 }
 
 impl CompressionStream {
     #[inline]
-    fn new(stream: Box<SquashStream>) -> Self {
+    fn new(stream: *mut SquashStream) -> Self {
         CompressionStream {
             stream: stream,
             buffer: [0; 16*1024]
@@ -235,7 +236,7 @@ impl CompressionStream {
     }
 
     pub fn process<W: Write>(&mut self, input: &[u8], output: &mut W) -> Result<(), CompressionError> {
-        let mut stream = &mut *self.stream;
+        let stream = unsafe { &mut (*self.stream) };
         stream.next_in = input.as_ptr();
         stream.avail_in = input.len();
         loop {
@@ -255,7 +256,7 @@ impl CompressionStream {
     }
 
     pub fn finish<W: Write>(mut self, output: &mut W) -> Result<(), CompressionError> {
-        let mut stream = &mut *self.stream;
+        let stream = unsafe { &mut (*self.stream) };
         loop {
             stream.next_out = self.buffer.as_mut_ptr();
             stream.avail_out = self.buffer.len();
@@ -270,5 +271,11 @@ impl CompressionStream {
             }
         }
         Ok(())
+    }
+}
+
+impl Drop for CompressionStream {
+    fn drop(&mut self) {
+        unsafe { squash_object_unref(self.stream as *mut libc::c_void); }
     }
 }
