@@ -8,6 +8,7 @@ use std::fs::{self, File, Permissions};
 use std::os::linux::fs::MetadataExt;
 use std::os::unix::fs::{PermissionsExt, symlink};
 use std::io::{self, Read, Write};
+use std::fmt;
 
 
 quick_error!{
@@ -78,6 +79,15 @@ serde_impl!(FileType(u8) {
     Directory => 1,
     Symlink => 2
 });
+impl fmt::Display for FileType {
+    fn fmt(&self, format: &mut fmt::Formatter) -> Result<(), fmt::Error> {
+        match *self {
+            FileType::File => write!(format, "file"),
+            FileType::Directory => write!(format, "directory"),
+            FileType::Symlink => write!(format, "symlink")
+        }
+    }
+}
 
 
 #[derive(Debug, Clone)]

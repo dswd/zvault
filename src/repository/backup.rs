@@ -307,12 +307,55 @@ impl Repository {
         self.restore_inode_tree(inode, path)
     }
 
+
+    pub fn create_backup_recurse<P: AsRef<Path>>(
+        &mut self,
+        path: P,
+        reference: Option<&Inode>,
+        backup: &mut Backup,
+        failed_paths: &mut Vec<PathBuf>
+    ) -> Result<ChunkList, RepositoryError> {
+        let path = path.as_ref();
+        let mut inode = try!(self.create_inode(path, reference));
+        let meta_size = 1000; // add 1000 for encoded metadata
+        backup.total_data_size += inode.size + meta_size;
+        if let Some(ref_inode) = reference {
+            if !ref_inode.is_unchanged(&inode) {
+                backup.changed_data_size += inode.size + meta_size;
+            }
+        } else {
+            backup.changed_data_size += inode.size + meta_size;
+        }
+        if inode.file_type == FileType::Directory {
+            backup.dir_count +=1;
+            let mut children = BTreeMap::new();
+            for ch in try!(fs::read_dir(path)) {
+                let child = try!(ch);
+                let name = child.file_name().to_string_lossy().to_string();
+                let ref_child = reference.as_ref()
+                    .and_then(|inode| inode.children.as_ref())
+                    .and_then(|map| map.get(&name))
+                    .and_then(|chunks| self.get_inode(chunks).ok());
+                let child_path = child.path();
+                let chunks = match self.create_backup_recurse(&child_path, ref_child.as_ref(), backup, failed_paths) {
+                    Ok(chunks) => chunks,
+                    Err(_) => {
+                        failed_paths.push(child_path);
+                        continue
+                    }
+                };
+                children.insert(name, chunks);
+            }
+            inode.children = Some(children);
+        } else {
+            backup.file_count +=1;
+        }
+        self.put_inode(&inode)
+    }
+
     #[allow(dead_code)]
-    pub fn create_backup<P: AsRef<Path>>(&mut self, path: P, reference: Option<&Backup>) -> Result<Backup, RepositoryError> {
+    pub fn create_backup_recursively<P: AsRef<Path>>(&mut self, path: P, reference: Option<&Backup>) -> Result<Backup, RepositoryError> {
         let reference_inode = reference.and_then(|b| self.get_inode(&b.root).ok());
-        let mut scan_stack = vec![(path.as_ref().to_owned(), reference_inode)];
-        let mut save_stack = vec![];
-        let mut directories = HashMap::new();
         let mut backup = Backup::default();
         backup.config = self.config.clone();
         backup.host = get_hostname().unwrap_or_else(|_| "".to_string());
@@ -320,95 +363,7 @@ impl Repository {
         let info_before = self.info();
         let start = Local::now();
         let mut failed_paths = vec![];
-        while let Some((path, reference_inode)) = scan_stack.pop() {
-            // Create an inode for this path containing all attributes and contents
-            // (for files) but no children (for directories)
-            let mut inode = match self.create_inode(&path, reference_inode.as_ref()) {
-                Ok(inode) => inode,
-                Err(RepositoryError::Inode(err)) => {
-                    warn!("Failed to backup inode {}", err);
-                    failed_paths.push(path);
-                    continue
-                },
-                Err(err) => return Err(err)
-            };
-            let meta_size = 1000; // add 1000 for encoded metadata
-            backup.total_data_size += inode.size + meta_size;
-            if let Some(ref ref_inode) = reference_inode {
-                if !ref_inode.is_unchanged(&inode) {
-                    backup.changed_data_size += inode.size + meta_size;
-                }
-            } else {
-                backup.changed_data_size += inode.size + meta_size;
-            }
-            if inode.file_type == FileType::Directory {
-                backup.dir_count +=1;
-                // For directories we need to put all children on the stack too, so there will be inodes created for them
-                // Also we put directories on the save stack to save them in order
-                save_stack.push(path.clone());
-                inode.children = Some(BTreeMap::new());
-                directories.insert(path.clone(), inode);
-                let dirlist = match fs::read_dir(&path) {
-                    Ok(dirlist) => dirlist,
-                    Err(err) => {
-                        warn!("Failed to read {:?}: {}", &path, err);
-                        failed_paths.push(path);
-                        continue
-                    }
-                };
-                for ch in dirlist {
-                    let child = match ch {
-                        Ok(child) => child,
-                        Err(err) => {
-                            warn!("Failed to read {:?}: {}", &path, err);
-                            continue
-                        }
-                    };
-                    let name = child.file_name().to_string_lossy().to_string();
-                    let ref_child = reference_inode.as_ref()
-                        .and_then(|inode| inode.children.as_ref())
-                        .and_then(|map| map.get(&name))
-                        .and_then(|chunks| self.get_inode(chunks).ok());
-                    scan_stack.push((child.path(), ref_child));
-                }
-            } else {
-                backup.file_count +=1;
-                // Non-directories are stored directly and the chunks are put into the children map of their parents
-                if let Some(parent) = path.parent() {
-                    let parent = parent.to_owned();
-                    if !directories.contains_key(&parent) {
-                        // This is a backup of one one file, put it in the directories map so it will be saved later
-                        assert!(scan_stack.is_empty() && save_stack.is_empty() && directories.is_empty());
-                        save_stack.push(path.clone());
-                        directories.insert(path.clone(), inode);
-                    } else {
-                        let mut parent = directories.get_mut(&parent).unwrap();
-                        let chunks = try!(self.put_inode(&inode));
-                        let children = parent.children.as_mut().unwrap();
-                        children.insert(inode.name.clone(), chunks);
-                    }
-                }
-            }
-        }
-        loop {
-            let path = save_stack.pop().unwrap();
-            // Now that all children have been saved the directories can be saved in order, adding their chunks to their parents as well
-            let inode = directories.remove(&path).unwrap();
-            let chunks = try!(self.put_inode(&inode));
-            if let Some(parent) = path.parent() {
-                let parent = parent.to_owned();
-                if let Some(ref mut parent) = directories.get_mut(&parent) {
-                    let children = parent.children.as_mut().unwrap();
-                    children.insert(inode.name.clone(), chunks);
-                } else if save_stack.is_empty() {
-                    backup.root = chunks;
-                    break
-                }
-            } else if save_stack.is_empty() {
-                backup.root = chunks;
-                break
-            }
-        }
+        backup.root = try!(self.create_backup_recurse(path, reference_inode.as_ref(), &mut backup, &mut failed_paths));
         try!(self.flush());
         let elapsed = Local::now().signed_duration_since(start);
         backup.date = start.timestamp();

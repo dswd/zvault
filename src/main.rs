@@ -19,7 +19,7 @@ extern crate filetime;
 extern crate libc;
 
 pub mod util;
-pub mod bundledb;
+mod bundledb;
 pub mod index;
 mod chunker;
 mod repository;

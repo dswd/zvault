@@ -76,6 +76,26 @@ fn print_backup(backup: &Backup) {
     println!("Chunk count: {}, avg size: {}", backup.chunk_count, to_file_size(backup.avg_chunk_size as u64));
 }
 
+fn print_inode(inode: &Inode) {
+    println!("Name: {}", inode.name);
+    println!("Type: {}", inode.file_type);
+    println!("Size: {}", to_file_size(inode.size));
+    println!("Permissions: {:3o}", inode.mode);
+    println!("User: {}", inode.user);
+    println!("Group: {}", inode.group);
+    println!("Access time: {}", Local.timestamp(inode.access_time, 0).to_rfc2822());
+    println!("Modification time: {}", Local.timestamp(inode.modify_time, 0).to_rfc2822());
+    if let Some(ref target) = inode.symlink_target {
+        println!("Symlink target: {}", target);
+    }
+    if let Some(ref children) = inode.children {
+        println!("Children:");
+        for name in children.keys() {
+            println!("  - {}", name);
+        }
+    }
+}
+
 fn print_backups(backup_map: &HashMap<String, Backup>) {
     for (name, backup) in backup_map {
         println!("{:25}  {:>32}  {:5} files, {:4} dirs, {:>10}",
@@ -168,7 +188,7 @@ pub fn run() {
                     info!("No reference backup found, doing a full scan instead");
                 }
             }
-            let backup = match repo.create_backup(&src_path, reference_backup.as_ref()) {
+            let backup = match repo.create_backup_recursively(&src_path, reference_backup.as_ref()) {
                 Ok(backup) => backup,
                 Err(RepositoryError::Backup(BackupError::FailedPaths(backup, _failed_paths))) => {
                     warn!("Some files are missing form the backup");
@@ -265,11 +285,12 @@ pub fn run() {
             }
         },
         Arguments::Info{repo_path, backup_name, inode} => {
-            let repo = open_repository(&repo_path);
+            let mut repo = open_repository(&repo_path);
             if let Some(backup_name) = backup_name {
                 let backup = get_backup(&repo, &backup_name);
-                if let Some(_inode) = inode {
-                    error!("Displaying information on single inodes is not implemented yet");
+                if let Some(inode) = inode {
+                    let inode = checked(repo.get_backup_inode(&backup, inode), "load subpath inode");
+                    print_inode(&inode);
                 } else {
                     print_backup(&backup);
                 }

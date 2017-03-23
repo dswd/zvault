@@ -460,23 +460,25 @@ impl Index {
     }
 
     #[inline]
-    pub fn walk<F>(&self, mut f: F) where F: FnMut(&Hash, &Location) {
+    pub fn walk<F, E>(&self, mut f: F) -> Result<(), E> where F: FnMut(&Hash, &Location) -> Result<(), E> {
         for pos in 0..self.capacity {
             let entry = &self.data[pos];
             if entry.is_used() {
-                f(&entry.key, &entry.data);
+                try!(f(&entry.key, &entry.data));
             }
         }
+        Ok(())
     }
 
     #[inline]
-    pub fn walk_mut<F>(&mut self, mut f: F) where F: FnMut(&Hash, &mut Location) {
+    pub fn walk_mut<F, E>(&mut self, mut f: F) -> Result<(), E> where F: FnMut(&Hash, &mut Location) -> Result<(), E> {
         for pos in 0..self.capacity {
             let entry = &mut self.data[pos];
             if entry.is_used() {
-                f(&entry.key, &mut entry.data);
+                try!(f(&entry.key, &mut entry.data));
             }
         }
+        Ok(())
     }
 
     #[inline]

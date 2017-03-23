@@ -32,16 +32,9 @@ quick_error!{
 
 impl Repository {
     fn check_index_chunks(&self) -> Result<(), RepositoryError> {
-        let mut pos = 0;
-        loop {
-            pos = if let Some(pos) = self.index.next_entry(pos) {
-                pos
-            } else {
-                break
-            };
-            let entry = self.index.get_entry(pos).unwrap();
+        self.index.walk(|_hash, location| {
             // Lookup bundle id from map
-            let bundle_id = try!(self.get_bundle_id(entry.data.bundle));
+            let bundle_id = try!(self.get_bundle_id(location.bundle));
             // Get bundle object from bundledb
             let bundle = if let Some(bundle) = self.bundles.get_bundle_info(&bundle_id) {
                 bundle
@@ -49,12 +42,11 @@ impl Repository {
                 return Err(RepositoryIntegrityError::MissingBundle(bundle_id.clone()).into())
             };
             // Get chunk from bundle
-            if bundle.chunk_count <= entry.data.chunk as usize {
-                return Err(RepositoryIntegrityError::NoSuchChunk(bundle_id.clone(), entry.data.chunk).into())
+            if bundle.chunk_count <= location.chunk as usize {
+                return Err(RepositoryIntegrityError::NoSuchChunk(bundle_id.clone(), location.chunk).into())
             }
-            pos += 1;
-        }
-        Ok(())
+            Ok(())
+        })
     }
 
     fn check_repository(&self) -> Result<(), RepositoryError> {
