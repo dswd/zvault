@@ -179,10 +179,15 @@ impl Backup {
 
 quick_error!{
     #[derive(Debug)]
+    #[allow(unknown_lints,large_enum_variant)]
     pub enum BackupError {
         FailedPaths(backup: Backup, failed: Vec<PathBuf>) {
             description("Some paths could not be backed up")
             display("Backup error: some paths could not be backed up")
+        }
+        RemoveRoot {
+            description("The root of a backup can not be removed")
+            display("Backup error: the root of a backup can not be removed")
         }
     }
 }
@@ -421,18 +426,45 @@ impl Repository {
         }
     }
 
-    pub fn get_backup_inode<P: AsRef<Path>>(&mut self, backup: &Backup, path: P) -> Result<Inode, RepositoryError> {
+    pub fn remove_backup_path<P: AsRef<Path>>(&mut self, backup: &mut Backup, path: P) -> Result<(), RepositoryError> {
+        let mut inodes = try!(self.get_backup_path(backup, path));
+        let to_remove = inodes.pop().unwrap();
+        let mut remove_from = match inodes.pop() {
+            Some(inode) => inode,
+            None => return Err(BackupError::RemoveRoot.into())
+        };
+        remove_from.children.as_mut().unwrap().remove(&to_remove.name);
+        let mut last_inode_chunks = try!(self.put_inode(&remove_from));
+        let mut last_inode_name = remove_from.name;
+        while let Some(mut inode) = inodes.pop() {
+            inode.children.as_mut().unwrap().insert(last_inode_name, last_inode_chunks);
+            last_inode_chunks = try!(self.put_inode(&inode));
+            last_inode_name = inode.name;
+        }
+        backup.root = last_inode_chunks;
+        Ok(())
+    }
+
+    pub fn get_backup_path<P: AsRef<Path>>(&mut self, backup: &Backup, path: P) -> Result<Vec<Inode>, RepositoryError> {
+        let mut inodes = vec![];
         let mut inode = try!(self.get_inode(&backup.root));
         for c in path.as_ref().components() {
             if let path::Component::Normal(name) = c {
                 let name = name.to_string_lossy();
                 if let Some(chunks) = inode.children.as_mut().and_then(|c| c.remove(&name as &str)) {
+                    inodes.push(inode);
                     inode = try!(self.get_inode(&chunks));
                 } else {
                     return Err(RepositoryError::NoSuchFileInBackup(backup.clone(), path.as_ref().to_owned()));
                 }
             }
         }
-        Ok(inode)
+        inodes.push(inode);
+        Ok(inodes)
+    }
+
+    #[inline]
+    pub fn get_backup_inode<P: AsRef<Path>>(&mut self, backup: &Backup, path: P) -> Result<Inode, RepositoryError> {
+        self.get_backup_path(backup, path).map(|mut inodes| inodes.pop().unwrap())
     }
 }

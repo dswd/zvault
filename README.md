@@ -110,7 +110,6 @@ Recommended: Brotli/2-7
     - http://mahkoh.github.io/posix/doc/posix/sys/time/fn.utimes.html
 
 ### CLI functionality
-- Remove backup subtrees
 - list --tree
 
 ### Other

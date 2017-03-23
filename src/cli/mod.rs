@@ -193,11 +193,12 @@ pub fn run() {
             }
         },
         Arguments::Remove{repo_path, backup_name, inode} => {
-            let repo = open_repository(&repo_path);
-            if let Some(_inode) = inode {
-                let _backup = get_backup(&repo, &backup_name);
-                error!("Removing backup subtrees is not implemented yet");
-                return
+            let mut repo = open_repository(&repo_path);
+            if let Some(inode) = inode {
+                let mut backup = get_backup(&repo, &backup_name);
+                checked(repo.remove_backup_path(&mut backup, inode), "remove backup subpath");
+                checked(repo.save_backup(&backup, &backup_name), "save backup file");
+                info!("The backup subpath has been deleted, run vacuum to reclaim space");
             } else {
                 checked(repo.delete_backup(&backup_name), "delete backup");
                 info!("The backup has been deleted, run vacuum to reclaim space");
@@ -220,7 +221,6 @@ pub fn run() {
             if !force {
                 info!("Run with --force to actually execute this command");
             }
-            return
         },
         Arguments::Check{repo_path, backup_name, inode, full} => {
             let mut repo = open_repository(&repo_path);
@@ -235,6 +235,7 @@ pub fn run() {
             } else {
                 checked(repo.check(full), "check repository")
             }
+            info!("Integrity verified")
         },
         Arguments::List{repo_path, backup_name, inode} => {
             let mut repo = open_repository(&repo_path);
@@ -269,7 +270,6 @@ pub fn run() {
                 let backup = get_backup(&repo, &backup_name);
                 if let Some(_inode) = inode {
                     error!("Displaying information on single inodes is not implemented yet");
-                    return
                 } else {
                     print_backup(&backup);
                 }
