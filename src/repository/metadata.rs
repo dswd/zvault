@@ -88,8 +88,8 @@ pub enum FileContents {
 }
 serde_impl!(FileContents(u8) {
     Inline(ByteBuf) => 0,
-    ChunkedDirect(Vec<Chunk>) => 1,
-    ChunkedIndirect(Vec<Chunk>) => 2
+    ChunkedDirect(ChunkList) => 1,
+    ChunkedIndirect(ChunkList) => 2
 });
 
 
