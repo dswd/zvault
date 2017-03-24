@@ -195,21 +195,21 @@ quick_error!{
 
 impl Repository {
     pub fn get_backups(&self) -> Result<HashMap<String, Backup>, RepositoryError> {
-        Ok(try!(Backup::get_all_from(&self.crypto.lock().unwrap(), self.path.join("backups"))))
+        Ok(try!(Backup::get_all_from(&self.crypto.lock().unwrap(), &self.backups_path)))
     }
 
     pub fn get_backup(&self, name: &str) -> Result<Backup, RepositoryError> {
-        Ok(try!(Backup::read_from(&self.crypto.lock().unwrap(), self.path.join("backups").join(name))))
+        Ok(try!(Backup::read_from(&self.crypto.lock().unwrap(), self.backups_path.join(name))))
     }
 
     pub fn save_backup(&mut self, backup: &Backup, name: &str) -> Result<(), RepositoryError> {
-        let path = self.path.join("backups").join(name);
+        let path = &self.backups_path.join(name);
         try!(fs::create_dir_all(path.parent().unwrap()));
         Ok(try!(backup.save_to(&self.crypto.lock().unwrap(), self.config.encryption.clone(), path)))
     }
 
     pub fn delete_backup(&self, name: &str) -> Result<(), RepositoryError> {
-        let mut path = self.path.join("backups").join(name);
+        let mut path = self.backups_path.join(name);
         try!(fs::remove_file(&path));
         loop {
             path = path.parent().unwrap().to_owned();

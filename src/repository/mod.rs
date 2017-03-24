@@ -28,6 +28,7 @@ use self::bundle_map::BundleMap;
 
 pub struct Repository {
     path: PathBuf,
+    backups_path: PathBuf,
     pub config: Config,
     index: Index,
     crypto: Arc<Mutex<Crypto>>,
@@ -60,8 +61,9 @@ impl Repository {
         try!(config.save(path.join("config.yaml")));
         let bundle_map = BundleMap::create();
         try!(bundle_map.save(path.join("bundles.map")));
-        try!(fs::create_dir(&path.join("backups")));
-        Ok(Repository{
+        try!(fs::create_dir_all(&path.join("remote/backups")));
+        Ok(Repository {
+            backups_path: path.join("remote/backups"),
             path: path,
             chunker: config.chunker.create(),
             config: config,
@@ -90,6 +92,7 @@ impl Repository {
         let index = try!(Index::open(&path.join("index")));
         let bundle_map = try!(BundleMap::load(path.join("bundles.map")));
         let mut repo = Repository {
+            backups_path: path.join("remote/backups"),
             path: path,
             chunker: config.chunker.create(),
             config: config,

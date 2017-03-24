@@ -98,7 +98,6 @@ Recommended: Brotli/2-7
 ## TODO
 
 ### Core functionality
-- Keep backup files also remotely and sync them
 - Options for creating backups (same filesystem, exclude/include patterns)
 - Recompress & combine bundles
 - Allow to use tar files for backup and restore (--tar, http://alexcrichton.com/tar-rs/tar/index.html)
