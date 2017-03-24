@@ -191,7 +191,7 @@ pub fn run() {
             let backup = match repo.create_backup_recursively(&src_path, reference_backup.as_ref()) {
                 Ok(backup) => backup,
                 Err(RepositoryError::Backup(BackupError::FailedPaths(backup, _failed_paths))) => {
-                    warn!("Some files are missing form the backup");
+                    warn!("Some files are missing from the backup");
                     backup
                 },
                 Err(err) => {

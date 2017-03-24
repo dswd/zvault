@@ -340,6 +340,7 @@ impl Repository {
                 let chunks = match self.create_backup_recurse(&child_path, ref_child.as_ref(), backup, failed_paths) {
                     Ok(chunks) => chunks,
                     Err(_) => {
+                        warn!("Failed to backup {:?}", child_path);
                         failed_paths.push(child_path);
                         continue
                     }
