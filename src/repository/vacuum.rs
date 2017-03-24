@@ -114,13 +114,13 @@ impl Repository {
         for id in &rewrite_bundles {
             let bundle = &usage[id];
             let bundle_id = self.bundle_map.get(*id).unwrap();
-            for chunk in 0..bundle.chunk_count {
-                let data = try!(self.bundles.get_chunk(&bundle_id, chunk));
-                let hash = self.config.hash.hash(&data);
+            let chunks = try!(self.bundles.get_chunk_list(&bundle_id));
+            for (chunk, &(hash, _len)) in chunks.into_iter().enumerate() {
                 if !bundle.used.get(chunk) {
                     try!(self.index.delete(&hash));
                     continue
                 }
+                let data = try!(self.bundles.get_chunk(&bundle_id, chunk));
                 let mode = if bundle.mode.get(chunk) {
                     BundleMode::Meta
                 } else {

@@ -161,7 +161,11 @@ impl BundleReader {
             data = try!(self.crypto.lock().unwrap().decrypt(&encryption, &data).context(&self.path as &Path));
         }
         if let Some(ref compression) = self.info.compression {
-            data = try!(compression.decompress(&data).context(&self.path as &Path));
+            let mut stream = try!(compression.decompress_stream().context(&self.path as &Path));
+            let mut buffer = Vec::with_capacity(self.info.raw_size);
+            try!(stream.process(&data, &mut buffer).context(&self.path as &Path));
+            try!(stream.finish(&mut buffer).context(&self.path as &Path));
+            data = buffer;
         }
         Ok(data)
     }

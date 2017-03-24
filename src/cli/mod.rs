@@ -20,7 +20,7 @@ pub const DEFAULT_CHUNKER: &'static str = "fastcdc/16";
 pub const DEFAULT_HASH: &'static str = "blake2";
 pub const DEFAULT_COMPRESSION: &'static str = "brotli/3";
 pub const DEFAULT_BUNDLE_SIZE: usize = 25;
-pub const DEFAULT_VACUUM_RATIO: f32 = 0.5;
+pub const DEFAULT_VACUUM_RATIO: usize = 50;
 
 
 fn checked<T, E: Display>(result: Result<T, E>, msg: &'static str) -> T {
@@ -80,6 +80,14 @@ fn print_backup(backup: &Backup) {
     println!("Chunk count: {}, avg size: {}", backup.chunk_count, to_file_size(backup.avg_chunk_size as u64));
 }
 
+pub fn format_inode_one_line(inode: &Inode) -> String {
+    match inode.file_type {
+        FileType::Directory => format!("{:25}\t{} entries", format!("{}/", inode.name), inode.children.as_ref().unwrap().len()),
+        FileType::File => format!("{:25}\t{}", inode.name, to_file_size(inode.size)),
+        FileType::Symlink => format!("{:25}\t -> {}", inode.name, inode.symlink_target.as_ref().unwrap()),
+    }
+}
+
 fn print_inode(inode: &Inode) {
     println!("Name: {}", inode.name);
     println!("Type: {}", inode.file_type);
@@ -123,6 +131,12 @@ fn print_bundle(bundle: &BundleInfo) {
     println!("Bundle {}", bundle.id);
     println!("  - Mode: {:?}", bundle.mode);
     println!("  - Hash method: {:?}", bundle.hash_method);
+    let encryption = if let Some((_, ref key)) = bundle.encryption {
+        to_hex(key)
+    } else {
+        "none".to_string()
+    };
+    println!("  - Encryption: {}", encryption);
     println!("  - Chunks: {}", bundle.chunk_count);
     println!("  - Size: {}", to_file_size(bundle.encoded_size as u64));
     println!("  - Data size: {}", to_file_size(bundle.raw_size as u64));
@@ -133,6 +147,10 @@ fn print_bundle(bundle: &BundleInfo) {
         "none".to_string()
     };
     println!("  - Compression: {}, ratio: {:.1}%", compression, ratio * 100.0);
+}
+
+fn print_bundle_one_line(bundle: &BundleInfo) {
+    println!("{}: {:8?}, {:5} chunks, {:8}", bundle.id, bundle.mode, bundle.chunk_count, to_file_size(bundle.encoded_size as u64))
 }
 
 fn print_config(config: &Config) {
@@ -198,7 +216,7 @@ pub fn run() {
                 }
             }
             let excludes: Vec<String> = excludes.into_iter().map(|mut exclude| {
-                exclude = regex::escape(&exclude).replace('?', ".").replace(r"\*\", ".*").replace(r"\*", "[^/]*");
+                exclude = regex::escape(&exclude).replace('?', ".").replace(r"\*\*", ".*").replace(r"\*", "[^/]*");
                 if exclude.starts_with('/') {
                     format!(r"^{}($|/)", exclude)
                 } else {
@@ -263,9 +281,13 @@ pub fn run() {
         },
         Arguments::Vacuum{repo_path, ratio, force} => {
             let mut repo = open_repository(&repo_path);
+            let info_before = repo.info();
             checked(repo.vacuum(ratio, force), "vacuum");
             if !force {
                 info!("Run with --force to actually execute this command");
+            } else {
+                let info_after = repo.info();
+                info!("Reclaimed {}", to_file_size(info_before.encoded_data_size - info_after.encoded_data_size));
             }
         },
         Arguments::Check{repo_path, backup_name, inode, full} => {
@@ -324,11 +346,19 @@ pub fn run() {
                 print_repoinfo(&repo.info());
             }
         },
-        Arguments::ListBundles{repo_path} => {
+        Arguments::BundleList{repo_path} => {
             let repo = open_repository(&repo_path);
             for bundle in repo.list_bundles() {
+                print_bundle_one_line(bundle);
+            }
+        },
+        Arguments::BundleInfo{repo_path, bundle_id} => {
+            let repo = open_repository(&repo_path);
+            if let Some(bundle) = repo.get_bundle(&bundle_id) {
                 print_bundle(bundle);
-                println!();
+            } else {
+                error!("No such bundle");
+                exit(3);
             }
         },
         Arguments::Import{repo_path, remote_path, key_files} => {

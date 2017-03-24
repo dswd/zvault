@@ -1,5 +1,3 @@
-use ::repository::{Inode, FileType};
-
 pub fn to_file_size(size: u64) -> String {
     let mut size = size as f32;
     if size >= 512.0 {
@@ -37,12 +35,4 @@ pub fn to_duration(dur: f32) -> String {
     let mins = (secs / 60) % 60;
     let secs = (secs % 60) as f32 + subsecs;
     format!("{}:{:02}:{:04.1}", hours, mins, secs)
-}
-
-pub fn format_inode_one_line(inode: &Inode) -> String {
-    match inode.file_type {
-        FileType::Directory => format!("{:25}\t{} entries", format!("{}/", inode.name), inode.children.as_ref().unwrap().len()),
-        FileType::File => format!("{:25}\t{}", inode.name, to_file_size(inode.size)),
-        FileType::Symlink => format!("{:25}\t -> {}", inode.name, inode.symlink_target.as_ref().unwrap()),
-    }
 }

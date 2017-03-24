@@ -51,7 +51,7 @@ impl Repository {
         try!(fs::remove_file(&path));
         loop {
             path = path.parent().unwrap().to_owned();
-            if fs::remove_dir(&path).is_err() {
+            if path == self.backups_path || fs::remove_dir(&path).is_err() {
                 break
             }
         }

@@ -65,8 +65,12 @@ pub enum Arguments {
         backup_name: Option<String>,
         inode: Option<String>
     },
-    ListBundles {
+    BundleList {
         repo_path: String
+    },
+    BundleInfo {
+        repo_path: String,
+        bundle_id: BundleId
     },
     Import {
         repo_path: String,
@@ -117,16 +121,6 @@ fn parse_num(num: &str, name: &str) -> u64 {
     }
 }
 
-fn parse_float(num: &str, name: &str) -> f64 {
-    if let Ok(num) = num.parse::<f64>() {
-        num
-    } else {
-        error!("{} must be a floating-point number, was '{}'", name, num);
-        exit(1);
-    }
-}
-
-
 fn parse_chunker(val: &str) -> ChunkerType {
     if let Ok(chunker) = ChunkerType::from_string(val) {
         chunker
@@ -169,6 +163,15 @@ fn parse_hash(val: &str) -> HashMethod {
         hash
     } else {
         error!("Invalid hash method: {}", val);
+        exit(1);
+    }
+}
+
+fn parse_bundle_id(val: &str) -> BundleId {
+    if let Ok(hash) = Hash::from_string(val) {
+        BundleId(hash)
+    } else {
+        error!("Invalid bundle id: {}", val);
         exit(1);
     }
 }
@@ -224,7 +227,7 @@ pub fn parse() -> Arguments {
         )
         (@subcommand vacuum =>
             (about: "saves space by combining and recompressing bundles")
-            (@arg ratio: --ratio -r +takes_value "ratio of unused chunks in a bundle to rewrite that bundle")
+            (@arg ratio: --ratio -r +takes_value "ratio in % of unused space in a bundle to rewrite that bundle")
             (@arg force: --force -f "actually run the vacuum instead of simulating it")
             (@arg REPO: +required "path of the repository")
         )
@@ -237,9 +240,14 @@ pub fn parse() -> Arguments {
             (about: "lists backups or backup contents")
             (@arg PATH: +required "repository[::backup[::subpath]] path")
         )
-        (@subcommand listbundles =>
+        (@subcommand bundlelist =>
             (about: "lists bundles in a repository")
             (@arg REPO: +required "path of the repository")
+        )
+        (@subcommand bundleinfo =>
+            (about: "lists bundles in a repository")
+            (@arg REPO: +required "path of the repository")
+            (@arg BUNDLE: +required "the bundle id")
         )
         (@subcommand import =>
             (about: "reconstruct a repository from the remote files")
@@ -368,7 +376,7 @@ pub fn parse() -> Arguments {
         return Arguments::Vacuum {
             repo_path: repository.to_string(),
             force: args.is_present("force"),
-            ratio: parse_float(args.value_of("ratio").unwrap_or(&DEFAULT_VACUUM_RATIO.to_string()), "ratio") as f32
+            ratio: parse_num(args.value_of("ratio").unwrap_or(&DEFAULT_VACUUM_RATIO.to_string()), "ratio") as f32 / 100.0
         }
     }
     if let Some(args) = args.subcommand_matches("check") {
@@ -388,14 +396,25 @@ pub fn parse() -> Arguments {
             inode: inode.map(|v| v.to_string())
         }
     }
-    if let Some(args) = args.subcommand_matches("listbundles") {
+    if let Some(args) = args.subcommand_matches("bundlelist") {
         let (repository, backup, inode) = split_repo_path(args.value_of("REPO").unwrap());
         if backup.is_some() || inode.is_some() {
             println!("No backups or subpaths may be given here");
             exit(1);
         }
-        return Arguments::ListBundles {
+        return Arguments::BundleList {
             repo_path: repository.to_string(),
+        }
+    }
+    if let Some(args) = args.subcommand_matches("bundleinfo") {
+        let (repository, backup, inode) = split_repo_path(args.value_of("REPO").unwrap());
+        if backup.is_some() || inode.is_some() {
+            println!("No backups or subpaths may be given here");
+            exit(1);
+        }
+        return Arguments::BundleInfo {
+            repo_path: repository.to_string(),
+            bundle_id: parse_bundle_id(args.value_of("BUNDLE").unwrap())
         }
     }
     if let Some(args) = args.subcommand_matches("info") {

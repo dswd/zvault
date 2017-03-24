@@ -20,6 +20,11 @@ impl Repository {
         self.bundles.list_bundles()
     }
 
+    #[inline]
+    pub fn get_bundle(&self, bundle: &BundleId) -> Option<&BundleInfo> {
+        self.bundles.get_bundle_info(bundle)
+    }
+
     pub fn info(&self) -> RepositoryInfo {
         let bundles = self.list_bundles();
         let encoded_data_size = bundles.iter().map(|b| b.encoded_size as u64).sum();

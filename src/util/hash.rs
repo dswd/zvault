@@ -12,7 +12,6 @@ use std::u64;
 use std::io::{self, Read, Write};
 
 
-
 #[repr(packed)]
 #[derive(Clone, Copy, PartialEq, Hash, Eq, Default)]
 pub struct Hash {
@@ -47,6 +46,13 @@ impl Hash {
         let high = try!(src.read_u64::<LittleEndian>());
         let low = try!(src.read_u64::<LittleEndian>());
         Ok(Hash { high: high, low: low })
+    }
+
+    #[inline]
+    pub fn from_string(val: &str) -> Result<Self, ()> {
+        let high = try!(u64::from_str_radix(&val[..16], 16).map_err(|_| ()));
+        let low = try!(u64::from_str_radix(&val[16..], 16).map_err(|_| ()));
+        Ok(Self { high: high, low: low })
     }
 }
 
