@@ -80,24 +80,29 @@ pub fn load_bundles<P: AsRef<Path>>(path: P, bundles: &mut HashMap<BundleId, Sto
             }
         }
     }
-    let mut gone = vec![];
+    let mut gone = HashSet::new();
     for (id, bundle) in bundles.iter_mut() {
         if !bundle_paths.contains(&bundle.path) {
-            gone.push(id.clone());
+            gone.insert(id.clone());
         } else {
             bundle_paths.remove(&bundle.path);
         }
     }
-    let gone = gone.iter().map(|id| bundles.remove(id).unwrap()).collect();
     let mut new = vec![];
     for path in bundle_paths {
         let bundle = StoredBundle {
             info: try!(BundleReader::load_info(&path)),
             path: path
         };
-        new.push(bundle.clone());
-        bundles.insert(bundle.info.id.clone(), bundle);
+        let id = bundle.info.id.clone();
+        if !bundles.contains_key(&id) {
+            new.push(bundle.clone());
+        } else {
+            gone.remove(&id);
+        }
+        bundles.insert(id, bundle);
     }
+    let gone = gone.iter().map(|id| bundles.remove(id).unwrap()).collect();
     Ok((new, gone))
 }
 
