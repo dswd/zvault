@@ -5,9 +5,13 @@ mod algotest;
 use ::prelude::*;
 
 use chrono::prelude::*;
+use regex::{self, RegexSet};
+
 use std::process::exit;
 use std::collections::HashMap;
 use std::fmt::Display;
+use std::io::{BufReader, BufRead};
+use std::fs::File;
 
 use self::args::Arguments;
 
@@ -174,7 +178,7 @@ pub fn run() {
             }
             print_config(&repo.config);
         },
-        Arguments::Backup{repo_path, backup_name, src_path, full, reference, same_device} => {
+        Arguments::Backup{repo_path, backup_name, src_path, full, reference, same_device, mut excludes, excludes_from} => {
             let mut repo = open_repository(&repo_path);
             let mut reference_backup = None;
             if !full {
@@ -188,8 +192,27 @@ pub fn run() {
                     info!("No reference backup found, doing a full scan instead");
                 }
             }
+            if let Some(excludes_from) = excludes_from {
+                for line in BufReader::new(checked(File::open(excludes_from), "open excludes file")).lines() {
+                    excludes.push(checked(line, "read excludes file"));
+                }
+            }
+            let excludes: Vec<String> = excludes.into_iter().map(|mut exclude| {
+                exclude = regex::escape(&exclude).replace('?', ".").replace(r"\*\", ".*").replace(r"\*", "[^/]*");
+                if exclude.starts_with('/') {
+                    format!(r"^{}($|/)", exclude)
+                } else {
+                    format!(r"/{}($|/)", exclude)
+                }
+            }).collect();
+            let excludes = if excludes.is_empty() {
+                None
+            } else {
+                Some(checked(RegexSet::new(excludes), "parse exclude patterns"))
+            };
             let options = BackupOptions {
-                same_device: same_device
+                same_device: same_device,
+                excludes: excludes
             };
             let backup = match repo.create_backup_recursively(&src_path, reference_backup.as_ref(), &options) {
                 Ok(backup) => backup,

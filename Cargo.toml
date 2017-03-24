@@ -22,6 +22,7 @@ byteorder = "1.0"
 ansi_term = "0.9"
 sodiumoxide = "0.0.14"
 filetime = "0.1"
+regex = "0.2"
 libc = "*"
 
 [build-dependencies]

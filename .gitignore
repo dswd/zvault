@@ -3,3 +3,4 @@ squash
 test.tar
 test_*
 restored
+excludes

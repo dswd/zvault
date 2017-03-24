@@ -16,6 +16,7 @@ extern crate byteorder;
 extern crate sodiumoxide;
 extern crate ansi_term;
 extern crate filetime;
+extern crate regex;
 extern crate libc;
 
 pub mod util;

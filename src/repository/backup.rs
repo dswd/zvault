@@ -6,6 +6,7 @@ use std::collections::{HashMap, BTreeMap, VecDeque};
 use std::os::linux::fs::MetadataExt;
 
 use chrono::prelude::*;
+use regex::RegexSet;
 
 
 quick_error!{
@@ -25,7 +26,8 @@ quick_error!{
 
 
 pub struct BackupOptions {
-    pub same_device: bool
+    pub same_device: bool,
+    pub excludes: Option<RegexSet>
 }
 
 
@@ -171,9 +173,16 @@ impl Repository {
             let parent_dev = try!(path.metadata()).st_dev();
             for ch in try!(fs::read_dir(path)) {
                 let child = try!(ch);
+                let child_path = child.path();
                 if options.same_device {
                     let child_dev = try!(child.metadata()).st_dev();
                     if child_dev != parent_dev {
+                        continue
+                    }
+                }
+                if let Some(ref excludes) = options.excludes {
+                    let child_path_str = child_path.to_string_lossy();
+                    if excludes.is_match(&child_path_str) {
                         continue
                     }
                 }
@@ -182,7 +191,6 @@ impl Repository {
                     .and_then(|inode| inode.children.as_ref())
                     .and_then(|map| map.get(&name))
                     .and_then(|chunks| self.get_inode(chunks).ok());
-                let child_path = child.path();
                 let chunks = match self.create_backup_recurse(&child_path, ref_child.as_ref(), options, backup, failed_paths) {
                     Ok(chunks) => chunks,
                     Err(_) => {

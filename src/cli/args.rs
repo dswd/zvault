@@ -20,7 +20,9 @@ pub enum Arguments {
         src_path: String,
         full: bool,
         reference: Option<String>,
-        same_device: bool
+        same_device: bool,
+        excludes: Vec<String>,
+        excludes_from: Option<String>
     },
     Restore {
         repo_path: String,
@@ -196,6 +198,8 @@ pub fn parse() -> Arguments {
             (@arg full: --full "create a full backup")
             (@arg reference: --ref +takes_value "the reference backup to use for partial backup")
             (@arg same_device: --xdev -x "do not cross filesystem boundaries")
+            (@arg exclude: --exclude -e ... +takes_value "exclude this path or file")
+            (@arg excludes_from: --excludesfrom +takes_value "read the list of exludes from this file")
             (@arg SRC: +required "source path to backup")
             (@arg BACKUP: +required "repository::backup path")
         )
@@ -308,6 +312,8 @@ pub fn parse() -> Arguments {
             backup_name: backup.unwrap().to_string(),
             full: args.is_present("full"),
             same_device: args.is_present("same_device"),
+            excludes: args.values_of("exclude").map(|v| v.map(|k| k.to_string()).collect()).unwrap_or_else(|| vec![]),
+            excludes_from: args.value_of("excludes_from").map(|v| v.to_string()),
             src_path: args.value_of("SRC").unwrap().to_string(),
             reference: args.value_of("reference").map(|v| v.to_string())
         }
