@@ -79,6 +79,12 @@ quick_error!{
             description("Failed to create a backup")
             display("Repository error: failed to create backup\n\tcaused by: {}", err)
         }
+        Lock(err: LockError) {
+            from()
+            cause(err)
+            description("Failed to obtain lock")
+            display("Repository error: failed to obtain lock\n\tcaused by: {}", err)
+        }
 
         Io(err: io::Error) {
             from()

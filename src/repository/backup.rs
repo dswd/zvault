@@ -286,6 +286,7 @@ impl Repository {
     }
 
     pub fn restore_inode_tree<P: AsRef<Path>>(&mut self, inode: Inode, path: P) -> Result<(), RepositoryError> {
+        let _lock = try!(self.lock(false));
         let mut queue = VecDeque::new();
         queue.push_back((path.as_ref().to_owned(), inode));
         while let Some((path, inode)) = queue.pop_front() {
@@ -303,6 +304,7 @@ impl Repository {
 
     #[inline]
     pub fn restore_backup<P: AsRef<Path>>(&mut self, backup: &Backup, path: P) -> Result<(), RepositoryError> {
+        let _lock = try!(self.lock(false));
         let inode = try!(self.get_inode(&backup.root));
         self.restore_inode_tree(inode, path)
     }
@@ -356,6 +358,7 @@ impl Repository {
 
     #[allow(dead_code)]
     pub fn create_backup_recursively<P: AsRef<Path>>(&mut self, path: P, reference: Option<&Backup>) -> Result<Backup, RepositoryError> {
+        let _lock = try!(self.lock(false));
         let reference_inode = reference.and_then(|b| self.get_inode(&b.root).ok());
         let mut backup = Backup::default();
         backup.config = self.config.clone();
@@ -383,6 +386,7 @@ impl Repository {
     }
 
     pub fn remove_backup_path<P: AsRef<Path>>(&mut self, backup: &mut Backup, path: P) -> Result<(), RepositoryError> {
+        let _lock = try!(self.lock(false));
         let mut inodes = try!(self.get_backup_path(backup, path));
         let to_remove = inodes.pop().unwrap();
         let mut remove_from = match inodes.pop() {

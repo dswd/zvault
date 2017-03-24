@@ -99,15 +99,11 @@ Recommended: Brotli/2-7
 
 ### Core functionality
 - Keep backup files also remotely and sync them
-- Lock during backup and vacuum
 - Options for creating backups (same filesystem, exclude/include patterns)
 - Recompress & combine bundles
 - Allow to use tar files for backup and restore (--tar, http://alexcrichton.com/tar-rs/tar/index.html)
 - File attributes
   - xattrs https://crates.io/crates/xattr
-  - gid/uid
-    - http://mahkoh.github.io/posix/doc/posix/unistd/fn.lchown.html
-    - http://mahkoh.github.io/posix/doc/posix/sys/time/fn.utimes.html
 
 ### CLI functionality
 - list --tree

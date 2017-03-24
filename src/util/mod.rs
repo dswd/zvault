@@ -9,6 +9,7 @@ mod hex;
 mod cli;
 mod hostname;
 mod fs;
+mod lock;
 pub mod msgpack;
 
 pub use self::fs::*;
@@ -21,3 +22,4 @@ pub use self::bitmap::*;
 pub use self::hex::*;
 pub use self::cli::*;
 pub use self::hostname::*;
+pub use self::lock::*;

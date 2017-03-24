@@ -37,7 +37,8 @@ pub struct Repository {
     bundles: BundleDb,
     content_bundle: Option<BundleWriter>,
     meta_bundle: Option<BundleWriter>,
-    chunker: Chunker
+    chunker: Chunker,
+    locks: LockFolder
 }
 
 
@@ -48,6 +49,8 @@ impl Repository {
         try!(fs::create_dir(path.join("keys")));
         let crypto = Arc::new(Mutex::new(try!(Crypto::open(path.join("keys")))));
         try!(symlink(remote, path.join("remote")));
+        try!(fs::create_dir_all(path.join("remote/locks")));
+        let locks = LockFolder::new(path.join("remote/locks"));
         let bundles = try!(BundleDb::create(
             path.join("remote/bundles"),
             path.join("bundles"),
@@ -69,13 +72,15 @@ impl Repository {
             bundles: bundles,
             content_bundle: None,
             meta_bundle: None,
-            crypto: crypto
+            crypto: crypto,
+            locks: locks
         })
     }
 
     pub fn open<P: AsRef<Path>>(path: P) -> Result<Self, RepositoryError> {
         let path = path.as_ref().to_owned();
         let config = try!(Config::load(path.join("config.yaml")));
+        let locks = LockFolder::new(path.join("remote/locks"));
         let crypto = Arc::new(Mutex::new(try!(Crypto::open(path.join("keys")))));
         let (bundles, new, gone) = try!(BundleDb::open(
             path.join("remote/bundles"),
@@ -96,6 +101,7 @@ impl Repository {
             bundles: bundles,
             content_bundle: None,
             meta_bundle: None,
+            locks: locks
         };
         for bundle in new {
             try!(repo.add_new_remote_bundle(bundle))
@@ -211,6 +217,10 @@ impl Repository {
             self.bundle_map.remove(id);
         }
         Ok(())
+    }
+
+    fn lock(&self, exclusive: bool) -> Result<LockHandle, RepositoryError> {
+        Ok(try!(self.locks.lock(exclusive)))
     }
 }
 

@@ -92,6 +92,8 @@ impl Repository {
 
     pub fn vacuum(&mut self, ratio: f32, force: bool) -> Result<(), RepositoryError> {
         try!(self.flush());
+        info!("Locking repository");
+        let _lock = try!(self.lock(true));
         info!("Analyzing chunk usage");
         let usage = try!(self.analyze_usage());
         let total = usage.values().map(|b| b.total_size).sum::<usize>();
