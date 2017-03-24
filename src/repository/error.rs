@@ -3,7 +3,8 @@ use ::prelude::*;
 use std::io;
 use std::path::PathBuf;
 
-use super::backup::{BackupFileError, BackupError};
+use super::backup_file::BackupFileError;
+use super::backup::BackupError;
 use super::bundle_map::BundleMapError;
 use super::config::ConfigError;
 use super::metadata::InodeError;

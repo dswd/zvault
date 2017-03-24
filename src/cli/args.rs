@@ -19,7 +19,8 @@ pub enum Arguments {
         backup_name: String,
         src_path: String,
         full: bool,
-        reference: Option<String>
+        reference: Option<String>,
+        same_device: bool
     },
     Restore {
         repo_path: String,
@@ -194,6 +195,7 @@ pub fn parse() -> Arguments {
             (about: "creates a new backup")
             (@arg full: --full "create a full backup")
             (@arg reference: --ref +takes_value "the reference backup to use for partial backup")
+            (@arg same_device: --xdev -x "do not cross filesystem boundaries")
             (@arg SRC: +required "source path to backup")
             (@arg BACKUP: +required "repository::backup path")
         )
@@ -305,6 +307,7 @@ pub fn parse() -> Arguments {
             repo_path: repository.to_string(),
             backup_name: backup.unwrap().to_string(),
             full: args.is_present("full"),
+            same_device: args.is_present("same_device"),
             src_path: args.value_of("SRC").unwrap().to_string(),
             reference: args.value_of("reference").map(|v| v.to_string())
         }

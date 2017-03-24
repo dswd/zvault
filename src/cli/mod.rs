@@ -174,7 +174,7 @@ pub fn run() {
             }
             print_config(&repo.config);
         },
-        Arguments::Backup{repo_path, backup_name, src_path, full, reference} => {
+        Arguments::Backup{repo_path, backup_name, src_path, full, reference, same_device} => {
             let mut repo = open_repository(&repo_path);
             let mut reference_backup = None;
             if !full {
@@ -188,7 +188,10 @@ pub fn run() {
                     info!("No reference backup found, doing a full scan instead");
                 }
             }
-            let backup = match repo.create_backup_recursively(&src_path, reference_backup.as_ref()) {
+            let options = BackupOptions {
+                same_device: same_device
+            };
+            let backup = match repo.create_backup_recursively(&src_path, reference_backup.as_ref(), &options) {
                 Ok(backup) => backup,
                 Err(RepositoryError::Backup(BackupError::FailedPaths(backup, _failed_paths))) => {
                     warn!("Some files are missing from the backup");

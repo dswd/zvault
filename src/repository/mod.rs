@@ -7,6 +7,7 @@ mod metadata;
 mod backup;
 mod error;
 mod vacuum;
+mod backup_file;
 
 use ::prelude::*;
 
@@ -20,7 +21,8 @@ use std::os::unix::fs::symlink;
 pub use self::error::RepositoryError;
 pub use self::config::Config;
 pub use self::metadata::{Inode, FileType};
-pub use self::backup::{Backup, BackupFileError, BackupError};
+pub use self::backup::{BackupError, BackupOptions};
+pub use self::backup_file::{Backup, BackupFileError};
 pub use self::integrity::RepositoryIntegrityError;
 pub use self::info::RepositoryInfo;
 use self::bundle_map::BundleMap;
