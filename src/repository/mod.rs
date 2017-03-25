@@ -24,7 +24,7 @@ pub use self::metadata::{Inode, FileType};
 pub use self::backup::{BackupError, BackupOptions};
 pub use self::backup_file::{Backup, BackupFileError};
 pub use self::integrity::RepositoryIntegrityError;
-pub use self::info::RepositoryInfo;
+pub use self::info::{RepositoryInfo, BundleAnalysis};
 use self::bundle_map::BundleMap;
 
 

@@ -65,6 +65,9 @@ pub enum Arguments {
         backup_name: Option<String>,
         inode: Option<String>
     },
+    Analyze {
+        repo_path: String
+    },
     BundleList {
         repo_path: String
     },
@@ -176,7 +179,7 @@ fn parse_bundle_id(val: &str) -> BundleId {
     }
 }
 
-
+#[allow(unknown_lints,cyclomatic_complexity)]
 pub fn parse() -> Arguments {
     let args = clap_app!(zvault =>
         (version: crate_version!())
@@ -258,6 +261,10 @@ pub fn parse() -> Arguments {
         (@subcommand info =>
             (about: "displays information on a repository, a backup or a path in a backup")
             (@arg PATH: +required "repository[::backup[::subpath]] path")
+        )
+        (@subcommand analyze =>
+            (about: "analyze the used and reclaimable space of bundles")
+            (@arg REPO: +required "repository path")
         )
         (@subcommand configure =>
             (about: "changes the configuration")
@@ -423,6 +430,16 @@ pub fn parse() -> Arguments {
             repo_path: repository.to_string(),
             backup_name: backup.map(|v| v.to_string()),
             inode: inode.map(|v| v.to_string())
+        }
+    }
+    if let Some(args) = args.subcommand_matches("analyze") {
+        let (repository, backup, inode) = split_repo_path(args.value_of("REPO").unwrap());
+        if backup.is_some() || inode.is_some() {
+            println!("No backups or subpaths may be given here");
+            exit(1);
+        }
+        return Arguments::Analyze {
+            repo_path: repository.to_string()
         }
     }
     if let Some(args) = args.subcommand_matches("import") {

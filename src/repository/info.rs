@@ -1,5 +1,32 @@
 use ::prelude::*;
 
+use super::metadata::FileContents;
+
+use std::collections::{HashMap, VecDeque};
+
+
+pub struct BundleAnalysis {
+    pub info: BundleInfo,
+    pub chunk_usage: Bitmap,
+    pub used_raw_size: usize
+}
+
+impl BundleAnalysis {
+    #[inline]
+    pub fn get_usage_ratio(&self) -> f32 {
+        self.used_raw_size as f32 / self.info.raw_size as f32
+    }
+
+    #[inline]
+    pub fn get_used_size(&self) -> usize {
+        (self.get_usage_ratio() * self.info.encoded_size as f32) as usize
+    }
+
+    #[inline]
+    pub fn get_unused_size(&self) -> usize {
+        ((1.0 - self.get_usage_ratio()) * self.info.encoded_size as f32) as usize
+    }
+}
 
 pub struct RepositoryInfo {
     pub bundle_count: usize,
@@ -15,6 +42,70 @@ pub struct RepositoryInfo {
 
 
 impl Repository {
+    fn mark_used(&self, bundles: &mut HashMap<u32, BundleAnalysis>, chunks: &[Chunk]) -> Result<bool, RepositoryError> {
+        let mut new = false;
+        for &(hash, len) in chunks {
+            if let Some(pos) = self.index.get(&hash) {
+                if let Some(bundle) = bundles.get_mut(&pos.bundle) {
+                    if !bundle.chunk_usage.get(pos.chunk as usize) {
+                        new = true;
+                        bundle.chunk_usage.set(pos.chunk as usize);
+                        bundle.used_raw_size += len as usize;
+                    }
+                } else {
+                    return Err(RepositoryIntegrityError::MissingBundleId(pos.bundle).into());
+                }
+            } else {
+                return Err(RepositoryIntegrityError::MissingChunk(hash).into());
+            }
+        }
+        Ok(new)
+    }
+
+    pub fn analyze_usage(&mut self) -> Result<HashMap<u32, BundleAnalysis>, RepositoryError> {
+        let mut usage = HashMap::new();
+        for (id, bundle) in self.bundle_map.bundles() {
+            let bundle = try!(self.bundles.get_bundle_info(&bundle).ok_or_else(|| RepositoryIntegrityError::MissingBundle(bundle)));
+            usage.insert(id, BundleAnalysis {
+                chunk_usage: Bitmap::new(bundle.chunk_count),
+                info: bundle.clone(),
+                used_raw_size: 0
+            });
+        }
+        let backups = try!(self.get_backups());
+        let mut todo = VecDeque::new();
+        for (_name, backup) in backups {
+            todo.push_back(backup.root);
+        }
+        while let Some(chunks) = todo.pop_back() {
+            if !try!(self.mark_used(&mut usage, &chunks)) {
+                continue
+            }
+            let inode = try!(self.get_inode(&chunks));
+            // Mark the content chunks as used
+            match inode.contents {
+                None | Some(FileContents::Inline(_)) => (),
+                Some(FileContents::ChunkedDirect(chunks)) => {
+                    try!(self.mark_used(&mut usage, &chunks));
+                },
+                Some(FileContents::ChunkedIndirect(chunks)) => {
+                    if try!(self.mark_used(&mut usage, &chunks)) {
+                        let chunk_data = try!(self.get_data(&chunks));
+                        let chunks = ChunkList::read_from(&chunk_data);
+                        try!(self.mark_used(&mut usage, &chunks));
+                    }
+                }
+            }
+            // Put children in todo
+            if let Some(children) = inode.children {
+                for (_name, chunks) in children {
+                    todo.push_back(chunks);
+                }
+            }
+        }
+        Ok(usage)
+    }
+
     #[inline]
     pub fn list_bundles(&self) -> Vec<&BundleInfo> {
         self.bundles.list_bundles()

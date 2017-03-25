@@ -169,6 +169,28 @@ fn print_config(config: &Config) {
     println!("Hash method: {}", config.hash.name());
 }
 
+fn print_analysis(analysis: &HashMap<u32, BundleAnalysis>) {
+    let mut reclaim_space = [0; 11];
+    let mut data_total = 0;
+    for bundle in analysis.values() {
+        data_total += bundle.info.encoded_size;
+        #[allow(unknown_lints,needless_range_loop)]
+        for i in 0..11 {
+            if bundle.get_usage_ratio() <= i as f32 * 0.1 {
+                reclaim_space[i] += bundle.get_unused_size();
+            }
+        }
+    }
+    println!("Total bundle size: {}", to_file_size(data_total as u64));
+    let used = data_total - reclaim_space[10];
+    println!("Space used: {}, {:.1} %", to_file_size(used as u64), used as f32 / data_total as f32 * 100.0);
+    println!("Reclaimable space (depending on vacuum ratio)");
+    #[allow(unknown_lints,needless_range_loop)]
+    for i in 0..11 {
+        println!("  - ratio={:3}: {:6}, {:4.1} %", i*10, to_file_size(reclaim_space[i] as u64), reclaim_space[i] as f32 / data_total as f32 * 100.0);
+    }
+}
+
 
 #[allow(unknown_lints,cyclomatic_complexity)]
 pub fn run() {
@@ -345,6 +367,10 @@ pub fn run() {
             } else {
                 print_repoinfo(&repo.info());
             }
+        },
+        Arguments::Analyze{repo_path} => {
+            let mut repo = open_repository(&repo_path);
+            print_analysis(&checked(repo.analyze_usage(), "analyze repository"));
         },
         Arguments::BundleList{repo_path} => {
             let repo = open_repository(&repo_path);
