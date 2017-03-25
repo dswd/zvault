@@ -99,7 +99,6 @@ Recommended: Brotli/2-7
 
 ### Core functionality
 - Fix vacuum inconsistencies (either index related, or bundle syncing related)
-- Proper bundle usage analysis with compressed size estimation
 - Recompress & combine bundles
 - Allow to use tar files for backup and restore (--tar, http://alexcrichton.com/tar-rs/tar/index.html)
 - Allow to mount backups (inode id == position in index, lru cache)

@@ -13,7 +13,7 @@ use mmap::{MemoryMap, MapOption, MapError};
 const MAGIC: [u8; 7] = *b"zvault\x02";
 const VERSION: u8 = 1;
 pub const MAX_USAGE: f64 = 0.9;
-pub const MIN_USAGE: f64 = 0.25;
+pub const MIN_USAGE: f64 = 0.35;
 pub const INITIAL_SIZE: usize = 1024;
 
 

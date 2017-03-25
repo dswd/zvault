@@ -75,25 +75,23 @@ impl Repository {
                 backups.push((name, date, backup));
             }
         }
-        backups.sort_by_key(|backup| backup.2.date);
+        backups.sort_by_key(|backup| -backup.2.date);
         let mut keep = Bitmap::new(backups.len());
 
         fn mark_needed<K: Eq, F: Fn(&DateTime<Local>) -> K>(backups: &[(String, DateTime<Local>, Backup)], keep: &mut Bitmap, max: usize, keyfn: F) {
-            let mut unique = VecDeque::with_capacity(max+1);
+            let mut kept = 0;
             let mut last = None;
             for (i, backup) in backups.iter().enumerate() {
                 let val = keyfn(&backup.1);
                 let cur = Some(val);
                 if cur != last {
-                    last = cur;
-                    unique.push_back(i);
-                    if unique.len() > max {
-                        unique.pop_front();
+                    if kept >= max {
+                        break
                     }
+                    last = cur;
+                    keep.set(i);
+                    kept += 1;
                 }
-            }
-            for i in unique {
-                keep.set(i);
             }
         }
         if let Some(max) = yearly {

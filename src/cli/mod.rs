@@ -41,7 +41,7 @@ fn get_backup(repo: &Repository, backup_name: &str) -> Backup {
     checked(repo.get_backup(backup_name), "load backup")
 }
 
-fn find_reference_backup(repo: &Repository, path: &str) -> Option<Backup> {
+fn find_reference_backup(repo: &Repository, path: &str) -> Option<(String, Backup)> {
     let mut matching = Vec::new();
     let hostname = match get_hostname() {
         Ok(hostname) => hostname,
@@ -58,12 +58,12 @@ fn find_reference_backup(repo: &Repository, path: &str) -> Option<Backup> {
             exit(3)
         }
     };
-    for (_name, backup) in backup_map {
+    for (name, backup) in backup_map {
         if backup.host == hostname && backup.path == path {
-            matching.push(backup);
+            matching.push((name, backup));
         }
     }
-    matching.sort_by_key(|b| b.date);
+    matching.sort_by_key(|&(_, ref b)| b.date);
     matching.pop()
 }
 
@@ -187,7 +187,7 @@ fn print_analysis(analysis: &HashMap<u32, BundleAnalysis>) {
     println!("Reclaimable space (depending on vacuum ratio)");
     #[allow(unknown_lints,needless_range_loop)]
     for i in 0..11 {
-        println!("  - ratio={:3}: {:10}, {:4.1} %", i*10, to_file_size(reclaim_space[i] as u64), reclaim_space[i] as f32 / data_total as f32 * 100.0);
+        println!("  - ratio={:3}: {:>10}, {:4.1} %", i*10, to_file_size(reclaim_space[i] as u64), reclaim_space[i] as f32 / data_total as f32 * 100.0);
     }
 }
 
@@ -222,16 +222,20 @@ pub fn run() {
             let mut repo = open_repository(&repo_path);
             let mut reference_backup = None;
             if !full {
-                reference_backup = reference.map(|r| get_backup(&repo, &r));
+                reference_backup = reference.map(|r| {
+                    let b = get_backup(&repo, &r);
+                    (r, b)
+                });
                 if reference_backup.is_none() {
                     reference_backup = find_reference_backup(&repo, &src_path);
                 }
-                if let Some(ref backup) = reference_backup {
-                    info!("Using backup from {} as reference", Local.timestamp(backup.date, 0).to_rfc2822());
+                if let Some(&(ref name, _)) = reference_backup.as_ref() {
+                    info!("Using backup {} as reference", name);
                 } else {
                     info!("No reference backup found, doing a full scan instead");
                 }
             }
+            let reference_backup = reference_backup.map(|(_, backup)| backup);
             if let Some(excludes_from) = excludes_from {
                 for line in BufReader::new(checked(File::open(excludes_from), "open excludes file")).lines() {
                     excludes.push(checked(line, "read excludes file"));
