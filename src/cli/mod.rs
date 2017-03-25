@@ -187,7 +187,7 @@ fn print_analysis(analysis: &HashMap<u32, BundleAnalysis>) {
     println!("Reclaimable space (depending on vacuum ratio)");
     #[allow(unknown_lints,needless_range_loop)]
     for i in 0..11 {
-        println!("  - ratio={:3}: {:6}, {:4.1} %", i*10, to_file_size(reclaim_space[i] as u64), reclaim_space[i] as f32 / data_total as f32 * 100.0);
+        println!("  - ratio={:3}: {:10}, {:4.1} %", i*10, to_file_size(reclaim_space[i] as u64), reclaim_space[i] as f32 / data_total as f32 * 100.0);
     }
 }
 
