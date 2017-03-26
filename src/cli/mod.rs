@@ -372,6 +372,21 @@ pub fn run() {
                 print_repoinfo(&repo.info());
             }
         },
+        Arguments::Mount{repo_path, backup_name, inode, mount_point} => {
+            let mut repo = open_repository(&repo_path);
+            let fs = if let Some(backup_name) = backup_name {
+                let backup = get_backup(&repo, &backup_name);
+                if let Some(inode) = inode {
+                    let inode = checked(repo.get_backup_inode(&backup, inode), "load subpath inode");
+                    checked(FuseFilesystem::from_inode(&mut repo, inode), "create fuse filesystem")
+                } else {
+                    checked(FuseFilesystem::from_backup(&mut repo, &backup), "create fuse filesystem")
+                }
+            } else {
+                checked(FuseFilesystem::from_repository(&mut repo), "create fuse filesystem")
+            };
+            checked(fs.mount(&mount_point), "mount filesystem");
+        },
         Arguments::Analyze{repo_path} => {
             let mut repo = open_repository(&repo_path);
             print_analysis(&checked(repo.analyze_usage(), "analyze repository"));

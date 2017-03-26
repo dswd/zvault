@@ -68,7 +68,7 @@ quick_error!{
 }
 
 
-#[derive(Debug, Eq, PartialEq)]
+#[derive(Debug, Eq, PartialEq, Clone, Copy)]
 pub enum FileType {
     File,
     Directory,

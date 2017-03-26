@@ -17,6 +17,8 @@ extern crate sodiumoxide;
 extern crate ansi_term;
 extern crate filetime;
 extern crate regex;
+extern crate fuse;
+extern crate time;
 extern crate libc;
 
 pub mod util;
@@ -26,6 +28,7 @@ mod chunker;
 mod repository;
 mod cli;
 mod prelude;
+mod mount;
 
 
 fn main() {

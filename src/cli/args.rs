@@ -65,6 +65,12 @@ pub enum Arguments {
         backup_name: Option<String>,
         inode: Option<String>
     },
+    Mount {
+        repo_path: String,
+        backup_name: Option<String>,
+        inode: Option<String>,
+        mount_point: String
+    },
     Analyze {
         repo_path: String
     },
@@ -113,6 +119,31 @@ pub fn split_repo_path(repo_path: &str) -> (&str, Option<&str>, Option<&str>) {
     let backup = parts.next();
     let inode = parts.next();
     (repo, backup, inode)
+}
+
+pub fn parse_repo_path(repo_path: &str, backup_restr: Option<bool>, path_restr: Option<bool>) -> (&str, Option<&str>, Option<&str>) {
+    let (repo, backup, path) = split_repo_path(repo_path);
+    if let Some(restr) = backup_restr {
+        if !restr && backup.is_some() {
+            println!("No backup may be given here");
+            exit(1);
+        }
+        if restr && backup.is_none() {
+            println!("A backup must be specified");
+            exit(1);
+        }
+    }
+    if let Some(restr) = path_restr {
+        if !restr && path.is_some() {
+            println!("No subpath may be given here");
+            exit(1);
+        }
+        if restr && path.is_none() {
+            println!("A subpath must be specified");
+            exit(1);
+        }
+    }
+    (repo, backup, path)
 }
 
 fn parse_num(num: &str, name: &str) -> u64 {
@@ -243,6 +274,11 @@ pub fn parse() -> Arguments {
             (about: "lists backups or backup contents")
             (@arg PATH: +required "repository[::backup[::subpath]] path")
         )
+        (@subcommand mount =>
+            (about: "mount a backup for inspection")
+            (@arg PATH: +required "repository[::backup[::subpath]] path")
+            (@arg MOUNTPOINT: +required "where to mount to backup")
+        )
         (@subcommand bundlelist =>
             (about: "lists bundles in a repository")
             (@arg REPO: +required "path of the repository")
@@ -297,11 +333,7 @@ pub fn parse() -> Arguments {
         )
     ).get_matches();
     if let Some(args) = args.subcommand_matches("init") {
-        let (repository, backup, inode) = split_repo_path(args.value_of("REPO").unwrap());
-        if backup.is_some() || inode.is_some() {
-            println!("No backups or subpaths may be given here");
-            exit(1);
-        }
+        let (repository, _backup, _inode) = parse_repo_path(args.value_of("REPO").unwrap(), Some(false), Some(false));
         return Arguments::Init {
             bundle_size: (parse_num(args.value_of("bundle_size").unwrap_or(&DEFAULT_BUNDLE_SIZE.to_string()), "Bundle size") * 1024 * 1024) as usize,
             chunker: parse_chunker(args.value_of("chunker").unwrap_or(DEFAULT_CHUNKER)),
@@ -313,15 +345,7 @@ pub fn parse() -> Arguments {
         }
     }
     if let Some(args) = args.subcommand_matches("backup") {
-        let (repository, backup, inode) = split_repo_path(args.value_of("BACKUP").unwrap());
-        if backup.is_none() {
-            println!("A backup must be specified");
-            exit(1);
-        }
-        if inode.is_some() {
-            println!("No subpaths may be given here");
-            exit(1);
-        }
+        let (repository, backup, _inode) = parse_repo_path(args.value_of("BACKUP").unwrap(), Some(true), Some(false));
         return Arguments::Backup {
             repo_path: repository.to_string(),
             backup_name: backup.unwrap().to_string(),
@@ -334,11 +358,7 @@ pub fn parse() -> Arguments {
         }
     }
     if let Some(args) = args.subcommand_matches("restore") {
-        let (repository, backup, inode) = split_repo_path(args.value_of("BACKUP").unwrap());
-        if backup.is_none() {
-            println!("A backup must be specified");
-            exit(1);
-        }
+        let (repository, backup, inode) = parse_repo_path(args.value_of("BACKUP").unwrap(), Some(true), None);
         return Arguments::Restore {
             repo_path: repository.to_string(),
             backup_name: backup.unwrap().to_string(),
@@ -347,11 +367,7 @@ pub fn parse() -> Arguments {
         }
     }
     if let Some(args) = args.subcommand_matches("remove") {
-        let (repository, backup, inode) = split_repo_path(args.value_of("BACKUP").unwrap());
-        if backup.is_none() {
-            println!("A backup must be specified");
-            exit(1);
-        }
+        let (repository, backup, inode) = parse_repo_path(args.value_of("BACKUP").unwrap(), Some(true), None);
         return Arguments::Remove {
             repo_path: repository.to_string(),
             backup_name: backup.unwrap().to_string(),
@@ -359,11 +375,7 @@ pub fn parse() -> Arguments {
         }
     }
     if let Some(args) = args.subcommand_matches("prune") {
-        let (repository, backup, inode) = split_repo_path(args.value_of("REPO").unwrap());
-        if backup.is_some() || inode.is_some() {
-            println!("No backups or subpaths may be given here");
-            exit(1);
-        }
+        let (repository, _backup, _inode) = parse_repo_path(args.value_of("REPO").unwrap(), Some(false), Some(false));
         return Arguments::Prune {
             repo_path: repository.to_string(),
             prefix: args.value_of("prefix").unwrap_or("").to_string(),
@@ -375,11 +387,7 @@ pub fn parse() -> Arguments {
         }
     }
     if let Some(args) = args.subcommand_matches("vacuum") {
-        let (repository, backup, inode) = split_repo_path(args.value_of("REPO").unwrap());
-        if backup.is_some() || inode.is_some() {
-            println!("No backups or subpaths may be given here");
-            exit(1);
-        }
+        let (repository, _backup, _inode) = parse_repo_path(args.value_of("REPO").unwrap(), Some(false), Some(false));
         return Arguments::Vacuum {
             repo_path: repository.to_string(),
             force: args.is_present("force"),
@@ -387,7 +395,7 @@ pub fn parse() -> Arguments {
         }
     }
     if let Some(args) = args.subcommand_matches("check") {
-        let (repository, backup, inode) = split_repo_path(args.value_of("PATH").unwrap());
+        let (repository, backup, inode) = parse_repo_path(args.value_of("PATH").unwrap(), None, None);
         return Arguments::Check {
             repo_path: repository.to_string(),
             backup_name: backup.map(|v| v.to_string()),
@@ -396,7 +404,7 @@ pub fn parse() -> Arguments {
         }
     }
     if let Some(args) = args.subcommand_matches("list") {
-        let (repository, backup, inode) = split_repo_path(args.value_of("PATH").unwrap());
+        let (repository, backup, inode) = parse_repo_path(args.value_of("PATH").unwrap(), None, None);
         return Arguments::List {
             repo_path: repository.to_string(),
             backup_name: backup.map(|v| v.to_string()),
@@ -404,50 +412,43 @@ pub fn parse() -> Arguments {
         }
     }
     if let Some(args) = args.subcommand_matches("bundlelist") {
-        let (repository, backup, inode) = split_repo_path(args.value_of("REPO").unwrap());
-        if backup.is_some() || inode.is_some() {
-            println!("No backups or subpaths may be given here");
-            exit(1);
-        }
+        let (repository, _backup, _inode) = parse_repo_path(args.value_of("REPO").unwrap(), Some(false), Some(false));
         return Arguments::BundleList {
             repo_path: repository.to_string(),
         }
     }
     if let Some(args) = args.subcommand_matches("bundleinfo") {
-        let (repository, backup, inode) = split_repo_path(args.value_of("REPO").unwrap());
-        if backup.is_some() || inode.is_some() {
-            println!("No backups or subpaths may be given here");
-            exit(1);
-        }
+        let (repository, _backup, _inode) = parse_repo_path(args.value_of("REPO").unwrap(), Some(false), Some(false));
         return Arguments::BundleInfo {
             repo_path: repository.to_string(),
             bundle_id: parse_bundle_id(args.value_of("BUNDLE").unwrap())
         }
     }
     if let Some(args) = args.subcommand_matches("info") {
-        let (repository, backup, inode) = split_repo_path(args.value_of("PATH").unwrap());
+        let (repository, backup, inode) = parse_repo_path(args.value_of("PATH").unwrap(), None, None);
         return Arguments::Info {
             repo_path: repository.to_string(),
             backup_name: backup.map(|v| v.to_string()),
             inode: inode.map(|v| v.to_string())
         }
     }
-    if let Some(args) = args.subcommand_matches("analyze") {
-        let (repository, backup, inode) = split_repo_path(args.value_of("REPO").unwrap());
-        if backup.is_some() || inode.is_some() {
-            println!("No backups or subpaths may be given here");
-            exit(1);
+    if let Some(args) = args.subcommand_matches("mount") {
+        let (repository, backup, inode) = parse_repo_path(args.value_of("PATH").unwrap(), None, None);
+        return Arguments::Mount {
+            repo_path: repository.to_string(),
+            backup_name: backup.map(|v| v.to_string()),
+            inode: inode.map(|v| v.to_string()),
+            mount_point: args.value_of("MOUNTPOINT").unwrap().to_string()
         }
+    }
+    if let Some(args) = args.subcommand_matches("analyze") {
+        let (repository, _backup, _inode) = parse_repo_path(args.value_of("REPO").unwrap(), Some(false), Some(false));
         return Arguments::Analyze {
             repo_path: repository.to_string()
         }
     }
     if let Some(args) = args.subcommand_matches("import") {
-        let (repository, backup, inode) = split_repo_path(args.value_of("REPO").unwrap());
-        if backup.is_some() || inode.is_some() {
-            println!("No backups or subpaths may be given here");
-            exit(1);
-        }
+        let (repository, _backup, _inode) = parse_repo_path(args.value_of("REPO").unwrap(), Some(false), Some(false));
         return Arguments::Import {
             repo_path: repository.to_string(),
             remote_path: args.value_of("REMOTE").unwrap().to_string(),
@@ -455,11 +456,7 @@ pub fn parse() -> Arguments {
         }
     }
     if let Some(args) = args.subcommand_matches("configure") {
-        let (repository, backup, inode) = split_repo_path(args.value_of("REPO").unwrap());
-        if backup.is_some() || inode.is_some() {
-            println!("No backups or subpaths may be given here");
-            exit(1);
-        }
+        let (repository, _backup, _inode) = parse_repo_path(args.value_of("REPO").unwrap(), Some(false), Some(false));
         return Arguments::Configure {
             bundle_size: args.value_of("bundle_size").map(|v| (parse_num(v, "Bundle size") * 1024 * 1024) as usize),
             chunker: args.value_of("chunker").map(|v| parse_chunker(v)),
@@ -481,11 +478,7 @@ pub fn parse() -> Arguments {
         }
     }
     if let Some(args) = args.subcommand_matches("addkey") {
-        let (repository, backup, inode) = split_repo_path(args.value_of("REPO").unwrap());
-        if backup.is_some() || inode.is_some() {
-            println!("No backups or subpaths may be given here");
-            exit(1);
-        }
+        let (repository, _backup, _inode) = parse_repo_path(args.value_of("REPO").unwrap(), Some(false), Some(false));
         let generate = args.is_present("generate");
         if !generate && !args.is_present("FILE") {
             println!("Without --generate, a file containing the key pair must be given");
