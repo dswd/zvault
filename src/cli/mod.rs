@@ -218,7 +218,7 @@ pub fn run() {
             }
             print_config(&repo.config);
         },
-        Arguments::Backup{repo_path, backup_name, src_path, full, reference, same_device, mut excludes, excludes_from} => {
+        Arguments::Backup{repo_path, backup_name, src_path, full, reference, same_device, mut excludes, excludes_from, no_default_excludes} => {
             let mut repo = open_repository(&repo_path);
             let mut reference_backup = None;
             if !full {
@@ -236,23 +236,32 @@ pub fn run() {
                 }
             }
             let reference_backup = reference_backup.map(|(_, backup)| backup);
+            if !no_default_excludes {
+                for line in BufReader::new(checked(File::open(&repo.excludes_path), "open default excludes file")).lines() {
+                    excludes.push(checked(line, "read default excludes file"));
+                }
+            }
             if let Some(excludes_from) = excludes_from {
                 for line in BufReader::new(checked(File::open(excludes_from), "open excludes file")).lines() {
                     excludes.push(checked(line, "read excludes file"));
                 }
             }
-            let excludes: Vec<String> = excludes.into_iter().map(|mut exclude| {
+            let mut excludes_parsed = Vec::with_capacity(excludes.len());
+            for mut exclude in excludes {
+                if exclude.starts_with('#') || exclude.is_empty() {
+                    continue
+                }
                 exclude = regex::escape(&exclude).replace('?', ".").replace(r"\*\*", ".*").replace(r"\*", "[^/]*");
-                if exclude.starts_with('/') {
+                excludes_parsed.push(if exclude.starts_with('/') {
                     format!(r"^{}($|/)", exclude)
                 } else {
                     format!(r"/{}($|/)", exclude)
-                }
-            }).collect();
-            let excludes = if excludes.is_empty() {
+                });
+            };
+            let excludes = if excludes_parsed.is_empty() {
                 None
             } else {
-                Some(checked(RegexSet::new(excludes), "parse exclude patterns"))
+                Some(checked(RegexSet::new(excludes_parsed), "parse exclude patterns"))
             };
             let options = BackupOptions {
                 same_device: same_device,
@@ -409,7 +418,7 @@ pub fn run() {
         Arguments::Import{repo_path, remote_path, key_files} => {
             checked(Repository::import(repo_path, remote_path, key_files), "import repository");
         },
-        Arguments::Configure{repo_path, bundle_size, chunker, compression, encryption, hash} => {
+        Arguments::Config{repo_path, bundle_size, chunker, compression, encryption, hash} => {
             let mut repo = open_repository(&repo_path);
             if let Some(bundle_size) = bundle_size {
                 repo.config.bundle_size = bundle_size

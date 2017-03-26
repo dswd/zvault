@@ -14,9 +14,10 @@ use ::prelude::*;
 use std::mem;
 use std::cmp::max;
 use std::path::{PathBuf, Path};
-use std::fs;
+use std::fs::{self, File};
 use std::sync::{Arc, Mutex};
 use std::os::unix::fs::symlink;
+use std::io::Write;
 
 pub use self::error::RepositoryError;
 pub use self::config::Config;
@@ -28,9 +29,13 @@ pub use self::info::{RepositoryInfo, BundleAnalysis};
 use self::bundle_map::BundleMap;
 
 
+const DEFAULT_EXCLUDES: &'static [u8] = include_bytes!("../../excludes.default");
+
+
 pub struct Repository {
     path: PathBuf,
     backups_path: PathBuf,
+    pub excludes_path: PathBuf,
     pub config: Config,
     index: Index,
     crypto: Arc<Mutex<Crypto>>,
@@ -49,6 +54,8 @@ impl Repository {
     pub fn create<P: AsRef<Path>, R: AsRef<Path>>(path: P, config: Config, remote: R) -> Result<Self, RepositoryError> {
         let path = path.as_ref().to_owned();
         try!(fs::create_dir(&path));
+        let mut excludes = try!(File::create(path.join("excludes")));
+        try!(excludes.write_all(DEFAULT_EXCLUDES));
         try!(fs::create_dir(path.join("keys")));
         let crypto = Arc::new(Mutex::new(try!(Crypto::open(path.join("keys")))));
         try!(symlink(remote, path.join("remote")));
@@ -66,6 +73,7 @@ impl Repository {
         try!(fs::create_dir_all(&path.join("remote/backups")));
         Ok(Repository {
             backups_path: path.join("remote/backups"),
+            excludes_path: path.join("excludes"),
             path: path,
             chunker: config.chunker.create(),
             config: config,
@@ -95,6 +103,7 @@ impl Repository {
         let bundle_map = try!(BundleMap::load(path.join("bundles.map")));
         let mut repo = Repository {
             backups_path: path.join("remote/backups"),
+            excludes_path: path.join("excludes"),
             path: path,
             chunker: config.chunker.create(),
             config: config,

@@ -22,7 +22,8 @@ pub enum Arguments {
         reference: Option<String>,
         same_device: bool,
         excludes: Vec<String>,
-        excludes_from: Option<String>
+        excludes_from: Option<String>,
+        no_default_excludes: bool
     },
     Restore {
         repo_path: String,
@@ -86,7 +87,7 @@ pub enum Arguments {
         remote_path: String,
         key_files: Vec<String>
     },
-    Configure {
+    Config {
         repo_path: String,
         bundle_size: Option<usize>,
         chunker: Option<ChunkerType>,
@@ -237,6 +238,7 @@ pub fn parse() -> Arguments {
             (@arg same_device: --xdev -x "do not cross filesystem boundaries")
             (@arg exclude: --exclude -e ... +takes_value "exclude this path or file")
             (@arg excludes_from: --excludesfrom +takes_value "read the list of exludes from this file")
+            (@arg no_default_excludes: --nodefaultexcludes "do not load the default excludes file")
             (@arg SRC: +required "source path to backup")
             (@arg BACKUP: +required "repository::backup path")
         )
@@ -302,7 +304,7 @@ pub fn parse() -> Arguments {
             (about: "analyze the used and reclaimable space of bundles")
             (@arg REPO: +required "repository path")
         )
-        (@subcommand configure =>
+        (@subcommand config =>
             (about: "changes the configuration")
             (@arg REPO: +required "path of the repository")
             (@arg bundle_size: --bundlesize +takes_value "maximal bundle size in MiB [default: 25]")
@@ -354,7 +356,8 @@ pub fn parse() -> Arguments {
             excludes: args.values_of("exclude").map(|v| v.map(|k| k.to_string()).collect()).unwrap_or_else(|| vec![]),
             excludes_from: args.value_of("excludes_from").map(|v| v.to_string()),
             src_path: args.value_of("SRC").unwrap().to_string(),
-            reference: args.value_of("reference").map(|v| v.to_string())
+            reference: args.value_of("reference").map(|v| v.to_string()),
+            no_default_excludes: args.is_present("no_default_excludes")
         }
     }
     if let Some(args) = args.subcommand_matches("restore") {
@@ -455,9 +458,9 @@ pub fn parse() -> Arguments {
             key_files: args.values_of("key").map(|v| v.map(|k| k.to_string()).collect()).unwrap_or_else(|| vec![])
         }
     }
-    if let Some(args) = args.subcommand_matches("configure") {
+    if let Some(args) = args.subcommand_matches("config") {
         let (repository, _backup, _inode) = parse_repo_path(args.value_of("REPO").unwrap(), Some(false), Some(false));
-        return Arguments::Configure {
+        return Arguments::Config {
             bundle_size: args.value_of("bundle_size").map(|v| (parse_num(v, "Bundle size") * 1024 * 1024) as usize),
             chunker: args.value_of("chunker").map(|v| parse_chunker(v)),
             compression: args.value_of("compression").map(|v| parse_compression(v)),

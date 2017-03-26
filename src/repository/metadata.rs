@@ -155,9 +155,7 @@ serde_impl!(Inode(u8) {
 impl Inode {
     pub fn get_from<P: AsRef<Path>>(path: P) -> Result<Self, InodeError> {
         let path = path.as_ref();
-        let name = try!(path.file_name()
-            .ok_or_else(|| InodeError::UnsupportedFiletype(path.to_owned())))
-            .to_string_lossy().to_string();
+        let name = path.file_name().map(|s| s.to_string_lossy().to_string()).unwrap_or_else(|| "_".to_string());
         let meta = try!(fs::symlink_metadata(path).map_err(|e| InodeError::ReadMetadata(e, path.to_owned())));
         let mut inode = Inode::default();
         inode.name = name;
@@ -220,6 +218,7 @@ impl Inode {
     pub fn is_unchanged(&self, other: &Inode) -> bool {
         self.modify_time == other.modify_time
         && self.file_type == other.file_type
+        && self.size == other.size
     }
 
     #[inline]

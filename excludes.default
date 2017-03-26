@@ -1,0 +1,17 @@
+# Mounted locations and pseudo filesystems
+/cdrom
+/dev
+lost+found
+/mnt
+/sys
+/proc
+/run
+/snap
+
+# Cache data that does not need to be backed up
+/home/*/.cache
+/var/cache
+/tmp
+
+# Avoid backing up zvault remote backups
+remote/bundles

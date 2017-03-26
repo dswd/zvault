@@ -15,13 +15,13 @@ quick_error!{
     pub enum BackupFileError {
         Read(err: io::Error, path: PathBuf) {
             cause(err)
-            description("Failed to write backup")
-            display("Backup file error: failed to write backup file {:?}\n\tcaused by: {}", path, err)
+            description("Failed to read backup")
+            display("Backup file error: failed to read backup file {:?}\n\tcaused by: {}", path, err)
         }
         Write(err: io::Error, path: PathBuf) {
             cause(err)
-            description("Failed to read/write backup")
-            display("Backup file error: failed to read backup file {:?}\n\tcaused by: {}", path, err)
+            description("Failed to write backup")
+            display("Backup file error: failed to write backup file {:?}\n\tcaused by: {}", path, err)
         }
         Decode(err: msgpack::DecodeError, path: PathBuf) {
             cause(err)
