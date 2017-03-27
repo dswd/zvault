@@ -68,7 +68,7 @@ quick_error!{
 }
 
 
-#[derive(Debug, Eq, PartialEq, Clone, Copy)]
+#[derive(Debug, Eq, PartialEq, Clone, Copy, Hash)]
 pub enum FileType {
     File,
     Directory,
@@ -90,7 +90,7 @@ impl fmt::Display for FileType {
 }
 
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Hash, PartialEq, Eq)]
 pub enum FileContents {
     Inline(msgpack::Bytes),
     ChunkedDirect(ChunkList),
@@ -103,7 +103,7 @@ serde_impl!(FileContents(u8) {
 });
 
 
-#[derive(Debug)]
+#[derive(Debug, Hash, Eq, PartialEq)]
 pub struct Inode {
     pub name: String,
     pub size: u64,

@@ -277,4 +277,22 @@ impl Repository {
     pub fn get_backup_inode<P: AsRef<Path>>(&mut self, backup: &Backup, path: P) -> Result<Inode, RepositoryError> {
         self.get_backup_path(backup, path).map(|mut inodes| inodes.pop().unwrap())
     }
+
+    #[inline]
+    pub fn find_versions<P: AsRef<Path>>(&mut self, path: P) -> Result<Vec<(String, Inode)>, RepositoryError> {
+        let path = path.as_ref();
+        let mut versions = HashMap::new();
+        for (name, backup) in try!(self.get_backups()) {
+            match self.get_backup_inode(&backup, path) {
+                Ok(inode) => {
+                    versions.insert((inode.file_type, inode.modify_time, inode.size), (name, inode));
+                },
+                Err(RepositoryError::NoSuchFileInBackup(..)) => continue,
+                Err(err) => return Err(err)
+            }
+        }
+        let mut versions: Vec<_> = versions.into_iter().map(|(_, v)| v).collect();
+        versions.sort_by_key(|v| v.1.modify_time);
+        Ok(versions)
+    }
 }

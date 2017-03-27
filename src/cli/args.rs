@@ -72,6 +72,10 @@ pub enum Arguments {
         inode: Option<String>,
         mount_point: String
     },
+    Versions {
+        repo_path: String,
+        path: String
+    },
     Analyze {
         repo_path: String
     },
@@ -304,6 +308,11 @@ pub fn parse() -> Arguments {
             (about: "analyze the used and reclaimable space of bundles")
             (@arg REPO: +required "repository path")
         )
+        (@subcommand versions =>
+            (about: "display different versions of a file in all backups")
+            (@arg REPO: +required "repository path")
+            (@arg PATH: +required "the file path")
+        )
         (@subcommand config =>
             (about: "changes the configuration")
             (@arg REPO: +required "path of the repository")
@@ -442,6 +451,13 @@ pub fn parse() -> Arguments {
             backup_name: backup.map(|v| v.to_string()),
             inode: inode.map(|v| v.to_string()),
             mount_point: args.value_of("MOUNTPOINT").unwrap().to_string()
+        }
+    }
+    if let Some(args) = args.subcommand_matches("versions") {
+        let (repository, _backup, _inode) = parse_repo_path(args.value_of("REPO").unwrap(), Some(false), Some(false));
+        return Arguments::Versions {
+            repo_path: repository.to_string(),
+            path: args.value_of("PATH").unwrap().to_string()
         }
     }
     if let Some(args) = args.subcommand_matches("analyze") {

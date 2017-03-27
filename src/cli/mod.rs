@@ -83,7 +83,7 @@ fn print_backup(backup: &Backup) {
 pub fn format_inode_one_line(inode: &Inode) -> String {
     match inode.file_type {
         FileType::Directory => format!("{:25}\t{} entries", format!("{}/", inode.name), inode.children.as_ref().unwrap().len()),
-        FileType::File => format!("{:25}\t{}", inode.name, to_file_size(inode.size)),
+        FileType::File => format!("{:25}\t{:>10}\t{}", inode.name, to_file_size(inode.size), Local.timestamp(inode.modify_time, 0).to_rfc2822()),
         FileType::Symlink => format!("{:25}\t -> {}", inode.name, inode.symlink_target.as_ref().unwrap()),
     }
 }
@@ -110,7 +110,7 @@ fn print_inode(inode: &Inode) {
 
 fn print_backups(backup_map: &HashMap<String, Backup>) {
     for (name, backup) in backup_map {
-        println!("{:25}  {:>32}  {:5} files, {:4} dirs, {:>10}",
+        println!("{:40}  {:>32}  {:5} files, {:4} dirs, {:>10}",
             name, Local.timestamp(backup.date, 0).to_rfc2822(), backup.file_count,
             backup.dir_count, to_file_size(backup.total_data_size));
     }
@@ -417,6 +417,13 @@ pub fn run() {
         },
         Arguments::Import{repo_path, remote_path, key_files} => {
             checked(Repository::import(repo_path, remote_path, key_files), "import repository");
+        },
+        Arguments::Versions{repo_path, path} => {
+            let mut repo = open_repository(&repo_path);
+            for (name, mut inode) in checked(repo.find_versions(&path), "find versions") {
+                inode.name = format!("{}::{}", name, &path);
+                println!("{}", format_inode_one_line(&inode));
+            }
         },
         Arguments::Config{repo_path, bundle_size, chunker, compression, encryption, hash} => {
             let mut repo = open_repository(&repo_path);
