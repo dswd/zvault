@@ -95,7 +95,6 @@ fn print_inode(inode: &Inode) {
     println!("Permissions: {:3o}", inode.mode);
     println!("User: {}", inode.user);
     println!("Group: {}", inode.group);
-    println!("Access time: {}", Local.timestamp(inode.access_time, 0).to_rfc2822());
     println!("Modification time: {}", Local.timestamp(inode.modify_time, 0).to_rfc2822());
     if let Some(ref target) = inode.symlink_target {
         println!("Symlink target: {}", target);
@@ -423,6 +422,25 @@ pub fn run() {
             for (name, mut inode) in checked(repo.find_versions(&path), "find versions") {
                 inode.name = format!("{}::{}", name, &path);
                 println!("{}", format_inode_one_line(&inode));
+            }
+        },
+        Arguments::Diff{repo_path_old, backup_name_old, inode_old, repo_path_new, backup_name_new, inode_new} => {
+            if repo_path_old != repo_path_new {
+                error!("Can only run diff on same repository");
+                exit(2)
+            }
+            let mut repo = open_repository(&repo_path_old);
+            let backup_old = get_backup(&repo, &backup_name_old);
+            let backup_new = get_backup(&repo, &backup_name_new);
+            let inode1 = checked(repo.get_backup_inode(&backup_old, inode_old.unwrap_or_else(|| "/".to_string())), "load subpath inode");
+            let inode2 = checked(repo.get_backup_inode(&backup_new, inode_new.unwrap_or_else(|| "/".to_string())), "load subpath inode");
+            let diffs = checked(repo.find_differences(&inode1, &inode2), "find differences");
+            for diff in diffs {
+                println!("{} {:?}", match diff.0 {
+                    DiffType::Add => "add",
+                    DiffType::Mod => "mod",
+                    DiffType::Del => "del"
+                }, diff.1);
             }
         },
         Arguments::Config{repo_path, bundle_size, chunker, compression, encryption, hash} => {

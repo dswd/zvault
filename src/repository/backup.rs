@@ -31,6 +31,11 @@ pub struct BackupOptions {
 }
 
 
+pub enum DiffType {
+    Add, Mod, Del
+}
+
+
 impl Repository {
     pub fn get_backups(&self) -> Result<HashMap<String, Backup>, RepositoryError> {
         Ok(try!(Backup::get_all_from(&self.crypto.lock().unwrap(), &self.backups_path)))
@@ -159,7 +164,7 @@ impl Repository {
         let meta_size = 1000; // add 1000 for encoded metadata
         backup.total_data_size += inode.size + meta_size;
         if let Some(ref_inode) = reference {
-            if !ref_inode.is_unchanged(&inode) {
+            if !ref_inode.is_same_meta_quick(&inode) {
                 backup.changed_data_size += inode.size + meta_size;
             }
         } else {
@@ -294,5 +299,53 @@ impl Repository {
         let mut versions: Vec<_> = versions.into_iter().map(|(_, v)| v).collect();
         versions.sort_by_key(|v| v.1.modify_time);
         Ok(versions)
+    }
+
+    #[inline]
+    fn find_differences_recurse(&mut self, inode1: &Inode, inode2: &Inode, path: PathBuf, diffs: &mut Vec<(DiffType, PathBuf)>) -> Result<(), RepositoryError> {
+        if !inode1.is_same_meta(inode2) || inode1.contents != inode2.contents {
+            diffs.push((DiffType::Mod, path.clone()));
+        }
+        if let Some(ref children1) = inode1.children {
+            if let Some(ref children2) = inode2.children {
+                for name in children1.keys() {
+                    if !children2.contains_key(name) {
+                        diffs.push((DiffType::Del, path.join(name)));
+                    }
+                }
+            } else {
+                for name in children1.keys() {
+                    diffs.push((DiffType::Del, path.join(name)));
+                }
+            }
+        }
+        if let Some(ref children2) = inode2.children {
+            if let Some(ref children1) = inode1.children {
+                for (name, chunks2) in children2 {
+                    if let Some(chunks1) = children1.get(name) {
+                        if chunks1 != chunks2 {
+                            let inode1 = try!(self.get_inode(chunks1));
+                            let inode2 = try!(self.get_inode(chunks2));
+                            try!(self.find_differences_recurse(&inode1, &inode2, path.join(name), diffs));
+                        }
+                    } else {
+                        diffs.push((DiffType::Add, path.join(name)));
+                    }
+                }
+            } else {
+                for name in children2.keys() {
+                    diffs.push((DiffType::Add, path.join(name)));
+                }
+            }
+        }
+        Ok(())
+    }
+
+    #[inline]
+    pub fn find_differences(&mut self, inode1: &Inode, inode2: &Inode) -> Result<Vec<(DiffType, PathBuf)>, RepositoryError> {
+        let mut diffs = vec![];
+        let path = PathBuf::from("/");
+        try!(self.find_differences_recurse(inode1, inode2, path, &mut diffs));
+        Ok(diffs)
     }
 }

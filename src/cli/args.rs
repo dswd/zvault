@@ -76,6 +76,14 @@ pub enum Arguments {
         repo_path: String,
         path: String
     },
+    Diff {
+        repo_path_old: String,
+        backup_name_old: String,
+        inode_old: Option<String>,
+        repo_path_new: String,
+        backup_name_new: String,
+        inode_new: Option<String>
+    },
     Analyze {
         repo_path: String
     },
@@ -313,6 +321,11 @@ pub fn parse() -> Arguments {
             (@arg REPO: +required "repository path")
             (@arg PATH: +required "the file path")
         )
+        (@subcommand diff =>
+            (about: "display difference between two backup versions")
+            (@arg OLD: +required "old repository::backup[::subpath] path")
+            (@arg NEW: +required "new repository::backup[::subpath] path")
+        )
         (@subcommand config =>
             (about: "changes the configuration")
             (@arg REPO: +required "path of the repository")
@@ -458,6 +471,18 @@ pub fn parse() -> Arguments {
         return Arguments::Versions {
             repo_path: repository.to_string(),
             path: args.value_of("PATH").unwrap().to_string()
+        }
+    }
+    if let Some(args) = args.subcommand_matches("diff") {
+        let (repository_old, backup_old, inode_old) = parse_repo_path(args.value_of("OLD").unwrap(), Some(true), None);
+        let (repository_new, backup_new, inode_new) = parse_repo_path(args.value_of("NEW").unwrap(), Some(true), None);
+        return Arguments::Diff {
+            repo_path_old: repository_old.to_string(),
+            backup_name_old: backup_old.unwrap().to_string(),
+            inode_old: inode_old.map(|v| v.to_string()),
+            repo_path_new: repository_new.to_string(),
+            backup_name_new: backup_new.unwrap().to_string(),
+            inode_new: inode_new.map(|v| v.to_string()),            
         }
     }
     if let Some(args) = args.subcommand_matches("analyze") {

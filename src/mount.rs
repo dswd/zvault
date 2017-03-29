@@ -87,7 +87,7 @@ impl FuseInode {
             ino: self.num,
             size: self.inode.size,
             blocks: self.inode.size / 512,
-            atime: Timespec::new(self.inode.access_time, 0),
+            atime: Timespec::new(self.inode.modify_time, 0),
             mtime: Timespec::new(self.inode.modify_time, 0),
             ctime: Timespec::new(0, 0),
             crtime: Timespec::new(0, 0),

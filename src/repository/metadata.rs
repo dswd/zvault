@@ -111,9 +111,9 @@ pub struct Inode {
     pub mode: u32,
     pub user: u32,
     pub group: u32,
-    pub access_time: i64,
+    pub __old_access_time: i64,
     pub modify_time: i64,
-    pub create_time: i64,
+    pub __old_create_time: i64,
     pub symlink_target: Option<String>,
     pub contents: Option<FileContents>,
     pub children: Option<BTreeMap<String, ChunkList>>
@@ -127,9 +127,9 @@ impl Default for Inode {
             mode: 0o644,
             user: 1000,
             group: 1000,
-            access_time: 0,
+            __old_access_time: 0,
             modify_time: 0,
-            create_time: 0,
+            __old_create_time: 0,
             symlink_target: None,
             contents: None,
             children: None
@@ -143,9 +143,9 @@ serde_impl!(Inode(u8) {
     mode: u32 => 3,
     user: u32 => 4,
     group: u32 => 5,
-    access_time: i64 => 6,
+    __old_access_time: i64 => 6,
     modify_time: i64 => 7,
-    create_time: i64 => 8,
+    __old_create_time: i64 => 8,
     symlink_target: Option<String> => 9,
     contents: Option<FileContents> => 10,
     children: BTreeMap<String, ChunkList> => 11
@@ -213,7 +213,13 @@ impl Inode {
         Ok(file)
     }
 
-    pub fn is_unchanged(&self, other: &Inode) -> bool {
+    pub fn is_same_meta(&self, other: &Inode) -> bool {
+        self.file_type == other.file_type && self.size == other.size && self.mode == other.mode
+        && self.user == other.user && self.group == other.group && self.name == other.name
+        && self.modify_time == other.modify_time && self.symlink_target == other.symlink_target
+    }
+
+    pub fn is_same_meta_quick(&self, other: &Inode) -> bool {
         self.modify_time == other.modify_time
         && self.file_type == other.file_type
         && self.size == other.size
@@ -236,7 +242,7 @@ impl Repository {
         let mut inode = try!(Inode::get_from(path.as_ref()));
         if inode.file_type == FileType::File && inode.size > 0 {
             if let Some(reference) = reference {
-                if reference.is_unchanged(&inode) {
+                if reference.is_same_meta_quick(&inode) {
                     inode.contents = reference.contents.clone();
                     return Ok(inode)
                 }
