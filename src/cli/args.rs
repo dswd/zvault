@@ -239,7 +239,7 @@ pub fn parse() -> Arguments {
             (about: "creates a new backup")
             (@arg full: --full "create a full backup")
             (@arg reference: --ref +takes_value "the reference backup to use for partial backup")
-            (@arg same_device: --xdev -x "do not cross filesystem boundaries")
+            (@arg cross_device: --xdev -x "allow to cross filesystem boundaries")
             (@arg exclude: --exclude -e ... +takes_value "exclude this path or file")
             (@arg excludes_from: --excludesfrom +takes_value "read the list of exludes from this file")
             (@arg no_default_excludes: --nodefaultexcludes "do not load the default excludes file")
@@ -361,7 +361,7 @@ pub fn parse() -> Arguments {
             repo_path: repository.to_string(),
             backup_name: backup.unwrap().to_string(),
             full: args.is_present("full"),
-            same_device: args.is_present("same_device"),
+            same_device: !args.is_present("cross_device"),
             excludes: args.values_of("exclude").map(|v| v.map(|k| k.to_string()).collect()).unwrap_or_else(|| vec![]),
             excludes_from: args.value_of("excludes_from").map(|v| v.to_string()),
             src_path: args.value_of("SRC").unwrap().to_string(),

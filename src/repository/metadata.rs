@@ -177,9 +177,7 @@ impl Inode {
         inode.mode = meta.st_mode();
         inode.user = meta.st_uid();
         inode.group = meta.st_gid();
-        inode.access_time = meta.st_atime();
         inode.modify_time = meta.st_mtime();
-        inode.create_time = meta.st_ctime();
         Ok(inode)
     }
 
@@ -208,7 +206,7 @@ impl Inode {
         ).map_err(|e| InodeError::SetPermissions(e, full_path.clone(), self.mode)));
         try!(filetime::set_file_times(
             &full_path,
-            FileTime::from_seconds_since_1970(self.access_time as u64, 0),
+            FileTime::from_seconds_since_1970(self.modify_time as u64, 0),
             FileTime::from_seconds_since_1970(self.modify_time as u64, 0)
         ).map_err(|e| InodeError::SetTimes(e, full_path.clone())));
         try!(chown(&full_path, self.user, self.group).map_err(|e| InodeError::SetOwnership(e, full_path.clone())));
