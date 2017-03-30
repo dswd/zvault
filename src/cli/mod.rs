@@ -108,8 +108,10 @@ fn print_inode(inode: &Inode) {
 }
 
 fn print_backups(backup_map: &HashMap<String, Backup>) {
-    for (name, backup) in backup_map {
-        println!("{:40}  {:>32}  {:5} files, {:4} dirs, {:>10}",
+    let mut backups: Vec<_> = backup_map.into_iter().collect();
+    backups.sort_by_key(|b| b.0);
+    for (name, backup) in backups {
+        println!("{:40}  {:>32}  {:7} files, {:6} dirs, {:>10}",
             name, Local.timestamp(backup.date, 0).to_rfc2822(), backup.file_count,
             backup.dir_count, to_file_size(backup.total_data_size));
     }
