@@ -98,8 +98,6 @@ Recommended: Brotli/2-7
 ## TODO
 
 ### Core functionality
-- Subcommand 'diff': find differences between two backups (add, mod, del)
-- Fix vacuum inconsistencies (either index related, or bundle syncing related)
 - Recompress & combine bundles
 - Allow to use tar files for backup and restore (--tar, http://alexcrichton.com/tar-rs/tar/index.html)
 - File attributes
