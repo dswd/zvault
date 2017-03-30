@@ -228,6 +228,7 @@ impl Repository {
     fn remove_gone_remote_bundle(&mut self, bundle: BundleInfo) -> Result<(), RepositoryError> {
         if let Some(id) = self.bundle_map.find(&bundle.id) {
             info!("Removing bundle from index: {}", bundle.id);
+            try!(self.index.filter(|_key, data| data.bundle != id));
             self.bundle_map.remove(id);
         }
         Ok(())
