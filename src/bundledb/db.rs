@@ -269,10 +269,16 @@ impl BundleDb {
     }
 
     #[inline]
-    pub fn delete_bundle(&mut self, bundle: &BundleId) -> Result<(), BundleDbError> {
+    pub fn delete_local_bundle(&mut self, bundle: &BundleId) -> Result<(), BundleDbError> {
         if let Some(bundle) = self.local_bundles.remove(bundle) {
             try!(fs::remove_file(&bundle.path).map_err(|e| BundleDbError::Remove(e, bundle.id())))
         }
+        Ok(())
+    }
+
+    #[inline]
+    pub fn delete_bundle(&mut self, bundle: &BundleId) -> Result<(), BundleDbError> {
+        try!(self.delete_local_bundle(bundle));
         if let Some(bundle) = self.remote_bundles.remove(bundle) {
             fs::remove_file(&bundle.path).map_err(|e| BundleDbError::Remove(e, bundle.id()))
         } else {
