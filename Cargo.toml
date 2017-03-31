@@ -24,6 +24,7 @@ sodiumoxide = "0.0.14"
 filetime = "0.1"
 regex = "0.2"
 fuse = "0.3"
+lazy_static = "0.2"
 time = "*"
 libc = "*"
 

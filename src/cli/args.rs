@@ -126,16 +126,24 @@ pub enum Arguments {
 }
 
 
-pub fn split_repo_path(repo_path: &str) -> (&str, Option<&str>, Option<&str>) {
-    let mut parts = repo_path.splitn(3, "::");
-    let repo = parts.next().unwrap();
-    let backup = parts.next();
-    let inode = parts.next();
-    (repo, backup, inode)
-}
-
 pub fn parse_repo_path(repo_path: &str, backup_restr: Option<bool>, path_restr: Option<bool>) -> (&str, Option<&str>, Option<&str>) {
-    let (repo, backup, path) = split_repo_path(repo_path);
+    let mut parts = repo_path.splitn(3, "::");
+    let mut repo = parts.next().unwrap_or(&DEFAULT_REPOSITORY);
+    if repo.is_empty() {
+        repo = &DEFAULT_REPOSITORY;
+    }
+    let mut backup = parts.next();
+    if let Some(val) = backup {
+        if val.is_empty() {
+            backup = None
+        }
+    }
+    let mut path = parts.next();
+    if let Some(val) = path {
+        if val.is_empty() {
+            path = None
+        }
+    }
     if let Some(restr) = backup_restr {
         if !restr && backup.is_some() {
             println!("No backup may be given here");
@@ -241,7 +249,7 @@ pub fn parse() -> Arguments {
             (@arg encryption: --encryption -e "generate a keypair and enable encryption")
             (@arg hash: --hash +takes_value "hash method to use [default: blake2]")
             (@arg remote: --remote -r +takes_value +required "path to the mounted remote storage")
-            (@arg REPO: +required "path of the repository")
+            (@arg REPO: "path of the repository")
         )
         (@subcommand backup =>
             (about: "creates a new backup")
@@ -271,54 +279,54 @@ pub fn parse() -> Arguments {
             (@arg monthly: --monthly +takes_value "keep this number of monthly backups")
             (@arg yearly: --yearly +takes_value  "keep this number of yearly backups")
             (@arg force: --force -f "actually run the prunce instead of simulating it")
-            (@arg REPO: +required "path of the repository")
+            (@arg REPO: "path of the repository")
         )
         (@subcommand vacuum =>
             (about: "saves space by combining and recompressing bundles")
             (@arg ratio: --ratio -r +takes_value "ratio in % of unused space in a bundle to rewrite that bundle")
             (@arg force: --force -f "actually run the vacuum instead of simulating it")
-            (@arg REPO: +required "path of the repository")
+            (@arg REPO: "path of the repository")
         )
         (@subcommand check =>
             (about: "checks the repository, a backup or a backup subpath")
             (@arg full: --full "also check file contents")
-            (@arg PATH: +required "repository[::backup] path")
+            (@arg PATH: "repository[::backup] path")
         )
         (@subcommand list =>
             (about: "lists backups or backup contents")
-            (@arg PATH: +required "repository[::backup[::subpath]] path")
+            (@arg PATH: "repository[::backup[::subpath]] path")
         )
         (@subcommand mount =>
             (about: "mount a backup for inspection")
-            (@arg PATH: +required "repository[::backup[::subpath]] path")
+            (@arg PATH: "repository[::backup[::subpath]] path")
             (@arg MOUNTPOINT: +required "where to mount to backup")
         )
         (@subcommand bundlelist =>
             (about: "lists bundles in a repository")
-            (@arg REPO: +required "path of the repository")
+            (@arg REPO: "path of the repository")
         )
         (@subcommand bundleinfo =>
             (about: "lists bundles in a repository")
-            (@arg REPO: +required "path of the repository")
+            (@arg REPO: "path of the repository")
             (@arg BUNDLE: +required "the bundle id")
         )
         (@subcommand import =>
             (about: "reconstruct a repository from the remote files")
             (@arg key: --key -k ... +takes_value "a file with a needed to read the bundles")
             (@arg REMOTE: +required "remote repository path")
-            (@arg REPO: +required "path of the local repository to create")
+            (@arg REPO: "path of the local repository to create")
         )
         (@subcommand info =>
             (about: "displays information on a repository, a backup or a path in a backup")
-            (@arg PATH: +required "repository[::backup[::subpath]] path")
+            (@arg PATH: "repository[::backup[::subpath]] path")
         )
         (@subcommand analyze =>
             (about: "analyze the used and reclaimable space of bundles")
-            (@arg REPO: +required "repository path")
+            (@arg REPO: "repository path")
         )
         (@subcommand versions =>
             (about: "display different versions of a file in all backups")
-            (@arg REPO: +required "repository path")
+            (@arg REPO: "repository path")
             (@arg PATH: +required "the file path")
         )
         (@subcommand diff =>
@@ -328,7 +336,7 @@ pub fn parse() -> Arguments {
         )
         (@subcommand config =>
             (about: "changes the configuration")
-            (@arg REPO: +required "path of the repository")
+            (@arg REPO: "path of the repository")
             (@arg bundle_size: --bundlesize +takes_value "maximal bundle size in MiB [default: 25]")
             (@arg chunker: --chunker +takes_value "chunker algorithm [default: fastcdc/16]")
             (@arg compression: --compression -c +takes_value "compression to use [default: brotli/3]")
@@ -341,7 +349,7 @@ pub fn parse() -> Arguments {
         )
         (@subcommand addkey =>
             (about: "adds a key to the respository")
-            (@arg REPO: +required "path of the repository")
+            (@arg REPO: "path of the repository")
             (@arg generate: --generate -g "generate a new key")
             (@arg set_default: --default -d "set this key as default")
             (@arg FILE: +takes_value "the file containing the keypair")
@@ -357,7 +365,7 @@ pub fn parse() -> Arguments {
         )
     ).get_matches();
     if let Some(args) = args.subcommand_matches("init") {
-        let (repository, _backup, _inode) = parse_repo_path(args.value_of("REPO").unwrap(), Some(false), Some(false));
+        let (repository, _backup, _inode) = parse_repo_path(args.value_of("REPO").unwrap_or(""), Some(false), Some(false));
         return Arguments::Init {
             bundle_size: (parse_num(args.value_of("bundle_size").unwrap_or(&DEFAULT_BUNDLE_SIZE.to_string()), "Bundle size") * 1024 * 1024) as usize,
             chunker: parse_chunker(args.value_of("chunker").unwrap_or(DEFAULT_CHUNKER)),
@@ -400,7 +408,7 @@ pub fn parse() -> Arguments {
         }
     }
     if let Some(args) = args.subcommand_matches("prune") {
-        let (repository, _backup, _inode) = parse_repo_path(args.value_of("REPO").unwrap(), Some(false), Some(false));
+        let (repository, _backup, _inode) = parse_repo_path(args.value_of("REPO").unwrap_or(""), Some(false), Some(false));
         return Arguments::Prune {
             repo_path: repository.to_string(),
             prefix: args.value_of("prefix").unwrap_or("").to_string(),
@@ -412,7 +420,7 @@ pub fn parse() -> Arguments {
         }
     }
     if let Some(args) = args.subcommand_matches("vacuum") {
-        let (repository, _backup, _inode) = parse_repo_path(args.value_of("REPO").unwrap(), Some(false), Some(false));
+        let (repository, _backup, _inode) = parse_repo_path(args.value_of("REPO").unwrap_or(""), Some(false), Some(false));
         return Arguments::Vacuum {
             repo_path: repository.to_string(),
             force: args.is_present("force"),
@@ -420,7 +428,7 @@ pub fn parse() -> Arguments {
         }
     }
     if let Some(args) = args.subcommand_matches("check") {
-        let (repository, backup, inode) = parse_repo_path(args.value_of("PATH").unwrap(), None, None);
+        let (repository, backup, inode) = parse_repo_path(args.value_of("PATH").unwrap_or(""), None, None);
         return Arguments::Check {
             repo_path: repository.to_string(),
             backup_name: backup.map(|v| v.to_string()),
@@ -429,7 +437,7 @@ pub fn parse() -> Arguments {
         }
     }
     if let Some(args) = args.subcommand_matches("list") {
-        let (repository, backup, inode) = parse_repo_path(args.value_of("PATH").unwrap(), None, None);
+        let (repository, backup, inode) = parse_repo_path(args.value_of("PATH").unwrap_or(""), None, None);
         return Arguments::List {
             repo_path: repository.to_string(),
             backup_name: backup.map(|v| v.to_string()),
@@ -437,20 +445,20 @@ pub fn parse() -> Arguments {
         }
     }
     if let Some(args) = args.subcommand_matches("bundlelist") {
-        let (repository, _backup, _inode) = parse_repo_path(args.value_of("REPO").unwrap(), Some(false), Some(false));
+        let (repository, _backup, _inode) = parse_repo_path(args.value_of("REPO").unwrap_or(""), Some(false), Some(false));
         return Arguments::BundleList {
             repo_path: repository.to_string(),
         }
     }
     if let Some(args) = args.subcommand_matches("bundleinfo") {
-        let (repository, _backup, _inode) = parse_repo_path(args.value_of("REPO").unwrap(), Some(false), Some(false));
+        let (repository, _backup, _inode) = parse_repo_path(args.value_of("REPO").unwrap_or(""), Some(false), Some(false));
         return Arguments::BundleInfo {
             repo_path: repository.to_string(),
             bundle_id: parse_bundle_id(args.value_of("BUNDLE").unwrap())
         }
     }
     if let Some(args) = args.subcommand_matches("info") {
-        let (repository, backup, inode) = parse_repo_path(args.value_of("PATH").unwrap(), None, None);
+        let (repository, backup, inode) = parse_repo_path(args.value_of("PATH").unwrap_or(""), None, None);
         return Arguments::Info {
             repo_path: repository.to_string(),
             backup_name: backup.map(|v| v.to_string()),
@@ -458,7 +466,7 @@ pub fn parse() -> Arguments {
         }
     }
     if let Some(args) = args.subcommand_matches("mount") {
-        let (repository, backup, inode) = parse_repo_path(args.value_of("PATH").unwrap(), None, None);
+        let (repository, backup, inode) = parse_repo_path(args.value_of("PATH").unwrap_or(""), None, None);
         return Arguments::Mount {
             repo_path: repository.to_string(),
             backup_name: backup.map(|v| v.to_string()),
@@ -467,7 +475,7 @@ pub fn parse() -> Arguments {
         }
     }
     if let Some(args) = args.subcommand_matches("versions") {
-        let (repository, _backup, _inode) = parse_repo_path(args.value_of("REPO").unwrap(), Some(false), Some(false));
+        let (repository, _backup, _inode) = parse_repo_path(args.value_of("REPO").unwrap_or(""), Some(false), Some(false));
         return Arguments::Versions {
             repo_path: repository.to_string(),
             path: args.value_of("PATH").unwrap().to_string()
@@ -482,17 +490,17 @@ pub fn parse() -> Arguments {
             inode_old: inode_old.map(|v| v.to_string()),
             repo_path_new: repository_new.to_string(),
             backup_name_new: backup_new.unwrap().to_string(),
-            inode_new: inode_new.map(|v| v.to_string()),            
+            inode_new: inode_new.map(|v| v.to_string()),
         }
     }
     if let Some(args) = args.subcommand_matches("analyze") {
-        let (repository, _backup, _inode) = parse_repo_path(args.value_of("REPO").unwrap(), Some(false), Some(false));
+        let (repository, _backup, _inode) = parse_repo_path(args.value_of("REPO").unwrap_or(""), Some(false), Some(false));
         return Arguments::Analyze {
             repo_path: repository.to_string()
         }
     }
     if let Some(args) = args.subcommand_matches("import") {
-        let (repository, _backup, _inode) = parse_repo_path(args.value_of("REPO").unwrap(), Some(false), Some(false));
+        let (repository, _backup, _inode) = parse_repo_path(args.value_of("REPO").unwrap_or(""), Some(false), Some(false));
         return Arguments::Import {
             repo_path: repository.to_string(),
             remote_path: args.value_of("REMOTE").unwrap().to_string(),
@@ -500,7 +508,7 @@ pub fn parse() -> Arguments {
         }
     }
     if let Some(args) = args.subcommand_matches("config") {
-        let (repository, _backup, _inode) = parse_repo_path(args.value_of("REPO").unwrap(), Some(false), Some(false));
+        let (repository, _backup, _inode) = parse_repo_path(args.value_of("REPO").unwrap_or(""), Some(false), Some(false));
         return Arguments::Config {
             bundle_size: args.value_of("bundle_size").map(|v| (parse_num(v, "Bundle size") * 1024 * 1024) as usize),
             chunker: args.value_of("chunker").map(|v| parse_chunker(v)),
@@ -522,7 +530,7 @@ pub fn parse() -> Arguments {
         }
     }
     if let Some(args) = args.subcommand_matches("addkey") {
-        let (repository, _backup, _inode) = parse_repo_path(args.value_of("REPO").unwrap(), Some(false), Some(false));
+        let (repository, _backup, _inode) = parse_repo_path(args.value_of("REPO").unwrap_or(""), Some(false), Some(false));
         let generate = args.is_present("generate");
         if !generate && !args.is_present("FILE") {
             println!("Without --generate, a file containing the key pair must be given");

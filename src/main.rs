@@ -17,6 +17,7 @@ extern crate sodiumoxide;
 extern crate ansi_term;
 extern crate filetime;
 extern crate regex;
+#[macro_use] extern crate lazy_static;
 extern crate fuse;
 extern crate time;
 extern crate libc;

@@ -12,6 +12,7 @@ use std::collections::HashMap;
 use std::fmt::Display;
 use std::io::{BufReader, BufRead};
 use std::fs::File;
+use std::env;
 
 use self::args::Arguments;
 
@@ -21,6 +22,11 @@ pub const DEFAULT_HASH: &'static str = "blake2";
 pub const DEFAULT_COMPRESSION: &'static str = "brotli/3";
 pub const DEFAULT_BUNDLE_SIZE: usize = 25;
 pub const DEFAULT_VACUUM_RATIO: usize = 50;
+lazy_static! {
+    pub static ref DEFAULT_REPOSITORY: String = {
+        env::home_dir().unwrap().join(".zvault").to_string_lossy().to_string()
+    };
+}
 
 
 fn checked<T, E: Display>(result: Result<T, E>, msg: &'static str) -> T {
