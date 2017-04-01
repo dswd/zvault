@@ -113,6 +113,7 @@ pub struct BundleDb {
     local_bundles_path: PathBuf,
     temp_path: PathBuf,
     remote_cache_path: PathBuf,
+    local_cache_path: PathBuf,
     crypto: Arc<Mutex<Crypto>>,
     local_bundles: HashMap<BundleId, StoredBundle>,
     remote_bundles: HashMap<BundleId, StoredBundle>,
@@ -123,7 +124,8 @@ pub struct BundleDb {
 impl BundleDb {
     fn new(remote_path: PathBuf, local_path: PathBuf, crypto: Arc<Mutex<Crypto>>) -> Self {
         BundleDb {
-            remote_cache_path: local_path.join("bundle_info.cache"),
+            remote_cache_path: local_path.join("remote.cache"),
+            local_cache_path: local_path.join("local.cache"),
             local_bundles_path: local_path.join("cached"),
             temp_path: local_path.join("temp"),
             remote_path: remote_path,
@@ -135,22 +137,34 @@ impl BundleDb {
     }
 
     fn load_bundle_list(&mut self) -> Result<(Vec<StoredBundle>, Vec<StoredBundle>), BundleDbError> {
-        let bundle_info_cache = &self.remote_cache_path;
-        if let Ok(list) = StoredBundle::read_list_from(&bundle_info_cache) {
+        let local_cache_path = &self.local_cache_path;
+        if let Ok(list) = StoredBundle::read_list_from(&local_cache_path) {
+            for bundle in list {
+                self.local_bundles.insert(bundle.id(), bundle);
+            }
+        }
+        let remote_cache_path = &self.remote_cache_path;
+        if let Ok(list) = StoredBundle::read_list_from(&remote_cache_path) {
             for bundle in list {
                 self.remote_bundles.insert(bundle.id(), bundle);
             }
         }
-        try!(load_bundles(&self.local_bundles_path, &mut self.local_bundles));
+        let (new, gone) = try!(load_bundles(&self.local_bundles_path, &mut self.local_bundles));
+        if !new.is_empty() || !gone.is_empty() {
+            let bundles: Vec<_> = self.local_bundles.values().cloned().collect();
+            try!(StoredBundle::save_list_to(&bundles, &local_cache_path));
+        }
         let (new, gone) = try!(load_bundles(&self.remote_path, &mut self.remote_bundles));
         if !new.is_empty() || !gone.is_empty() {
             let bundles: Vec<_> = self.remote_bundles.values().cloned().collect();
-            try!(StoredBundle::save_list_to(&bundles, &bundle_info_cache));
+            try!(StoredBundle::save_list_to(&bundles, &remote_cache_path));
         }
         Ok((new, gone))
     }
 
     pub fn save_cache(&self) -> Result<(), BundleDbError> {
+        let bundles: Vec<_> = self.local_bundles.values().cloned().collect();
+        try!(StoredBundle::save_list_to(&bundles, &self.local_cache_path));
         let bundles: Vec<_> = self.remote_bundles.values().cloned().collect();
         Ok(try!(StoredBundle::save_list_to(&bundles, &self.remote_cache_path)))
     }
