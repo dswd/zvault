@@ -12,6 +12,7 @@ use ::prelude::*;
 
 use std::fmt;
 use serde;
+use rand;
 
 
 pub static HEADER_STRING: [u8; 7] = *b"zvault\x01";
@@ -38,6 +39,10 @@ impl BundleId {
     #[inline]
     fn to_string(&self) -> String {
         self.0.to_string()
+    }
+
+    pub fn random() -> Self {
+        BundleId(Hash{high: rand::random(), low: rand::random()})
     }
 }
 

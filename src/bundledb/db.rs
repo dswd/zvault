@@ -255,11 +255,11 @@ impl BundleDb {
     #[inline]
     pub fn add_bundle(&mut self, bundle: BundleWriter) -> Result<BundleInfo, BundleDbError> {
         let bundle = try!(bundle.finish(&self));
-        let id = bundle.id();
+        let random_id = BundleId::random();
         if bundle.info.mode == BundleMode::Meta {
             try!(self.copy_remote_bundle_to_cache(&bundle))
         }
-        let (folder, filename) = bundle_path(&id, self.remote_path.clone(), self.remote_bundles.len());
+        let (folder, filename) = bundle_path(&random_id, self.remote_path.clone(), self.remote_bundles.len());
         try!(fs::create_dir_all(&folder).context(&folder as &Path));
         let bundle = try!(bundle.move_to(folder.join(filename)));
         self.remote_bundles.insert(bundle.id(), bundle.clone());

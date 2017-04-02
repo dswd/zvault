@@ -106,7 +106,6 @@ Recommended: Brotli/2-7
 ### Formats
 - Bundles
   - Encrypted bundle header
-  - Random bundle name
 - Metadata
   - Arbitrarily nested chunk lists
 

@@ -19,6 +19,7 @@ extern crate filetime;
 extern crate regex;
 #[macro_use] extern crate lazy_static;
 extern crate fuse;
+extern crate rand;
 extern crate time;
 extern crate libc;
 
