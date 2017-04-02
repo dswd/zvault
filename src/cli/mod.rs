@@ -89,7 +89,7 @@ fn print_backup(backup: &Backup) {
 pub fn format_inode_one_line(inode: &Inode) -> String {
     match inode.file_type {
         FileType::Directory => format!("{:25}\t{} entries", format!("{}/", inode.name), inode.children.as_ref().unwrap().len()),
-        FileType::File => format!("{:25}\t{:>10}\t{}", inode.name, to_file_size(inode.size), Local.timestamp(inode.modify_time, 0).to_rfc2822()),
+        FileType::File => format!("{:25}\t{:>10}\t{}", inode.name, to_file_size(inode.size), Local.timestamp(inode.timestamp, 0).to_rfc2822()),
         FileType::Symlink => format!("{:25}\t -> {}", inode.name, inode.symlink_target.as_ref().unwrap()),
     }
 }
@@ -101,7 +101,7 @@ fn print_inode(inode: &Inode) {
     println!("Permissions: {:3o}", inode.mode);
     println!("User: {}", inode.user);
     println!("Group: {}", inode.group);
-    println!("Modification time: {}", Local.timestamp(inode.modify_time, 0).to_rfc2822());
+    println!("Timestamp: {}", Local.timestamp(inode.timestamp, 0).to_rfc2822());
     if let Some(ref target) = inode.symlink_target {
         println!("Symlink target: {}", target);
     }

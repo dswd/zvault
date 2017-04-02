@@ -89,7 +89,7 @@ pub struct Backup {
     pub path: String,
     pub config: Config,
 }
-serde_impl!(Backup(u8) {
+serde_impl!(Backup(u8?) {
     root: Vec<Chunk> => 0,
     total_data_size: u64 => 1,
     changed_data_size: u64 => 2,

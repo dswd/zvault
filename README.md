@@ -103,6 +103,15 @@ Recommended: Brotli/2-7
 - File attributes
   - xattrs https://crates.io/crates/xattr
 
+### Formats
+- Bundles
+  - Encrypted bundle header
+  - Random bundle name
+- Metadata
+  - Arbitrarily nested chunk lists
+  - Cumulative size, chunk count, dir/file count
+- Permissive msgpack mode
+
 ### CLI functionality
 - list --tree
 

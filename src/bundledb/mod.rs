@@ -78,7 +78,7 @@ pub struct BundleInfo {
     pub chunk_count: usize,
     pub chunk_info_size: usize
 }
-serde_impl!(BundleInfo(u64) {
+serde_impl!(BundleInfo(u64?) {
     id: BundleId => 0,
     mode: BundleMode => 1,
     compression: Option<Compression> => 2,

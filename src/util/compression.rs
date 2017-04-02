@@ -35,7 +35,7 @@ quick_error!{
     }
 }
 
-#[derive(Clone, Debug, Copy)]
+#[derive(Clone, Debug, Copy, Eq, PartialEq)]
 pub enum CompressionAlgo {
     Deflate, // Standardized
     Brotli, // Good speed and ratio
@@ -50,7 +50,7 @@ serde_impl!(CompressionAlgo(u8) {
 });
 
 
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, Eq, PartialEq)]
 pub struct Compression {
     algo: CompressionAlgo,
     level: u8

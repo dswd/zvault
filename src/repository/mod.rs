@@ -29,6 +29,7 @@ pub use self::info::{RepositoryInfo, BundleAnalysis};
 use self::bundle_map::BundleMap;
 
 
+const REPOSITORY_README: &'static [u8] = include_bytes!("../../docs/repository_readme.md");
 const DEFAULT_EXCLUDES: &'static [u8] = include_bytes!("../../excludes.default");
 
 
@@ -59,6 +60,8 @@ impl Repository {
         try!(fs::create_dir(path.join("keys")));
         let crypto = Arc::new(Mutex::new(try!(Crypto::open(path.join("keys")))));
         try!(symlink(remote, path.join("remote")));
+        let mut remote_readme = try!(File::create(path.join("remote/README.md")));
+        try!(remote_readme.write_all(REPOSITORY_README));
         try!(fs::create_dir_all(path.join("remote/locks")));
         let locks = LockFolder::new(path.join("remote/locks"));
         let bundles = try!(BundleDb::create(

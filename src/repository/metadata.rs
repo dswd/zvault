@@ -112,7 +112,7 @@ pub struct Inode {
     pub user: u32,
     pub group: u32,
     pub __old_access_time: i64,
-    pub modify_time: i64,
+    pub timestamp: i64,
     pub __old_create_time: i64,
     pub symlink_target: Option<String>,
     pub contents: Option<FileContents>,
@@ -128,7 +128,7 @@ impl Default for Inode {
             user: 1000,
             group: 1000,
             __old_access_time: 0,
-            modify_time: 0,
+            timestamp: 0,
             __old_create_time: 0,
             symlink_target: None,
             contents: None,
@@ -136,7 +136,7 @@ impl Default for Inode {
         }
     }
 }
-serde_impl!(Inode(u8) {
+serde_impl!(Inode(u8?) {
     name: String => 0,
     size: u64 => 1,
     file_type: FileType => 2,
@@ -144,7 +144,7 @@ serde_impl!(Inode(u8) {
     user: u32 => 4,
     group: u32 => 5,
     __old_access_time: i64 => 6,
-    modify_time: i64 => 7,
+    timestamp: i64 => 7,
     __old_create_time: i64 => 8,
     symlink_target: Option<String> => 9,
     contents: Option<FileContents> => 10,
@@ -177,7 +177,7 @@ impl Inode {
         inode.mode = meta.st_mode();
         inode.user = meta.st_uid();
         inode.group = meta.st_gid();
-        inode.modify_time = meta.st_mtime();
+        inode.timestamp = meta.st_mtime();
         Ok(inode)
     }
 
@@ -204,11 +204,8 @@ impl Inode {
             &full_path,
             Permissions::from_mode(self.mode)
         ).map_err(|e| InodeError::SetPermissions(e, full_path.clone(), self.mode)));
-        try!(filetime::set_file_times(
-            &full_path,
-            FileTime::from_seconds_since_1970(self.modify_time as u64, 0),
-            FileTime::from_seconds_since_1970(self.modify_time as u64, 0)
-        ).map_err(|e| InodeError::SetTimes(e, full_path.clone())));
+        let time = FileTime::from_seconds_since_1970(self.timestamp as u64, 0);
+        try!(filetime::set_file_times(&full_path, time, time).map_err(|e| InodeError::SetTimes(e, full_path.clone())));
         try!(chown(&full_path, self.user, self.group).map_err(|e| InodeError::SetOwnership(e, full_path.clone())));
         Ok(file)
     }
@@ -216,11 +213,11 @@ impl Inode {
     pub fn is_same_meta(&self, other: &Inode) -> bool {
         self.file_type == other.file_type && self.size == other.size && self.mode == other.mode
         && self.user == other.user && self.group == other.group && self.name == other.name
-        && self.modify_time == other.modify_time && self.symlink_target == other.symlink_target
+        && self.timestamp == other.timestamp && self.symlink_target == other.symlink_target
     }
 
     pub fn is_same_meta_quick(&self, other: &Inode) -> bool {
-        self.modify_time == other.modify_time
+        self.timestamp == other.timestamp
         && self.file_type == other.file_type
         && self.size == other.size
     }

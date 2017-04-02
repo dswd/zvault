@@ -78,7 +78,7 @@ impl IChunker for Chunker {
 }
 
 
-#[derive(Debug, Clone, Copy)]
+#[derive(Debug, Clone, Copy, Eq, PartialEq)]
 pub enum ChunkerType {
     Ae(usize),
     Rabin((usize, u32)),

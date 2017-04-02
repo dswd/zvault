@@ -149,7 +149,7 @@ serde_impl!(ConfigYaml(String) {
 
 
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Eq, PartialEq)]
 pub struct Config {
     pub compression: Option<Compression>,
     pub encryption: Option<Encryption>,

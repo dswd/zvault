@@ -290,14 +290,14 @@ impl Repository {
         for (name, backup) in try!(self.get_backups()) {
             match self.get_backup_inode(&backup, path) {
                 Ok(inode) => {
-                    versions.insert((inode.file_type, inode.modify_time, inode.size), (name, inode));
+                    versions.insert((inode.file_type, inode.timestamp, inode.size), (name, inode));
                 },
                 Err(RepositoryError::NoSuchFileInBackup(..)) => continue,
                 Err(err) => return Err(err)
             }
         }
         let mut versions: Vec<_> = versions.into_iter().map(|(_, v)| v).collect();
-        versions.sort_by_key(|v| v.1.modify_time);
+        versions.sort_by_key(|v| v.1.timestamp);
         Ok(versions)
     }
 
