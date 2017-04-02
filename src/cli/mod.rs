@@ -105,6 +105,9 @@ fn print_inode(inode: &Inode) {
     if let Some(ref target) = inode.symlink_target {
         println!("Symlink target: {}", target);
     }
+    println!("Cumulative size: {}", to_file_size(inode.cum_size));
+    println!("Cumulative file count: {}", inode.cum_files);
+    println!("Cumulative directory count: {}", inode.cum_dirs);
     if let Some(ref children) = inode.children {
         println!("Children:");
         for name in children.keys() {

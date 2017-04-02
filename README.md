@@ -109,8 +109,6 @@ Recommended: Brotli/2-7
   - Random bundle name
 - Metadata
   - Arbitrarily nested chunk lists
-  - Cumulative size, chunk count, dir/file count
-- Permissive msgpack mode
 
 ### CLI functionality
 - list --tree

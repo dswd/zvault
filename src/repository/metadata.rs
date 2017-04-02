@@ -111,12 +111,13 @@ pub struct Inode {
     pub mode: u32,
     pub user: u32,
     pub group: u32,
-    pub __old_access_time: i64,
     pub timestamp: i64,
-    pub __old_create_time: i64,
     pub symlink_target: Option<String>,
     pub contents: Option<FileContents>,
-    pub children: Option<BTreeMap<String, ChunkList>>
+    pub children: Option<BTreeMap<String, ChunkList>>,
+    pub cum_size: u64,
+    pub cum_dirs: usize,
+    pub cum_files: usize
 }
 impl Default for Inode {
     fn default() -> Self {
@@ -127,12 +128,13 @@ impl Default for Inode {
             mode: 0o644,
             user: 1000,
             group: 1000,
-            __old_access_time: 0,
             timestamp: 0,
-            __old_create_time: 0,
             symlink_target: None,
             contents: None,
-            children: None
+            children: None,
+            cum_size: 0,
+            cum_dirs: 0,
+            cum_files: 0
         }
     }
 }
@@ -143,12 +145,15 @@ serde_impl!(Inode(u8?) {
     mode: u32 => 3,
     user: u32 => 4,
     group: u32 => 5,
-    __old_access_time: i64 => 6,
+    //__old_access_time: i64 => 6,
     timestamp: i64 => 7,
-    __old_create_time: i64 => 8,
+    //__old_create_time: i64 => 8,
     symlink_target: Option<String> => 9,
     contents: Option<FileContents> => 10,
-    children: BTreeMap<String, ChunkList> => 11
+    children: BTreeMap<String, ChunkList> => 11,
+    cum_size: u64 => 12,
+    cum_dirs: usize => 13,
+    cum_files: usize => 14
 });
 
 

@@ -158,11 +158,11 @@ impl Repository {
         options: &BackupOptions,
         backup: &mut Backup,
         failed_paths: &mut Vec<PathBuf>
-    ) -> Result<ChunkList, RepositoryError> {
+    ) -> Result<Inode, RepositoryError> {
         let path = path.as_ref();
         let mut inode = try!(self.create_inode(path, reference));
         let meta_size = 1000; // add 1000 for encoded metadata
-        backup.total_data_size += inode.size + meta_size;
+        inode.cum_size = inode.size + meta_size;
         if let Some(ref_inode) = reference {
             if !ref_inode.is_same_meta_quick(&inode) {
                 backup.changed_data_size += inode.size + meta_size;
@@ -171,7 +171,7 @@ impl Repository {
             backup.changed_data_size += inode.size + meta_size;
         }
         if inode.file_type == FileType::Directory {
-            backup.dir_count +=1;
+            inode.cum_dirs = 1;
             let mut children = BTreeMap::new();
             let parent_dev = try!(path.metadata()).st_dev();
             for ch in try!(fs::read_dir(path)) {
@@ -194,21 +194,25 @@ impl Repository {
                     .and_then(|inode| inode.children.as_ref())
                     .and_then(|map| map.get(&name))
                     .and_then(|chunks| self.get_inode(chunks).ok());
-                let chunks = match self.create_backup_recurse(&child_path, ref_child.as_ref(), options, backup, failed_paths) {
-                    Ok(chunks) => chunks,
+                let child_inode = match self.create_backup_recurse(&child_path, ref_child.as_ref(), options, backup, failed_paths) {
+                    Ok(inode) => inode,
                     Err(_) => {
                         warn!("Failed to backup {:?}", child_path);
                         failed_paths.push(child_path);
                         continue
                     }
                 };
+                let chunks = try!(self.put_inode(&child_inode));
                 children.insert(name, chunks);
+                inode.cum_size += child_inode.cum_size;
+                inode.cum_dirs += child_inode.cum_dirs;
+                inode.cum_files += child_inode.cum_files;
             }
             inode.children = Some(children);
         } else {
-            backup.file_count +=1;
+            inode.cum_files = 1;
         }
-        self.put_inode(&inode)
+        Ok(inode)
     }
 
     #[allow(dead_code)]
@@ -222,10 +226,14 @@ impl Repository {
         let info_before = self.info();
         let start = Local::now();
         let mut failed_paths = vec![];
-        backup.root = try!(self.create_backup_recurse(path, reference_inode.as_ref(), options, &mut backup, &mut failed_paths));
+        let root_inode = try!(self.create_backup_recurse(path, reference_inode.as_ref(), options, &mut backup, &mut failed_paths));
+        backup.root = try!(self.put_inode(&root_inode));
         try!(self.flush());
         let elapsed = Local::now().signed_duration_since(start);
         backup.date = start.timestamp();
+        backup.total_data_size = root_inode.cum_size;
+        backup.file_count = root_inode.cum_files;
+        backup.dir_count = root_inode.cum_dirs;
         backup.duration = elapsed.num_milliseconds() as f32 / 1_000.0;
         let info_after = self.info();
         backup.deduplicated_data_size = info_after.raw_data_size - info_before.raw_data_size;
