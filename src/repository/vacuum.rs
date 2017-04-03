@@ -54,9 +54,9 @@ impl Repository {
         }
         try!(self.flush());
         info!("Checking index");
-        self.index.walk::<_, ()>(|_hash, location| {
+        self.index.walk::<_, ()>(|hash, location| {
             if rewrite_bundles.contains(&location.bundle) {
-                panic!("Removed bundle is still referenced in index");
+                panic!("Removed bundle is still referenced in index: hash:{}, bundle:{}, chunk:{}", hash, location.bundle, location.chunk);
             }
             Ok(())
         }).ok();

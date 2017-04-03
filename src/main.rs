@@ -22,6 +22,7 @@ extern crate fuse;
 extern crate rand;
 extern crate time;
 extern crate libc;
+extern crate tar;
 
 pub mod util;
 mod bundledb;
@@ -32,7 +33,11 @@ mod cli;
 mod prelude;
 mod mount;
 
+use std::process::exit;
 
 fn main() {
-    cli::run();
+    match cli::run() {
+        Ok(()) => exit(0),
+        Err(code) => exit(code.code())
+    }
 }

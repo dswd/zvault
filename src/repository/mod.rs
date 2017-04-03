@@ -8,6 +8,7 @@ mod backup;
 mod error;
 mod vacuum;
 mod backup_file;
+mod tarfile;
 
 use ::prelude::*;
 
@@ -21,7 +22,7 @@ use std::io::Write;
 
 pub use self::error::RepositoryError;
 pub use self::config::Config;
-pub use self::metadata::{Inode, FileType, FileData};
+pub use self::metadata::{Inode, FileType, FileData, InodeError};
 pub use self::backup::{BackupError, BackupOptions, DiffType};
 pub use self::backup_file::{Backup, BackupFileError};
 pub use self::integrity::RepositoryIntegrityError;
@@ -30,7 +31,7 @@ use self::bundle_map::BundleMap;
 
 
 const REPOSITORY_README: &'static [u8] = include_bytes!("../../docs/repository_readme.md");
-const DEFAULT_EXCLUDES: &'static [u8] = include_bytes!("../../excludes.default");
+const DEFAULT_EXCLUDES: &'static [u8] = include_bytes!("../../docs/excludes.default");
 
 
 pub struct Repository {
@@ -242,6 +243,7 @@ impl Repository {
         Ok(try!(self.locks.lock(exclusive)))
     }
 }
+
 
 impl Drop for Repository {
     fn drop(&mut self) {

@@ -7,14 +7,62 @@ use ::prelude::*;
 use chrono::prelude::*;
 use regex::{self, RegexSet};
 
-use std::process::exit;
 use std::collections::HashMap;
-use std::fmt::Display;
 use std::io::{BufReader, BufRead};
 use std::fs::File;
 use std::env;
 
 use self::args::Arguments;
+
+
+pub enum ErrorCode {
+    UnsafeArgs, InvalidArgs,
+    InitializeLogger,
+    CreateRepository,
+    LoadRepository, SaveBackup, LoadBackup, LoadInode, LoadBundle,
+    AddKey, LoadKey, SaveKey,
+    SaveConfig,
+    LoadExcludes, InvalidExcludes,
+    BackupRun, RestoreRun, RemoveRun, PruneRun, VacuumRun, CheckRun, AnalyzeRun, DiffRun,
+    VersionsRun, ImportRun, FuseMount
+}
+impl ErrorCode {
+    pub fn code(&self) -> i32 {
+        match *self {
+            // Crazy stuff
+            ErrorCode::InitializeLogger => -1,
+            ErrorCode::InvalidExcludes => -1,
+            // Arguments
+            ErrorCode::InvalidArgs => 1,
+            ErrorCode::UnsafeArgs => 2,
+            // Load things
+            ErrorCode::LoadRepository => 3,
+            ErrorCode::LoadBackup => 4,
+            ErrorCode::LoadInode => 5,
+            ErrorCode::LoadBundle => 6,
+            ErrorCode::LoadKey => 7,
+            ErrorCode::LoadExcludes => 8,
+            // Minor operations
+            ErrorCode::SaveBackup => 9,
+            ErrorCode::AddKey => 10,
+            ErrorCode::SaveKey => 11,
+            ErrorCode::SaveConfig => 12,
+            // Main operation
+            ErrorCode::CreateRepository => 13,
+            ErrorCode::BackupRun => 14,
+            ErrorCode::RestoreRun => 15,
+            ErrorCode::RemoveRun => 16,
+            ErrorCode::PruneRun => 17,
+            ErrorCode::VacuumRun => 18,
+            ErrorCode::CheckRun => 19,
+            ErrorCode::AnalyzeRun => 20,
+            ErrorCode::DiffRun => 21,
+            ErrorCode::VersionsRun => 22,
+            ErrorCode::ImportRun => 23,
+            ErrorCode::FuseMount => 24,
+        }
+    }
+}
 
 
 pub const DEFAULT_CHUNKER: &'static str = "fastcdc/16";
@@ -28,30 +76,31 @@ lazy_static! {
     };
 }
 
-
-fn checked<T, E: Display>(result: Result<T, E>, msg: &'static str) -> T {
-    match result {
-        Ok(val) => val,
-        Err(err) => {
-            error!("Failed to {}\n\tcaused by: {}", msg, err);
-            exit(3);
+macro_rules! checked {
+    ($expr:expr, $msg:expr, $code:expr) => {
+        match $expr {
+            Ok(val) => val,
+            Err(err) => {
+                error!("Failed to {}\n\tcaused by: {}", $msg, err);
+                return Err($code)
+            }
         }
-    }
+    };
 }
 
-fn open_repository(path: &str) -> Repository {
-    checked(Repository::open(path), "load repository")
+fn open_repository(path: &str) -> Result<Repository, ErrorCode> {
+    Ok(checked!(Repository::open(path), "load repository", ErrorCode::LoadRepository))
 }
 
-fn get_backup(repo: &Repository, backup_name: &str) -> Backup {
-    checked(repo.get_backup(backup_name), "load backup")
+fn get_backup(repo: &Repository, backup_name: &str) -> Result<Backup, ErrorCode> {
+    Ok(checked!(repo.get_backup(backup_name), "load backup", ErrorCode::LoadBackup))
 }
 
-fn find_reference_backup(repo: &Repository, path: &str) -> Option<(String, Backup)> {
+fn find_reference_backup(repo: &Repository, path: &str) -> Result<Option<(String, Backup)>, ErrorCode> {
     let mut matching = Vec::new();
     let hostname = match get_hostname() {
         Ok(hostname) => hostname,
-        Err(_) => return None
+        Err(_) => return Ok(None)
     };
     let backup_map = match repo.get_backups() {
         Ok(backup_map) => backup_map,
@@ -61,7 +110,7 @@ fn find_reference_backup(repo: &Repository, path: &str) -> Option<(String, Backu
         },
         Err(err) => {
             error!("Failed to load backup files: {}", err);
-            exit(3)
+            return Err(ErrorCode::LoadBackup)
         }
     };
     for (name, backup) in backup_map {
@@ -70,11 +119,13 @@ fn find_reference_backup(repo: &Repository, path: &str) -> Option<(String, Backu
         }
     }
     matching.sort_by_key(|&(_, ref b)| b.date);
-    matching.pop()
+    Ok(matching.pop())
 }
 
 fn print_backup(backup: &Backup) {
+    println!("Modified: {}", backup.modified);
     println!("Date: {}", Local.timestamp(backup.date, 0).to_rfc2822());
+    println!("Source: {}:{}", backup.host, backup.path);
     println!("Duration: {}", to_duration(backup.duration));
     println!("Entries: {} files, {} dirs", backup.file_count, backup.dir_count);
     println!("Total backup size: {}", to_file_size(backup.total_data_size));
@@ -88,9 +139,9 @@ fn print_backup(backup: &Backup) {
 
 pub fn format_inode_one_line(inode: &Inode) -> String {
     match inode.file_type {
-        FileType::Directory => format!("{:25}\t{} entries", format!("{}/", inode.name), inode.children.as_ref().unwrap().len()),
+        FileType::Directory => format!("{:25}\t{} entries", format!("{}/", inode.name), inode.children.as_ref().map(|c| c.len()).unwrap_or(0)),
         FileType::File => format!("{:25}\t{:>10}\t{}", inode.name, to_file_size(inode.size), Local.timestamp(inode.timestamp, 0).to_rfc2822()),
-        FileType::Symlink => format!("{:25}\t -> {}", inode.name, inode.symlink_target.as_ref().unwrap()),
+        FileType::Symlink => format!("{:25}\t -> {}", inode.name, inode.symlink_target.as_ref().map(|s| s as &str).unwrap_or("?")),
     }
 }
 
@@ -203,41 +254,44 @@ fn print_analysis(analysis: &HashMap<u32, BundleAnalysis>) {
 
 
 #[allow(unknown_lints,cyclomatic_complexity)]
-pub fn run() {
+pub fn run() -> Result<(), ErrorCode> {
     if let Err(err) = logger::init() {
         println!("Failed to initialize the logger: {}", err);
-        exit(-1)
+        return Err(ErrorCode::InitializeLogger)
     }
-    match args::parse() {
+    match try!(args::parse()) {
         Arguments::Init{repo_path, bundle_size, chunker, compression, encryption, hash, remote_path} => {
-            let mut repo = checked(Repository::create(repo_path, Config {
+            let mut repo = checked!(Repository::create(repo_path, Config {
                 bundle_size: bundle_size,
                 chunker: chunker,
                 compression: compression,
                 encryption: None,
                 hash: hash
-            }, remote_path), "create repository");
+            }, remote_path), "create repository", ErrorCode::CreateRepository);
             if encryption {
                 let (public, secret) = gen_keypair();
                 println!("public: {}", to_hex(&public[..]));
                 println!("secret: {}", to_hex(&secret[..]));
                 repo.set_encryption(Some(&public));
-                checked(repo.register_key(public, secret), "add key");
-                checked(repo.save_config(), "save config");
+                checked!(repo.register_key(public, secret), "add key", ErrorCode::AddKey);
+                checked!(repo.save_config(), "save config", ErrorCode::SaveConfig);
                 println!();
             }
             print_config(&repo.config);
         },
-        Arguments::Backup{repo_path, backup_name, src_path, full, reference, same_device, mut excludes, excludes_from, no_default_excludes} => {
-            let mut repo = open_repository(&repo_path);
+        Arguments::Backup{repo_path, backup_name, src_path, full, reference, same_device, mut excludes, excludes_from, no_default_excludes, tar} => {
+            let mut repo = try!(open_repository(&repo_path));
             let mut reference_backup = None;
-            if !full {
-                reference_backup = reference.map(|r| {
-                    let b = get_backup(&repo, &r);
-                    (r, b)
-                });
+            if !full && !tar {
+                reference_backup = match reference {
+                    Some(r) => {
+                        let b = try!(get_backup(&repo, &r));
+                        Some((r, b))
+                    },
+                    None => None
+                };
                 if reference_backup.is_none() {
-                    reference_backup = find_reference_backup(&repo, &src_path);
+                    reference_backup = try!(find_reference_backup(&repo, &src_path));
                 }
                 if let Some(&(ref name, _)) = reference_backup.as_ref() {
                     info!("Using backup {} as reference", name);
@@ -246,14 +300,14 @@ pub fn run() {
                 }
             }
             let reference_backup = reference_backup.map(|(_, backup)| backup);
-            if !no_default_excludes {
-                for line in BufReader::new(checked(File::open(&repo.excludes_path), "open default excludes file")).lines() {
-                    excludes.push(checked(line, "read default excludes file"));
+            if !no_default_excludes && !tar {
+                for line in BufReader::new(checked!(File::open(&repo.excludes_path), "open default excludes file", ErrorCode::LoadExcludes)).lines() {
+                    excludes.push(checked!(line, "read default excludes file", ErrorCode::LoadExcludes));
                 }
             }
             if let Some(excludes_from) = excludes_from {
-                for line in BufReader::new(checked(File::open(excludes_from), "open excludes file")).lines() {
-                    excludes.push(checked(line, "read excludes file"));
+                for line in BufReader::new(checked!(File::open(excludes_from), "open excludes file", ErrorCode::LoadExcludes)).lines() {
+                    excludes.push(checked!(line, "read excludes file", ErrorCode::LoadExcludes));
                 }
             }
             let mut excludes_parsed = Vec::with_capacity(excludes.len());
@@ -271,13 +325,18 @@ pub fn run() {
             let excludes = if excludes_parsed.is_empty() {
                 None
             } else {
-                Some(checked(RegexSet::new(excludes_parsed), "parse exclude patterns"))
+                Some(checked!(RegexSet::new(excludes_parsed), "parse exclude patterns", ErrorCode::InvalidExcludes))
             };
             let options = BackupOptions {
                 same_device: same_device,
                 excludes: excludes
             };
-            let backup = match repo.create_backup_recursively(&src_path, reference_backup.as_ref(), &options) {
+            let result = if tar {
+                repo.import_tarfile(&src_path)
+            } else {
+                repo.create_backup_recursively(&src_path, reference_backup.as_ref(), &options)
+            };
+            let backup = match result {
                 Ok(backup) => backup,
                 Err(RepositoryError::Backup(BackupError::FailedPaths(backup, _failed_paths))) => {
                     warn!("Some files are missing from the backup");
@@ -285,49 +344,53 @@ pub fn run() {
                 },
                 Err(err) => {
                     error!("Backup failed: {}", err);
-                    exit(3)
+                    return Err(ErrorCode::BackupRun)
                 }
             };
-            checked(repo.save_backup(&backup, &backup_name), "save backup file");
+            checked!(repo.save_backup(&backup, &backup_name), "save backup file", ErrorCode::SaveBackup);
             print_backup(&backup);
         },
-        Arguments::Restore{repo_path, backup_name, inode, dst_path} => {
-            let mut repo = open_repository(&repo_path);
-            let backup = get_backup(&repo, &backup_name);
-            if let Some(inode) = inode {
-                let inode = checked(repo.get_backup_inode(&backup, &inode), "load subpath inode");
-                checked(repo.restore_inode_tree(inode, &dst_path), "restore subpath");
+        Arguments::Restore{repo_path, backup_name, inode, dst_path, tar} => {
+            let mut repo = try!(open_repository(&repo_path));
+            let backup = try!(get_backup(&repo, &backup_name));
+            let inode = if let Some(inode) = inode {
+                checked!(repo.get_backup_inode(&backup, &inode), "load subpath inode", ErrorCode::LoadInode)
             } else {
-                checked(repo.restore_backup(&backup, &dst_path), "restore backup");
+                checked!(repo.get_inode(&backup.root), "load root inode", ErrorCode::LoadInode)
+            };
+            if tar {
+                checked!(repo.export_tarfile(inode, &dst_path), "restore backup", ErrorCode::RestoreRun);
+            } else {
+                checked!(repo.restore_inode_tree(inode, &dst_path), "restore backup", ErrorCode::RestoreRun);
             }
         },
         Arguments::Remove{repo_path, backup_name, inode} => {
-            let mut repo = open_repository(&repo_path);
+            let mut repo = try!(open_repository(&repo_path));
             if let Some(inode) = inode {
-                let mut backup = get_backup(&repo, &backup_name);
-                checked(repo.remove_backup_path(&mut backup, inode), "remove backup subpath");
-                checked(repo.save_backup(&backup, &backup_name), "save backup file");
+                let mut backup = try!(get_backup(&repo, &backup_name));
+                checked!(repo.remove_backup_path(&mut backup, inode), "remove backup subpath", ErrorCode::RemoveRun);
+                checked!(repo.save_backup(&backup, &backup_name), "save backup file", ErrorCode::SaveBackup);
                 info!("The backup subpath has been deleted, run vacuum to reclaim space");
             } else {
-                checked(repo.delete_backup(&backup_name), "delete backup");
+                checked!(repo.delete_backup(&backup_name), "delete backup", ErrorCode::RemoveRun);
                 info!("The backup has been deleted, run vacuum to reclaim space");
             }
         },
         Arguments::Prune{repo_path, prefix, daily, weekly, monthly, yearly, force} => {
-            let repo = open_repository(&repo_path);
+            let repo = try!(open_repository(&repo_path));
             if daily.is_none() && weekly.is_none() && monthly.is_none() && yearly.is_none() {
                 error!("This would remove all those backups");
-                exit(1);
+                return Err(ErrorCode::UnsafeArgs)
             }
-            checked(repo.prune_backups(&prefix, daily, weekly, monthly, yearly, force), "prune backups");
+            checked!(repo.prune_backups(&prefix, daily, weekly, monthly, yearly, force), "prune backups", ErrorCode::PruneRun);
             if !force {
                 info!("Run with --force to actually execute this command");
             }
         },
         Arguments::Vacuum{repo_path, ratio, force} => {
-            let mut repo = open_repository(&repo_path);
+            let mut repo = try!(open_repository(&repo_path));
             let info_before = repo.info();
-            checked(repo.vacuum(ratio, force), "vacuum");
+            checked!(repo.vacuum(ratio, force), "vacuum", ErrorCode::VacuumRun);
             if !force {
                 info!("Run with --force to actually execute this command");
             } else {
@@ -336,29 +399,29 @@ pub fn run() {
             }
         },
         Arguments::Check{repo_path, backup_name, inode, full} => {
-            let mut repo = open_repository(&repo_path);
+            let mut repo = try!(open_repository(&repo_path));
             if let Some(backup_name) = backup_name {
-                let backup = get_backup(&repo, &backup_name);
+                let backup = try!(get_backup(&repo, &backup_name));
                 if let Some(inode) = inode {
-                    let inode = checked(repo.get_backup_inode(&backup, inode), "load subpath inode");
-                    checked(repo.check_inode(&inode), "check inode")
+                    let inode = checked!(repo.get_backup_inode(&backup, inode), "load subpath inode", ErrorCode::LoadInode);
+                    checked!(repo.check_inode(&inode), "check inode", ErrorCode::CheckRun)
                 } else {
-                    checked(repo.check_backup(&backup), "check backup")
+                    checked!(repo.check_backup(&backup), "check backup", ErrorCode::CheckRun)
                 }
             } else {
-                checked(repo.check(full), "check repository")
+                checked!(repo.check(full), "check repository", ErrorCode::CheckRun)
             }
             info!("Integrity verified")
         },
         Arguments::List{repo_path, backup_name, inode} => {
-            let mut repo = open_repository(&repo_path);
+            let mut repo = try!(open_repository(&repo_path));
             if let Some(backup_name) = backup_name {
-                let backup = get_backup(&repo, &backup_name);
-                let inode = checked(repo.get_backup_inode(&backup, inode.as_ref().map(|v| v as &str).unwrap_or("/")), "load subpath inode");
+                let backup = try!(get_backup(&repo, &backup_name));
+                let inode = checked!(repo.get_backup_inode(&backup, inode.as_ref().map(|v| v as &str).unwrap_or("/")), "load subpath inode", ErrorCode::LoadInode);
                 println!("{}", format_inode_one_line(&inode));
                 if let Some(children) = inode.children {
                     for chunks in children.values() {
-                        let inode = checked(repo.get_inode(chunks), "load child inode");
+                        let inode = checked!(repo.get_inode(chunks), "load child inode", ErrorCode::LoadInode);
                         println!("- {}", format_inode_one_line(&inode));
                     }
                 }
@@ -371,18 +434,18 @@ pub fn run() {
                     },
                     Err(err) => {
                         error!("Failed to load backup files: {}", err);
-                        exit(3)
+                        return Err(ErrorCode::LoadBackup)
                     }
                 };
                 print_backups(&backup_map);
             }
         },
         Arguments::Info{repo_path, backup_name, inode} => {
-            let mut repo = open_repository(&repo_path);
+            let mut repo = try!(open_repository(&repo_path));
             if let Some(backup_name) = backup_name {
-                let backup = get_backup(&repo, &backup_name);
+                let backup = try!(get_backup(&repo, &backup_name));
                 if let Some(inode) = inode {
-                    let inode = checked(repo.get_backup_inode(&backup, inode), "load subpath inode");
+                    let inode = checked!(repo.get_backup_inode(&backup, inode), "load subpath inode", ErrorCode::LoadInode);
                     print_inode(&inode);
                 } else {
                     print_backup(&backup);
@@ -392,45 +455,45 @@ pub fn run() {
             }
         },
         Arguments::Mount{repo_path, backup_name, inode, mount_point} => {
-            let mut repo = open_repository(&repo_path);
+            let mut repo = try!(open_repository(&repo_path));
             let fs = if let Some(backup_name) = backup_name {
-                let backup = get_backup(&repo, &backup_name);
+                let backup = try!(get_backup(&repo, &backup_name));
                 if let Some(inode) = inode {
-                    let inode = checked(repo.get_backup_inode(&backup, inode), "load subpath inode");
-                    checked(FuseFilesystem::from_inode(&mut repo, inode), "create fuse filesystem")
+                    let inode = checked!(repo.get_backup_inode(&backup, inode), "load subpath inode", ErrorCode::LoadInode);
+                    checked!(FuseFilesystem::from_inode(&mut repo, inode), "create fuse filesystem", ErrorCode::FuseMount)
                 } else {
-                    checked(FuseFilesystem::from_backup(&mut repo, &backup), "create fuse filesystem")
+                    checked!(FuseFilesystem::from_backup(&mut repo, &backup), "create fuse filesystem", ErrorCode::FuseMount)
                 }
             } else {
-                checked(FuseFilesystem::from_repository(&mut repo), "create fuse filesystem")
+                checked!(FuseFilesystem::from_repository(&mut repo), "create fuse filesystem", ErrorCode::FuseMount)
             };
-            checked(fs.mount(&mount_point), "mount filesystem");
+            checked!(fs.mount(&mount_point), "mount filesystem", ErrorCode::FuseMount);
         },
         Arguments::Analyze{repo_path} => {
-            let mut repo = open_repository(&repo_path);
-            print_analysis(&checked(repo.analyze_usage(), "analyze repository"));
+            let mut repo = try!(open_repository(&repo_path));
+            print_analysis(&checked!(repo.analyze_usage(), "analyze repository", ErrorCode::AnalyzeRun));
         },
         Arguments::BundleList{repo_path} => {
-            let repo = open_repository(&repo_path);
+            let repo = try!(open_repository(&repo_path));
             for bundle in repo.list_bundles() {
                 print_bundle_one_line(bundle);
             }
         },
         Arguments::BundleInfo{repo_path, bundle_id} => {
-            let repo = open_repository(&repo_path);
+            let repo = try!(open_repository(&repo_path));
             if let Some(bundle) = repo.get_bundle(&bundle_id) {
                 print_bundle(bundle);
             } else {
                 error!("No such bundle");
-                exit(3);
+                return Err(ErrorCode::LoadBundle)
             }
         },
         Arguments::Import{repo_path, remote_path, key_files} => {
-            checked(Repository::import(repo_path, remote_path, key_files), "import repository");
+            checked!(Repository::import(repo_path, remote_path, key_files), "import repository", ErrorCode::ImportRun);
         },
         Arguments::Versions{repo_path, path} => {
-            let mut repo = open_repository(&repo_path);
-            for (name, mut inode) in checked(repo.find_versions(&path), "find versions") {
+            let mut repo = try!(open_repository(&repo_path));
+            for (name, mut inode) in checked!(repo.find_versions(&path), "find versions", ErrorCode::VersionsRun) {
                 inode.name = format!("{}::{}", name, &path);
                 println!("{}", format_inode_one_line(&inode));
             }
@@ -438,14 +501,14 @@ pub fn run() {
         Arguments::Diff{repo_path_old, backup_name_old, inode_old, repo_path_new, backup_name_new, inode_new} => {
             if repo_path_old != repo_path_new {
                 error!("Can only run diff on same repository");
-                exit(2)
+                return Err(ErrorCode::InvalidArgs)
             }
-            let mut repo = open_repository(&repo_path_old);
-            let backup_old = get_backup(&repo, &backup_name_old);
-            let backup_new = get_backup(&repo, &backup_name_new);
-            let inode1 = checked(repo.get_backup_inode(&backup_old, inode_old.unwrap_or_else(|| "/".to_string())), "load subpath inode");
-            let inode2 = checked(repo.get_backup_inode(&backup_new, inode_new.unwrap_or_else(|| "/".to_string())), "load subpath inode");
-            let diffs = checked(repo.find_differences(&inode1, &inode2), "find differences");
+            let mut repo = try!(open_repository(&repo_path_old));
+            let backup_old = try!(get_backup(&repo, &backup_name_old));
+            let backup_new = try!(get_backup(&repo, &backup_name_new));
+            let inode1 = checked!(repo.get_backup_inode(&backup_old, inode_old.unwrap_or_else(|| "/".to_string())), "load subpath inode", ErrorCode::LoadInode);
+            let inode2 = checked!(repo.get_backup_inode(&backup_new, inode_new.unwrap_or_else(|| "/".to_string())), "load subpath inode", ErrorCode::LoadInode);
+            let diffs = checked!(repo.find_differences(&inode1, &inode2), "find differences", ErrorCode::DiffRun);
             for diff in diffs {
                 println!("{} {:?}", match diff.0 {
                     DiffType::Add => "add",
@@ -455,7 +518,7 @@ pub fn run() {
             }
         },
         Arguments::Config{repo_path, bundle_size, chunker, compression, encryption, hash} => {
-            let mut repo = open_repository(&repo_path);
+            let mut repo = try!(open_repository(&repo_path));
             if let Some(bundle_size) = bundle_size {
                 repo.config.bundle_size = bundle_size
             }
@@ -473,7 +536,7 @@ pub fn run() {
                 warn!("Changing the hash makes it impossible to use existing data for deduplication");
                 repo.config.hash = hash
             }
-            checked(repo.save_config(), "save config");
+            checked!(repo.save_config(), "save config", ErrorCode::SaveConfig);
             print_config(&repo.config);
         },
         Arguments::GenKey{file} => {
@@ -481,27 +544,28 @@ pub fn run() {
             println!("public: {}", to_hex(&public[..]));
             println!("secret: {}", to_hex(&secret[..]));
             if let Some(file) = file {
-                checked(Crypto::save_keypair_to_file(&public, &secret, file), "save key pair");
+                checked!(Crypto::save_keypair_to_file(&public, &secret, file), "save key pair", ErrorCode::SaveKey);
             }
         },
         Arguments::AddKey{repo_path, set_default, file} => {
-            let mut repo = open_repository(&repo_path);
+            let mut repo = try!(open_repository(&repo_path));
             let (public, secret) = if let Some(file) = file {
-                checked(Crypto::load_keypair_from_file(file), "load key pair")
+                checked!(Crypto::load_keypair_from_file(file), "load key pair", ErrorCode::LoadKey)
             } else {
                 let (public, secret) = gen_keypair();
                 println!("public: {}", to_hex(&public[..]));
                 println!("secret: {}", to_hex(&secret[..]));
                 (public, secret)
             };
-            checked(repo.register_key(public, secret), "add key pair");
+            checked!(repo.register_key(public, secret), "add key pair", ErrorCode::AddKey);
             if set_default {
                 repo.set_encryption(Some(&public));
-                checked(repo.save_config(), "save config");
+                checked!(repo.save_config(), "save config", ErrorCode::SaveConfig);
             }
         },
         Arguments::AlgoTest{bundle_size, chunker, compression, encrypt, hash, file} => {
             algotest::run(&file, bundle_size, chunker, compression, encrypt, hash);
         }
     }
+    Ok(())
 }

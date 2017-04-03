@@ -88,6 +88,7 @@ pub struct Backup {
     pub host: String,
     pub path: String,
     pub config: Config,
+    pub modified: bool
 }
 serde_impl!(Backup(u8?) {
     root: ChunkList => 0,
@@ -104,7 +105,8 @@ serde_impl!(Backup(u8?) {
     dir_count: usize => 11,
     host: String => 12,
     path: String => 13,
-    config: Config => 14
+    config: Config => 14,
+    modified: bool => 15
 });
 
 impl Backup {

@@ -99,7 +99,6 @@ Recommended: Brotli/2-7
 
 ### Core functionality
 - Recompress & combine bundles
-- Allow to use tar files for backup and restore (--tar, http://alexcrichton.com/tar-rs/tar/index.html)
 - File attributes
   - xattrs https://crates.io/crates/xattr
 

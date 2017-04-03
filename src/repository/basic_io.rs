@@ -1,7 +1,56 @@
 use ::prelude::*;
 
 use std::mem;
-use std::io::{Read, Write, Cursor};
+use std::cmp::min;
+use std::collections::VecDeque;
+use std::io::{self, Read, Write, Cursor};
+
+
+pub struct ChunkReader<'a> {
+    chunks: VecDeque<Chunk>,
+    data: Vec<u8>,
+    pos: usize,
+    repo: &'a mut Repository
+}
+
+impl<'a> ChunkReader<'a> {
+    pub fn new(repo: &'a mut Repository, chunks: ChunkList) -> Self {
+        ChunkReader {
+            repo: repo,
+            chunks: chunks.into_inner().into(),
+            data: vec![],
+            pos: 0
+        }
+    }
+}
+
+impl<'a> Read for ChunkReader<'a> {
+    fn read(&mut self, mut buf: &mut [u8]) -> Result<usize, io::Error> {
+        let mut bpos = 0;
+        loop {
+            if buf.len() == bpos {
+                break
+            }
+            if self.data.len() == self.pos {
+                if let Some(chunk) = self.chunks.pop_front() {
+                    self.data = match self.repo.get_chunk(chunk.0) {
+                        Ok(Some(data)) => data,
+                        Ok(None) => return Err(io::Error::new(io::ErrorKind::Other, RepositoryIntegrityError::MissingChunk(chunk.0))),
+                        Err(err) => return Err(io::Error::new(io::ErrorKind::Other, err))
+                    };
+                    self.pos = 0;
+                } else {
+                    break
+                }
+            }
+            let l = min(self.data.len()-self.pos, buf.len() - bpos);
+            buf[bpos..bpos+l].copy_from_slice(&self.data[self.pos..self.pos+l]);
+            bpos += l;
+            self.pos += l;
+        }
+        Ok(bpos)
+    }
+}
 
 
 impl Repository {
@@ -112,6 +161,11 @@ impl Repository {
         let mut data = Vec::with_capacity(chunks.iter().map(|&(_, size)| size).sum::<u32>() as usize);
         try!(self.get_stream(chunks, &mut data));
         Ok(data)
+    }
+
+    #[inline]
+    pub fn get_reader(&mut self, chunks: ChunkList) -> ChunkReader {
+        ChunkReader::new(self, chunks)
     }
 
     #[inline]

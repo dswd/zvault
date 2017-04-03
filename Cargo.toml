@@ -26,6 +26,7 @@ regex = "0.2"
 fuse = "0.3"
 lazy_static = "0.2"
 rand = "0.3"
+tar = "0.4"
 time = "*"
 libc = "*"
 

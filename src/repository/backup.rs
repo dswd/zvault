@@ -143,14 +143,6 @@ impl Repository {
         Ok(())
     }
 
-    #[inline]
-    pub fn restore_backup<P: AsRef<Path>>(&mut self, backup: &Backup, path: P) -> Result<(), RepositoryError> {
-        let _lock = try!(self.lock(false));
-        let inode = try!(self.get_inode(&backup.root));
-        self.restore_inode_tree(inode, path)
-    }
-
-
     pub fn create_backup_recurse<P: AsRef<Path>>(
         &mut self,
         path: P,
@@ -265,6 +257,7 @@ impl Repository {
             last_inode_name = inode.name;
         }
         backup.root = last_inode_chunks;
+        backup.modified = true;
         Ok(())
     }
 
