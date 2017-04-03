@@ -150,7 +150,7 @@ serde_impl!(Inode(u8?) {
     //__old_create_time: i64 => 8,
     symlink_target: Option<String> => 9,
     data: Option<FileData> => 10,
-    children: BTreeMap<String, ChunkList> => 11,
+    children: Option<BTreeMap<String, ChunkList>> => 11,
     cum_size: u64 => 12,
     cum_dirs: usize => 13,
     cum_files: usize => 14
@@ -255,7 +255,7 @@ impl Repository {
                 try!(file.read_to_end(&mut data));
                 inode.data = Some(FileData::Inline(data.into()));
             } else {
-                let mut chunks = try!(self.put_stream(BundleMode::Content, &mut file));
+                let mut chunks = try!(self.put_stream(BundleMode::Data, &mut file));
                 if chunks.len() < 10 {
                     inode.data = Some(FileData::ChunkedDirect(chunks));
                 } else {

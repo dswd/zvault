@@ -48,10 +48,10 @@ impl Repository {
     }
 
     fn check_repository(&self) -> Result<(), RepositoryError> {
-        if self.next_content_bundle == self.next_meta_bundle {
+        if self.next_data_bundle == self.next_meta_bundle {
             return Err(RepositoryIntegrityError::InvalidNextBundleId.into())
         }
-        if self.bundle_map.get(self.next_content_bundle).is_some() {
+        if self.bundle_map.get(self.next_data_bundle).is_some() {
             return Err(RepositoryIntegrityError::InvalidNextBundleId.into())
         }
         if self.bundle_map.get(self.next_meta_bundle).is_some() {

@@ -61,7 +61,7 @@ pub fn bundle_path(bundle: &BundleId, mut folder: PathBuf, mut count: usize) -> 
         }
         folder = folder.join(&file[0..2]);
         file = file[2..].to_string();
-        count /= 100;
+        count /= 250;
     }
     (folder, file.into())
 }

@@ -36,7 +36,7 @@ impl Repository {
         let next_free_bundle_id = self.next_free_bundle_id();
         // Select a bundle writer according to the mode and...
         let writer = match mode {
-            BundleMode::Content => &mut self.content_bundle,
+            BundleMode::Data => &mut self.data_bundle,
             BundleMode::Meta => &mut self.meta_bundle
         };
         // ...alocate one if needed
@@ -60,7 +60,7 @@ impl Repository {
             raw_size = writer_obj.raw_size();
         }
         let bundle_id = match mode {
-            BundleMode::Content => self.next_content_bundle,
+            BundleMode::Data => self.next_data_bundle,
             BundleMode::Meta => self.next_meta_bundle
         };
         // Finish bundle if over maximum size
@@ -72,8 +72,8 @@ impl Repository {
             if self.next_meta_bundle == bundle_id {
                 self.next_meta_bundle = next_free_bundle_id
             }
-            if self.next_content_bundle == bundle_id {
-                self.next_content_bundle = next_free_bundle_id
+            if self.next_data_bundle == bundle_id {
+                self.next_data_bundle = next_free_bundle_id
             }
             // Not saving the bundle map, this will be done by flush
         }

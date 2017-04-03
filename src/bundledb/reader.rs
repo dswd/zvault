@@ -106,7 +106,7 @@ impl BundleReader {
         let mut info: BundleInfo = try!(msgpack::decode(&info_data).context(path));
         info.encryption = header.encryption;
         debug!("Load bundle {}", info.id);
-        let content_start = file.seek(SeekFrom::Current(0)).unwrap() as usize + info.chunk_info_size;
+        let content_start = file.seek(SeekFrom::Current(0)).unwrap() as usize + info.chunk_list_size;
         Ok((info, version, content_start))
     }
 
@@ -124,11 +124,11 @@ impl BundleReader {
     fn load_chunklist(&mut self) -> Result<(), BundleReaderError> {
         debug!("Load bundle chunklist {} ({:?})", self.info.id, self.info.mode);
         let mut file = BufReader::new(try!(File::open(&self.path).context(&self.path as &Path)));
-        let len = self.info.chunk_info_size;
+        let len = self.info.chunk_list_size;
         let start = self.content_start - len;
         try!(file.seek(SeekFrom::Start(start as u64)).context(&self.path as &Path));
         let mut chunk_data = Vec::with_capacity(len);
-        chunk_data.resize(self.info.chunk_info_size, 0);
+        chunk_data.resize(self.info.chunk_list_size, 0);
         try!(file.read_exact(&mut chunk_data).context(&self.path as &Path));
         if let Some(ref encryption) = self.info.encryption {
             chunk_data = try!(self.crypto.lock().unwrap().decrypt(&encryption, &chunk_data).context(&self.path as &Path));

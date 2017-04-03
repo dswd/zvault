@@ -7,11 +7,14 @@ lost+found
 /proc
 /run
 /snap
+/media
 
 # Cache data that does not need to be backed up
 /home/*/.cache
+/home/*/.zvault
 /var/cache
 /tmp
+/home/**/Trash
 
 # Avoid backing up zvault remote backups
 remote/bundles

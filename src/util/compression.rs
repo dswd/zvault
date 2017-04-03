@@ -36,32 +36,32 @@ quick_error!{
 }
 
 #[derive(Clone, Debug, Copy, Eq, PartialEq)]
-pub enum CompressionAlgo {
+pub enum CompressionMethod {
     Deflate, // Standardized
     Brotli, // Good speed and ratio
-    Lzma2, // Very good ratio, slow
+    Lzma, // Very good ratio, slow
     Lz4 // Very fast, low ratio
 }
-serde_impl!(CompressionAlgo(u8) {
+serde_impl!(CompressionMethod(u8) {
     Deflate => 0,
     Brotli => 1,
-    Lzma2 => 2,
+    Lzma => 2,
     Lz4 => 3
 });
 
 
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub struct Compression {
-    algo: CompressionAlgo,
+    method: CompressionMethod,
     level: u8
 }
 impl Default for Compression {
     fn default() -> Self {
-        Compression { algo: CompressionAlgo::Brotli, level: 3 }
+        Compression { method: CompressionMethod::Brotli, level: 3 }
     }
 }
 serde_impl!(Compression(u64) {
-    algo: CompressionAlgo => 0,
+    method: CompressionMethod => 0,
     level: u8 => 1
 });
 
@@ -81,23 +81,23 @@ impl Compression {
         } else {
             (name, 5)
         };
-        let algo = match name {
-            "deflate" | "zlib" | "gzip" => CompressionAlgo::Deflate,
-            "brotli" => CompressionAlgo::Brotli,
-            "lzma2" => CompressionAlgo::Lzma2,
-            "lz4" => CompressionAlgo::Lz4,
+        let method = match name {
+            "deflate" | "zlib" | "gzip" => CompressionMethod::Deflate,
+            "brotli" => CompressionMethod::Brotli,
+            "lzma" | "lzma2" | "xz" => CompressionMethod::Lzma,
+            "lz4" => CompressionMethod::Lz4,
             _ => return Err(CompressionError::UnsupportedCodec(name.to_string()))
         };
-        Ok(Compression { algo: algo, level: level })
+        Ok(Compression { method: method, level: level })
     }
 
     #[inline]
     pub fn name(&self) -> &'static str {
-        match self.algo {
-            CompressionAlgo::Deflate => "deflate",
-            CompressionAlgo::Brotli => "brotli",
-            CompressionAlgo::Lzma2 => "lzma2",
-            CompressionAlgo::Lz4 => "lz4",
+        match self.method {
+            CompressionMethod::Deflate => "deflate",
+            CompressionMethod::Brotli => "brotli",
+            CompressionMethod::Lzma => "lzma",
+            CompressionMethod::Lz4 => "lz4",
         }
     }
 

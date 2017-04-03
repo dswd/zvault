@@ -41,10 +41,10 @@ pub struct Repository {
     index: Index,
     crypto: Arc<Mutex<Crypto>>,
     bundle_map: BundleMap,
-    next_content_bundle: u32,
+    next_data_bundle: u32,
     next_meta_bundle: u32,
     bundles: BundleDb,
-    content_bundle: Option<BundleWriter>,
+    data_bundle: Option<BundleWriter>,
     meta_bundle: Option<BundleWriter>,
     chunker: Chunker,
     locks: LockFolder
@@ -82,10 +82,10 @@ impl Repository {
             config: config,
             index: index,
             bundle_map: bundle_map,
-            next_content_bundle: 1,
+            next_data_bundle: 1,
             next_meta_bundle: 0,
             bundles: bundles,
-            content_bundle: None,
+            data_bundle: None,
             meta_bundle: None,
             crypto: crypto,
             locks: locks
@@ -113,10 +113,10 @@ impl Repository {
             index: index,
             crypto: crypto,
             bundle_map: bundle_map,
-            next_content_bundle: 0,
+            next_data_bundle: 0,
             next_meta_bundle: 0,
             bundles: bundles,
-            content_bundle: None,
+            data_bundle: None,
             meta_bundle: None,
             locks: locks
         };
@@ -128,7 +128,7 @@ impl Repository {
         }
         try!(repo.save_bundle_map());
         repo.next_meta_bundle = repo.next_free_bundle_id();
-        repo.next_content_bundle = repo.next_free_bundle_id();
+        repo.next_data_bundle = repo.next_free_bundle_id();
         Ok(repo)
     }
 
@@ -177,7 +177,7 @@ impl Repository {
 
     #[inline]
     fn next_free_bundle_id(&self) -> u32 {
-        let mut id = max(self.next_content_bundle, self.next_meta_bundle) + 1;
+        let mut id = max(self.next_data_bundle, self.next_meta_bundle) + 1;
         while self.bundle_map.get(id).is_some() {
             id += 1;
         }
@@ -185,14 +185,14 @@ impl Repository {
     }
 
     pub fn flush(&mut self) -> Result<(), RepositoryError> {
-        if self.content_bundle.is_some() {
+        if self.data_bundle.is_some() {
             let mut finished = None;
-            mem::swap(&mut self.content_bundle, &mut finished);
+            mem::swap(&mut self.data_bundle, &mut finished);
             {
                 let bundle = try!(self.bundles.add_bundle(finished.unwrap()));
-                self.bundle_map.set(self.next_content_bundle, bundle.id.clone());
+                self.bundle_map.set(self.next_data_bundle, bundle.id.clone());
             }
-            self.next_content_bundle = self.next_free_bundle_id()
+            self.next_data_bundle = self.next_free_bundle_id()
         }
         if self.meta_bundle.is_some() {
             let mut finished = None;
@@ -211,7 +211,7 @@ impl Repository {
     fn add_new_remote_bundle(&mut self, bundle: BundleInfo) -> Result<(), RepositoryError> {
         info!("Adding new bundle to index: {}", bundle.id);
         let bundle_id = match bundle.mode {
-            BundleMode::Content => self.next_content_bundle,
+            BundleMode::Data => self.next_data_bundle,
             BundleMode::Meta => self.next_meta_bundle
         };
         let chunks = try!(self.bundles.get_chunk_list(&bundle.id));
@@ -219,8 +219,8 @@ impl Repository {
         if self.next_meta_bundle == bundle_id {
             self.next_meta_bundle = self.next_free_bundle_id()
         }
-        if self.next_content_bundle == bundle_id {
-            self.next_content_bundle = self.next_free_bundle_id()
+        if self.next_data_bundle == bundle_id {
+            self.next_data_bundle = self.next_free_bundle_id()
         }
         for (i, (hash, _len)) in chunks.into_inner().into_iter().enumerate() {
             try!(self.index.set(&hash, &Location{bundle: bundle_id as u32, chunk: i as u32}));

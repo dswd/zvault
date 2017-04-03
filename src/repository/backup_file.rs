@@ -90,7 +90,7 @@ pub struct Backup {
     pub config: Config,
 }
 serde_impl!(Backup(u8?) {
-    root: Vec<Chunk> => 0,
+    root: ChunkList => 0,
     total_data_size: u64 => 1,
     changed_data_size: u64 => 2,
     deduplicated_data_size: u64 => 3,
