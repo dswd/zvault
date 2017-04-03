@@ -103,10 +103,6 @@ Recommended: Brotli/2-7
 - File attributes
   - xattrs https://crates.io/crates/xattr
 
-### Formats
-- Bundles
-  - Encrypted bundle header
-
 ### CLI functionality
 - list --tree
 

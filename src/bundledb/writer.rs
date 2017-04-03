@@ -105,21 +105,30 @@ impl BundleWriter {
         let mut file = BufWriter::new(try!(File::create(&path).context(&path as &Path)));
         try!(file.write_all(&HEADER_STRING).context(&path as &Path));
         try!(file.write_all(&[HEADER_VERSION]).context(&path as &Path));
-        let header = BundleInfo {
+        let info = BundleInfo {
             mode: self.mode,
             hash_method: self.hash_method,
             compression: self.compression,
-            encryption: self.encryption,
+            encryption: self.encryption.clone(),
             chunk_count: self.chunk_count,
             id: id.clone(),
             raw_size: self.raw_size,
             encoded_size: encoded_size,
             chunk_info_size: chunk_data.len()
         };
+        let mut info_data = try!(msgpack::encode(&info).context(&path as &Path));
+        if let Some(ref encryption) = self.encryption {
+            info_data = try!(self.crypto.lock().unwrap().encrypt(&encryption, &info_data));
+        }
+        let header = BundleHeader {
+            encryption: self.encryption,
+            info_size: info_data.len()
+        };
         try!(msgpack::encode_to_stream(&header, &mut file).context(&path as &Path));
+        try!(file.write_all(&info_data).context(&path as &Path));
         try!(file.write_all(&chunk_data).context(&path as &Path));
         try!(file.write_all(&self.data).context(&path as &Path));
-        Ok(StoredBundle { path: path, info: header })
+        Ok(StoredBundle { path: path, info: info })
     }
 
     #[inline]

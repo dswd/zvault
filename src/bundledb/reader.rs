@@ -84,7 +84,7 @@ impl BundleReader {
         self.info.id.clone()
     }
 
-    fn load_header<P: AsRef<Path>>(path: P) -> Result<(BundleInfo, u8, usize), BundleReaderError> {
+    fn load_header<P: AsRef<Path>>(path: P, crypto: Arc<Mutex<Crypto>>) -> Result<(BundleInfo, u8, usize), BundleReaderError> {
         let path = path.as_ref();
         let mut file = BufReader::new(try!(File::open(path).context(path)));
         let mut header = [0u8; 8];
@@ -96,20 +96,28 @@ impl BundleReader {
         if version != HEADER_VERSION {
             return Err(BundleReaderError::UnsupportedVersion(path.to_path_buf(), version))
         }
-        let header: BundleInfo = try!(msgpack::decode_from_stream(&mut file).context(path));
-        debug!("Load bundle {}", header.id);
-        let content_start = file.seek(SeekFrom::Current(0)).unwrap() as usize + header.chunk_info_size;
-        Ok((header, version, content_start))
+        let header: BundleHeader = try!(msgpack::decode_from_stream(&mut file).context(path));
+        let mut info_data = Vec::with_capacity(header.info_size);
+        info_data.resize(header.info_size, 0);
+        try!(file.read_exact(&mut info_data).context(path));
+        if let Some(ref encryption) = header.encryption {
+            info_data = try!(crypto.lock().unwrap().decrypt(&encryption, &info_data).context(path));
+        }
+        let mut info: BundleInfo = try!(msgpack::decode(&info_data).context(path));
+        info.encryption = header.encryption;
+        debug!("Load bundle {}", info.id);
+        let content_start = file.seek(SeekFrom::Current(0)).unwrap() as usize + info.chunk_info_size;
+        Ok((info, version, content_start))
     }
 
     #[inline]
-    pub fn load_info<P: AsRef<Path>>(path: P) -> Result<BundleInfo, BundleReaderError> {
-        Self::load_header(path).map(|b| b.0)
+    pub fn load_info<P: AsRef<Path>>(path: P, crypto: Arc<Mutex<Crypto>>) -> Result<BundleInfo, BundleReaderError> {
+        Self::load_header(path, crypto).map(|b| b.0)
     }
 
     #[inline]
     pub fn load(path: PathBuf, crypto: Arc<Mutex<Crypto>>) -> Result<Self, BundleReaderError> {
-        let (header, version, content_start) = try!(Self::load_header(&path));
+        let (header, version, content_start) = try!(Self::load_header(&path, crypto.clone()));
         Ok(BundleReader::new(path, version, content_start, crypto, header))
     }
 

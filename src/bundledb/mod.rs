@@ -71,6 +71,17 @@ serde_impl!(BundleMode(u8) {
 });
 
 
+#[derive(Default, Debug, Clone)]
+pub struct BundleHeader {
+    pub encryption: Option<Encryption>,
+    pub info_size: usize
+}
+serde_impl!(BundleHeader(u8) {
+    encryption: Option<Encryption> => 0,
+    info_size: usize => 1
+});
+
+
 #[derive(Clone)]
 pub struct BundleInfo {
     pub id: BundleId,
@@ -87,7 +98,7 @@ serde_impl!(BundleInfo(u64?) {
     id: BundleId => 0,
     mode: BundleMode => 1,
     compression: Option<Compression> => 2,
-    encryption: Option<Encryption> => 3,
+    //encryption: already in the header
     hash_method: HashMethod => 4,
     raw_size: usize => 6,
     encoded_size: usize => 7,

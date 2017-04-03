@@ -66,7 +66,7 @@ pub fn bundle_path(bundle: &BundleId, mut folder: PathBuf, mut count: usize) -> 
     (folder, file.into())
 }
 
-pub fn load_bundles<P: AsRef<Path>>(path: P, bundles: &mut HashMap<BundleId, StoredBundle>) -> Result<(Vec<StoredBundle>, Vec<StoredBundle>), BundleDbError> {
+pub fn load_bundles<P: AsRef<Path>>(path: P, bundles: &mut HashMap<BundleId, StoredBundle>, crypto: Arc<Mutex<Crypto>>) -> Result<(Vec<StoredBundle>, Vec<StoredBundle>), BundleDbError> {
     let mut paths = vec![path.as_ref().to_path_buf()];
     let mut bundle_paths = HashSet::new();
     while let Some(path) = paths.pop() {
@@ -91,7 +91,7 @@ pub fn load_bundles<P: AsRef<Path>>(path: P, bundles: &mut HashMap<BundleId, Sto
     let mut new = vec![];
     for path in bundle_paths {
         let bundle = StoredBundle {
-            info: try!(BundleReader::load_info(&path)),
+            info: try!(BundleReader::load_info(&path, crypto.clone())),
             path: path
         };
         let id = bundle.info.id.clone();
@@ -149,12 +149,12 @@ impl BundleDb {
                 self.remote_bundles.insert(bundle.id(), bundle);
             }
         }
-        let (new, gone) = try!(load_bundles(&self.local_bundles_path, &mut self.local_bundles));
+        let (new, gone) = try!(load_bundles(&self.local_bundles_path, &mut self.local_bundles, self.crypto.clone()));
         if !new.is_empty() || !gone.is_empty() {
             let bundles: Vec<_> = self.local_bundles.values().cloned().collect();
             try!(StoredBundle::save_list_to(&bundles, &local_cache_path));
         }
-        let (new, gone) = try!(load_bundles(&self.remote_path, &mut self.remote_bundles));
+        let (new, gone) = try!(load_bundles(&self.remote_path, &mut self.remote_bundles, self.crypto.clone()));
         if !new.is_empty() || !gone.is_empty() {
             let bundles: Vec<_> = self.remote_bundles.values().cloned().collect();
             try!(StoredBundle::save_list_to(&bundles, &remote_cache_path));
