@@ -106,8 +106,6 @@ Recommended: Brotli/2-7
 ### Formats
 - Bundles
   - Encrypted bundle header
-- Metadata
-  - Arbitrarily nested chunk lists
 
 ### CLI functionality
 - list --tree

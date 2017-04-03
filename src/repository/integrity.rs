@@ -1,7 +1,5 @@
 use ::prelude::*;
 
-use super::metadata::FileContents;
-
 use std::collections::VecDeque;
 
 
@@ -76,18 +74,18 @@ impl Repository {
     }
 
     fn check_inode_contents(&mut self, inode: &Inode, checked: &mut Bitmap) -> Result<(), RepositoryError> {
-        match inode.contents {
-            Some(FileContents::ChunkedDirect(ref chunks)) => {
+        match inode.data {
+            None | Some(FileData::Inline(_)) => (),
+            Some(FileData::ChunkedDirect(ref chunks)) => {
                 try!(self.check_chunks(checked, chunks));
             },
-            Some(FileContents::ChunkedIndirect(ref chunks)) => {
+            Some(FileData::ChunkedIndirect(ref chunks)) => {
                 if try!(self.check_chunks(checked, chunks)) {
                     let chunk_data = try!(self.get_data(&chunks));
                     let chunks = ChunkList::read_from(&chunk_data);
                     try!(self.check_chunks(checked, &chunks));
                 }
             }
-            _ => ()
         }
         Ok(())
     }

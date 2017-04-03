@@ -262,12 +262,12 @@ impl<'a> FuseFilesystem<'a> {
     pub fn fetch_chunks(&mut self, inode: &FuseInodeRef) -> Result<(), RepositoryError> {
         let mut inode = inode.borrow_mut();
         let mut chunks = None;
-        match inode.inode.contents {
-            None | Some(FileContents::Inline(_)) => (),
-            Some(FileContents::ChunkedDirect(ref c)) => {
+        match inode.inode.data {
+            None | Some(FileData::Inline(_)) => (),
+            Some(FileData::ChunkedDirect(ref c)) => {
                 chunks = Some(c.clone());
             },
-            Some(FileContents::ChunkedIndirect(ref c)) => {
+            Some(FileData::ChunkedIndirect(ref c)) => {
                 let chunk_data = try!(self.repository.get_data(c));
                 chunks = Some(ChunkList::read_from(&chunk_data));
             }
@@ -393,9 +393,9 @@ impl<'a> fuse::Filesystem for FuseFilesystem<'a> {
         info!("read {:?}, offset {}, size {}", ino, offset, size);
         let inode = inode!(self, ino, reply);
         let inode = inode.borrow();
-        match inode.inode.contents {
+        match inode.inode.data {
             None => return reply.data(&[]),
-            Some(FileContents::Inline(ref data)) => return reply.data(&data[min(offset as usize, data.len())..min(offset as usize+size as usize, data.len())]),
+            Some(FileData::Inline(ref data)) => return reply.data(&data[min(offset as usize, data.len())..min(offset as usize+size as usize, data.len())]),
             _ => ()
         }
         if let Some(ref chunks) = inode.chunks {

@@ -21,7 +21,7 @@ use std::io::Write;
 
 pub use self::error::RepositoryError;
 pub use self::config::Config;
-pub use self::metadata::{Inode, FileType, FileContents};
+pub use self::metadata::{Inode, FileType, FileData};
 pub use self::backup::{BackupError, BackupOptions, DiffType};
 pub use self::backup_file::{Backup, BackupFileError};
 pub use self::integrity::RepositoryIntegrityError;

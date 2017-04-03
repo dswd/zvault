@@ -91,12 +91,12 @@ impl fmt::Display for FileType {
 
 
 #[derive(Debug, Clone, Hash, PartialEq, Eq)]
-pub enum FileContents {
+pub enum FileData {
     Inline(msgpack::Bytes),
     ChunkedDirect(ChunkList),
     ChunkedIndirect(ChunkList)
 }
-serde_impl!(FileContents(u8) {
+serde_impl!(FileData(u8) {
     Inline(ByteBuf) => 0,
     ChunkedDirect(ChunkList) => 1,
     ChunkedIndirect(ChunkList) => 2
@@ -113,7 +113,7 @@ pub struct Inode {
     pub group: u32,
     pub timestamp: i64,
     pub symlink_target: Option<String>,
-    pub contents: Option<FileContents>,
+    pub data: Option<FileData>,
     pub children: Option<BTreeMap<String, ChunkList>>,
     pub cum_size: u64,
     pub cum_dirs: usize,
@@ -130,7 +130,7 @@ impl Default for Inode {
             group: 1000,
             timestamp: 0,
             symlink_target: None,
-            contents: None,
+            data: None,
             children: None,
             cum_size: 0,
             cum_dirs: 0,
@@ -149,7 +149,7 @@ serde_impl!(Inode(u8?) {
     timestamp: i64 => 7,
     //__old_create_time: i64 => 8,
     symlink_target: Option<String> => 9,
-    contents: Option<FileContents> => 10,
+    data: Option<FileData> => 10,
     children: BTreeMap<String, ChunkList> => 11,
     cum_size: u64 => 12,
     cum_dirs: usize => 13,
@@ -245,7 +245,7 @@ impl Repository {
         if inode.file_type == FileType::File && inode.size > 0 {
             if let Some(reference) = reference {
                 if reference.is_same_meta_quick(&inode) {
-                    inode.contents = reference.contents.clone();
+                    inode.data = reference.data.clone();
                     return Ok(inode)
                 }
             }
@@ -253,16 +253,16 @@ impl Repository {
             if inode.size < 100 {
                 let mut data = Vec::with_capacity(inode.size as usize);
                 try!(file.read_to_end(&mut data));
-                inode.contents = Some(FileContents::Inline(data.into()));
+                inode.data = Some(FileData::Inline(data.into()));
             } else {
                 let mut chunks = try!(self.put_stream(BundleMode::Content, &mut file));
                 if chunks.len() < 10 {
-                    inode.contents = Some(FileContents::ChunkedDirect(chunks));
+                    inode.data = Some(FileData::ChunkedDirect(chunks));
                 } else {
                     let mut chunk_data = Vec::with_capacity(chunks.encoded_size());
                     chunks.write_to(&mut chunk_data).unwrap();
                     chunks = try!(self.put_data(BundleMode::Meta, &chunk_data));
-                    inode.contents = Some(FileContents::ChunkedIndirect(chunks));
+                    inode.data = Some(FileData::ChunkedIndirect(chunks));
                 }
             }
         }
@@ -282,15 +282,15 @@ impl Repository {
     #[inline]
     pub fn save_inode_at<P: AsRef<Path>>(&mut self, inode: &Inode, path: P) -> Result<(), RepositoryError> {
         if let Some(mut file) = try!(inode.create_at(path.as_ref())) {
-            if let Some(ref contents) = inode.contents {
+            if let Some(ref contents) = inode.data {
                 match *contents {
-                    FileContents::Inline(ref data) => {
+                    FileData::Inline(ref data) => {
                         try!(file.write_all(&data));
                     },
-                    FileContents::ChunkedDirect(ref chunks) => {
+                    FileData::ChunkedDirect(ref chunks) => {
                         try!(self.get_stream(chunks, &mut file));
                     },
-                    FileContents::ChunkedIndirect(ref chunks) => {
+                    FileData::ChunkedIndirect(ref chunks) => {
                         let chunk_data = try!(self.get_data(chunks));
                         let chunks = ChunkList::read_from(&chunk_data);
                         try!(self.get_stream(&chunks, &mut file));

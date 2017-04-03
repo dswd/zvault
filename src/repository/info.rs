@@ -1,7 +1,5 @@
 use ::prelude::*;
 
-use super::metadata::FileContents;
-
 use std::collections::{HashMap, VecDeque};
 
 
@@ -83,12 +81,12 @@ impl Repository {
             }
             let inode = try!(self.get_inode(&chunks));
             // Mark the content chunks as used
-            match inode.contents {
-                None | Some(FileContents::Inline(_)) => (),
-                Some(FileContents::ChunkedDirect(chunks)) => {
+            match inode.data {
+                None | Some(FileData::Inline(_)) => (),
+                Some(FileData::ChunkedDirect(chunks)) => {
                     try!(self.mark_used(&mut usage, &chunks));
                 },
-                Some(FileContents::ChunkedIndirect(chunks)) => {
+                Some(FileData::ChunkedIndirect(chunks)) => {
                     if try!(self.mark_used(&mut usage, &chunks)) {
                         let chunk_data = try!(self.get_data(&chunks));
                         let chunks = ChunkList::read_from(&chunk_data);

@@ -311,7 +311,7 @@ impl Repository {
 
     #[inline]
     fn find_differences_recurse(&mut self, inode1: &Inode, inode2: &Inode, path: PathBuf, diffs: &mut Vec<(DiffType, PathBuf)>) -> Result<(), RepositoryError> {
-        if !inode1.is_same_meta(inode2) || inode1.contents != inode2.contents {
+        if !inode1.is_same_meta(inode2) || inode1.data != inode2.data {
             diffs.push((DiffType::Mod, path.clone()));
         }
         if let Some(ref children1) = inode1.children {
