@@ -113,15 +113,11 @@ impl Repository {
                 roots.push((inode, chunks));
             }
         }
-        let mut root_inode;
-        let chunks;
         if roots.len() == 1 {
-            let r = roots.pop().unwrap();
-            root_inode = r.0;
-            chunks = r.1;
+            Ok(roots.pop().unwrap())
         } else {
             warn!("Tar file contains multiple roots, adding dummy folder");
-            root_inode = Inode {
+            let mut root_inode = Inode {
                 file_type: FileType::Directory,
                 mode: 0o755,
                 name: "archive".to_string(),
@@ -138,9 +134,9 @@ impl Repository {
                 root_inode.cum_dirs += inode.cum_dirs;
             }
             root_inode.children = Some(children);
-            chunks = try!(self.put_inode(&root_inode));
+            let chunks = try!(self.put_inode(&root_inode));
+            Ok((root_inode, chunks))
         }
-        Ok((root_inode, chunks))
     }
 
     pub fn import_tarfile<P: AsRef<Path>>(&mut self, tarfile: P) -> Result<Backup, RepositoryError> {

@@ -1,6 +1,7 @@
 use ::prelude::*;
 
 use filetime::{self, FileTime};
+use xattr;
 
 use std::collections::BTreeMap;
 use std::path::{Path, PathBuf};
@@ -22,6 +23,11 @@ quick_error!{
             cause(err)
             description("Failed to obtain metadata for file")
             display("Inode error: failed to obtain metadata for file {:?}\n\tcaused by: {}", path, err)
+        }
+        ReadXattr(err: io::Error, path: PathBuf) {
+            cause(err)
+            description("Failed to obtain xattr for file")
+            display("Inode error: failed to obtain xattr for file {:?}\n\tcaused by: {}", path, err)
         }
         ReadLinkTarget(err: io::Error, path: PathBuf) {
             cause(err)
@@ -47,6 +53,11 @@ quick_error!{
             cause(err)
             description("Failed to set file ownership")
             display("Inode error: failed to set file ownership on {:?}\n\tcaused by: {}", path, err)
+        }
+        SetXattr(err: io::Error, path: PathBuf) {
+            cause(err)
+            description("Failed to set xattr")
+            display("Inode error: failed to set xattr on {:?}\n\tcaused by: {}", path, err)
         }
         Integrity(reason: &'static str) {
             description("Integrity error")
@@ -117,7 +128,8 @@ pub struct Inode {
     pub children: Option<BTreeMap<String, ChunkList>>,
     pub cum_size: u64,
     pub cum_dirs: usize,
-    pub cum_files: usize
+    pub cum_files: usize,
+    pub xattrs: BTreeMap<String, msgpack::Bytes>
 }
 impl Default for Inode {
     fn default() -> Self {
@@ -134,7 +146,8 @@ impl Default for Inode {
             children: None,
             cum_size: 0,
             cum_dirs: 0,
-            cum_files: 0
+            cum_files: 0,
+            xattrs: BTreeMap::new()
         }
     }
 }
@@ -145,15 +158,14 @@ serde_impl!(Inode(u8?) {
     mode: u32 => 3,
     user: u32 => 4,
     group: u32 => 5,
-    //__old_access_time: i64 => 6,
     timestamp: i64 => 7,
-    //__old_create_time: i64 => 8,
     symlink_target: Option<String> => 9,
     data: Option<FileData> => 10,
     children: Option<BTreeMap<String, ChunkList>> => 11,
     cum_size: u64 => 12,
     cum_dirs: usize => 13,
-    cum_files: usize => 14
+    cum_files: usize => 14,
+    xattrs: BTreeMap<String, msgpack::Bytes> => 15
 });
 
 
@@ -183,6 +195,14 @@ impl Inode {
         inode.user = meta.st_uid();
         inode.group = meta.st_gid();
         inode.timestamp = meta.st_mtime();
+        if xattr::SUPPORTED_PLATFORM {
+            if let Ok(attrs) = xattr::list(path) {
+                for name in attrs {
+                    let data = try!(xattr::get(path, &name).map_err(|e| InodeError::ReadXattr(e, path.to_owned())));
+                    inode.xattrs.insert(name.to_string_lossy().to_string(), data.into());
+                }
+            }
+        }
         Ok(inode)
     }
 
@@ -205,12 +225,21 @@ impl Inode {
                 }
             }
         }
+        let time = FileTime::from_seconds_since_1970(self.timestamp as u64, 0);
+        try!(filetime::set_file_times(&full_path, time, time).map_err(|e| InodeError::SetTimes(e, full_path.clone())));
+        if !self.xattrs.is_empty() {
+            if xattr::SUPPORTED_PLATFORM {
+                for (name, data) in &self.xattrs {
+                    try!(xattr::set(&full_path, name, data).map_err(|e| InodeError::SetXattr(e, full_path.clone())))
+                }
+            } else {
+                warn!("Not setting xattr on {:?}", full_path);
+            }
+        }
         try!(fs::set_permissions(
             &full_path,
             Permissions::from_mode(self.mode)
         ).map_err(|e| InodeError::SetPermissions(e, full_path.clone(), self.mode)));
-        let time = FileTime::from_seconds_since_1970(self.timestamp as u64, 0);
-        try!(filetime::set_file_times(&full_path, time, time).map_err(|e| InodeError::SetTimes(e, full_path.clone())));
         try!(chown(&full_path, self.user, self.group).map_err(|e| InodeError::SetOwnership(e, full_path.clone())));
         Ok(file)
     }

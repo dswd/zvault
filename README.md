@@ -99,8 +99,6 @@ Recommended: Brotli/2-7
 
 ### Core functionality
 - Recompress & combine bundles
-- File attributes
-  - xattrs https://crates.io/crates/xattr
 
 ### CLI functionality
 - list --tree

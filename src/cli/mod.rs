@@ -30,8 +30,7 @@ impl ErrorCode {
     pub fn code(&self) -> i32 {
         match *self {
             // Crazy stuff
-            ErrorCode::InitializeLogger => -1,
-            ErrorCode::InvalidExcludes => -1,
+            ErrorCode::InitializeLogger | ErrorCode::InvalidExcludes => -1,
             // Arguments
             ErrorCode::InvalidArgs => 1,
             ErrorCode::UnsafeArgs => 2,

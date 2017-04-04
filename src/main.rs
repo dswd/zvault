@@ -1,4 +1,5 @@
 #![recursion_limit="128"]
+#![allow(unknown_lints, float_cmp)]
 extern crate serde;
 extern crate rmp_serde;
 #[macro_use] extern crate serde_utils;
@@ -21,6 +22,7 @@ extern crate regex;
 extern crate fuse;
 extern crate rand;
 extern crate time;
+extern crate xattr;
 extern crate libc;
 extern crate tar;
 
