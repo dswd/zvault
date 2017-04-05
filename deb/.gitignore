@@ -1,6 +1,7 @@
 zvault/debian/zvault
 zvault/zvault*
 libsquash/src
+libsquash/debian/libsquash
 */debian/debhelper*
 */debian/files
 *.deb
