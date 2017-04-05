@@ -1,0 +1,11 @@
+Source: zvault
+Section: misc
+Priority: extra
+Maintainer: Dennis Schwerdel <schwerdel@googlemail.com>
+Build-Depends: debhelper (>= 9), ruby-ronn
+Standards-Version: 3.8.3
+
+Package: zvault
+Architecture: amd64
+Depends: libsquash, ${shlibs:Depends}, ${misc:Depends}
+Description: Deduplicating backup solution

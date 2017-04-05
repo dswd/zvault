@@ -4,3 +4,5 @@ test.tar
 test_*
 restored
 excludes
+._*
+.~*

@@ -97,6 +97,10 @@ Recommended: Brotli/2-7
 
 ## TODO
 
+### Packaging
+- Included works
+- Proper manpage
+
 ### Core functionality
 - Recompress & combine bundles
 

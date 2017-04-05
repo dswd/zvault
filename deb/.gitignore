@@ -1,0 +1,10 @@
+zvault/debian/zvault
+zvault/zvault*
+libsquash/src
+*/debian/debhelper*
+*/debian/files
+*.deb
+*.build
+*.changes
+*.debhelper*
+*.substvars
