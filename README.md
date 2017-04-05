@@ -95,6 +95,18 @@ Recommended: Brotli/2-7
 ## Design
 
 
+### Semantic Versioning
+
+zVault sticks to the semantic versioning scheme. In its current pre-1.0 stage
+this has the following implications:
+- Even now the repository format is considered pretty stable. All future
+  versions will be able to read the current repository format. Maybe conversions
+  might be necessary but the backups should always be forward-compatible.
+- The CLI might see breaking changes but at least it is guaranteed that calls
+  that are currently non-destructive will not become destructive in the future.
+  Running todays commands on a future version will not cause any harm.
+
+
 ## TODO
 
 ### Packaging

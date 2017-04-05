@@ -68,7 +68,7 @@ pub const DEFAULT_CHUNKER: &'static str = "fastcdc/16";
 pub const DEFAULT_HASH: &'static str = "blake2";
 pub const DEFAULT_COMPRESSION: &'static str = "brotli/3";
 pub const DEFAULT_BUNDLE_SIZE: usize = 25;
-pub const DEFAULT_VACUUM_RATIO: usize = 50;
+pub const DEFAULT_VACUUM_RATIO: usize = 0;
 lazy_static! {
     pub static ref DEFAULT_REPOSITORY: String = {
         env::home_dir().unwrap().join(".zvault").to_string_lossy().to_string()

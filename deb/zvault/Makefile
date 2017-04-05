@@ -1,7 +1,10 @@
-build: zvault.1
+build: man/zvault.1 man/zvault-backup.1 man/zvault-check.1 man/zvault-config.1 \
+	   man/zvault-import.1 man/zvault-info.1 man/zvault-init.1 man/zvault-list.1 \
+	   man/zvault-mount.1 man/zvault-prune.1 man/zvault-remove.1 \
+	   man/zvault-restore.1 man/zvault-vacuum.1
 
-zvault.1: zvault.1.ronn
-	ronn -r zvault.1.ronn
+%.1: %.1.md
+	ronn -r $<
 
 install:
 	install -d $(DESTDIR)/usr/bin

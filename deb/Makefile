@@ -10,7 +10,7 @@ build: libsquash_*.deb $(PACKAGE)_*.deb
 libsquash_*.deb:
 	(cd libsquash; make clean; debuild -b -us -uc; cd ..)
 
-$(PACKAGE)_*.deb: $(PACKAGE)/zvault.1.ronn $(PACKAGE)/zvault
+$(PACKAGE)_*.deb: $(PACKAGE)/man/* $(PACKAGE)/zvault
 	(cd $(PACKAGE); make clean; debuild -b -us -uc; cd ..)
 
 .PHONY: clean
@@ -19,10 +19,9 @@ clean:
 	rm -rf $(PACKAGE)_*
 	(cd libsquash; debuild clean; cd ..)
 	rm -rf libsqash_*
-	rm -f ../target/release/zvault
 
-$(PACKAGE)/zvault.1.ronn: ../docs/manpage.md
-	cp ../docs/manpage.md $(PACKAGE)/zvault.1.ronn
+$(PACKAGE)/man/*: ../docs/man/*
+	cp ../docs/man/* $(PACKAGE)/man
 
 $(PACKAGE)/zvault: ../target/release/zvault
 	cp ../target/release/zvault $(PACKAGE)/zvault
