@@ -122,7 +122,9 @@ fn find_reference_backup(repo: &Repository, path: &str) -> Result<Option<(String
 }
 
 fn print_backup(backup: &Backup) {
-    println!("Modified: {}", backup.modified);
+    if backup.modified {
+        warn!("This backup has been modified");
+    }
     println!("Date: {}", Local.timestamp(backup.date, 0).to_rfc2822());
     println!("Source: {}:{}", backup.host, backup.path);
     println!("Duration: {}", to_duration(backup.duration));

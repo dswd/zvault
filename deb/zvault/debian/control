@@ -7,5 +7,5 @@ Standards-Version: 3.8.3
 
 Package: zvault
 Architecture: amd64
-Depends: libsquash, ${shlibs:Depends}, ${misc:Depends}
+Depends: libsodium18, libsquash, ${shlibs:Depends}, ${misc:Depends}
 Description: Deduplicating backup solution

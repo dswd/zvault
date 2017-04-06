@@ -162,7 +162,7 @@ impl Default for Config {
         Config {
             compression: None,
             encryption: None,
-            bundle_size: 25,
+            bundle_size: 25*1024*1024,
             chunker: ChunkerType::from_string("fastcdc/16").unwrap(),
             hash: HashMethod::Blake2
         }

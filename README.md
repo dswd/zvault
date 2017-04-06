@@ -105,18 +105,17 @@ I should now store this key pair in a safe location before I continue.
 
 Now I can backup my home directory to the repository.
 
-   #$> zvault backup /home/dswd/projects ::projects1
-   info: No reference backup found, doing a full scan instead
-   Modified: false
-   Date: Thu,  6 Apr 2017 12:29:52 +0200
-   Source: capanord:/home/dswd/projects
-   Duration: 0:01:59.5
-   Entries: 29205 files, 9535 dirs
-   Total backup size: 5.4 GiB
-   Modified data size: 5.4 GiB
-   Deduplicated size: 3.2 GiB, 41.8% saved
-   Compressed size: 1.1 GiB in 48 bundles, 63.9% saved
-   Chunk count: 220410, avg size: 15.0 KiB
+    #$> zvault backup /home/dswd/projects ::projects1
+    info: No reference backup found, doing a full scan instead
+    Date: Thu,  6 Apr 2017 12:29:52 +0200
+    Source: capanord:/home/dswd/projects
+    Duration: 0:01:59.5
+    Entries: 29205 files, 9535 dirs
+    Total backup size: 5.4 GiB
+    Modified data size: 5.4 GiB
+    Deduplicated size: 3.2 GiB, 41.8% saved
+    Compressed size: 1.1 GiB in 48 bundles, 63.9% saved
+    Chunk count: 220410, avg size: 15.0 KiB
 
 The backup run took about 2 minutes and by looking at the data, I see that
 deduplication saved over 40% and compression again saved over 60% so that in the
@@ -125,8 +124,7 @@ end my backup only uses 1.1 GiB out of 5.4 GiB.
 After some work, I create another backup.
 
     #$> zvault backup /home/dswd/projects ::projects2
-    info: Using backup projekte1 as reference
-    Modified: false
+    info: Using backup projects1 as reference
     Date: Thu,  6 Apr 2017 13:28:54 +0200
     Source: capanord:/home/dswd/projects
     Duration: 0:00:07.9

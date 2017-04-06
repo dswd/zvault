@@ -373,7 +373,6 @@ impl<'a> fuse::Filesystem for FuseFilesystem<'a> {
     /// filesystem may set, to change the way the file is opened. See fuse_file_info
     /// structure in <fuse_common.h> for more details.
     fn open (&mut self, _req: &fuse::Request, ino: u64, flags: u32, reply: fuse::ReplyOpen) {
-        info!("open {:?}, flags: {:o}", ino, flags);
         if (flags & (libc::O_WRONLY | libc::O_RDWR | libc::O_TRUNC) as u32) != 0 {
             return reply.error(libc::EROFS);
         }
@@ -390,7 +389,6 @@ impl<'a> fuse::Filesystem for FuseFilesystem<'a> {
     /// operation. fh will contain the value set by the open method, or will be undefined
     /// if the open method didn't set any value.
     fn read (&mut self, _req: &fuse::Request, ino: u64, _fh: u64, mut offset: u64, mut size: u32, reply: fuse::ReplyData) {
-        info!("read {:?}, offset {}, size {}", ino, offset, size);
         let inode = inode!(self, ino, reply);
         let inode = inode.borrow();
         match inode.inode.data {
