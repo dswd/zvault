@@ -1,18 +1,40 @@
 # ZVault Backup solution
+zVault is a highly efficient deduplicating backup solution that supports
+client-side encryption, compression and remote storage of backup data.
 
-## Goals / Features
+## Main Features
 
+### Space efficient storage
+Each file is split into a number of chunks. Content-defined chunking and chunk
+fingerprints make sure that each chunk is only stored once. The chunking
+algorithm is designed so that small changes to a file only change a few chunks
+and leave most chunks unchanged. Multiple backups of the same data set will only
+take up the space of one copy.
 
-### Space-efficient storage with deduplication
-The backup data is split into chunks. Fingerprints make sure that each chunk is
-only stored once. The chunking algorithm is designed so that small changes to a
-file only change a few chunks and leave most chunks unchanged.
+The deduplication in zVault is able to reuse existing data no matter whether a
+file is modified, stored again under a different name, renamed or moved to
+different folder.
 
-Multiple backups of the same data set will only take up the space of one copy.
+That makes it possible to store daily backups without much overhead as backups
+with only small changes do not take up much space.
 
-The chunks are combined into bundles. Each bundle holds chunks up to a maximum
-data size and is compressed as a whole to save space ("solid archive").
+Also multiple machines can share the same remote backup location and reuse the
+data of each others for deduplication.
 
+### Performance
+High backup speed is a major design goal of zVault. Therefore is uses different
+techniques to reach extremely fast backup speeds.
+
+All used algorithms are hand-selected and optimized for speed.
+
+Unmodified files are detected by comparing them to the last backup which makes
+it possible to skip most of the files in regular usage.
+
+A blazingly fast memory-mapped hash table tracks the fingerprints of all known
+chunks so that chunks that are already in the repository can be skipped quickly.
+
+In a general use case with a Linux system and a home folder of 50 GiB, backup
+runs usually take between 1 and 2 minutes.
 
 ### Independent backups
 All backups share common data in form of chunks but are independent on a higher
@@ -23,80 +45,45 @@ Other backup solutions use differential backups organized in chains. This makes
 those backups dependent on previous backups in the chain, so that those backups
 can not be deleted. Also, restoring chained backups is much less efficient.
 
-
-### Fast backup runs
-* Only adding changed files
-* In-Memory Hashtable
-
-
-### Backup verification
-* Bundles verification
-* Index verification
-* File structure verification
-
-
-
-## Configuration options
-There are several configuration options with trade-offs attached so these are
-exposed to users.
-
-
-### Chunker algorithm
-The chunker algorithm is responsible for splitting files into chunks in a way
-that survives small changes to the file so that small changes still yield
-many matching chunks. The quality of the algorithm affects the deduplication
-rate and its speed affects the backup speed.
-
-There are 3 algorithms to choose from:
-
-The **Rabin chunker** is a very common algorithm with a good quality but a
-mediocre speed (about 350 MB/s).
-The **AE chunker** is a novel approach that can reach very high speeds
-(over 750 MB/s) but at a cost of quality.
-The **FastCDC** algorithm has a slightly higher quality than the Rabin chunker
-and is quite fast (about 550 MB/s).
-
-The recommendation is **FastCDC**.
-
-
-### Chunk size
-The chunk size determines the memory usage during backup runs. For every chunk
-in the backup repository, 24 bytes of memory are needed. That means that for
-every GiB stored in the repository the following amount of memory is needed:
-- 8 KiB chunks => 3 MiB / GiB
-- 16 KiB chunks => 1.5 MiB / GiB
-- 32 KiB chunks => 750 KiB / GiB
-- 64 KiB chunks => 375 KiB / GiB
-
-On the other hand, bigger chunks reduce the deduplication efficiency. Even small
-changes of only one byte will result in at least one complete chunk changing.
-
-
-### Hash algorithm
-Blake2
-Murmur3
-
-Recommended: Blake2
-
-
-### Bundle size
-10 M
-25 M
-100 M
-
-Recommended: 25 MiB
-
+### Data encryption
+The backup data can be protected by modern and fast encryption methods on the
+client before storing it remotely.
 
 ### Compression
+The backup data can be compressed to save even more space than by deduplication
+alone. Users can choose between zlib (medium speed and compression),
+lz4 (very fast, lower compression), brotli (medium speed, good compression), and
+lzma (quite slow but amazing compression).
 
-Recommended: Brotli/2-7
+### Remote backup storage
+zVault supports off-site backups via mounted filesystems. Backups can be stored
+on any remote storage that can be mounted as a filesystem:
+- NFS
+- SMB / Windows shares
+- SSH (via sshfs)
+- FTP (via curlftpfs)
+- Google Drive (via rclone)
+- Amazon S3 (via rclone)
+- Openstack Swift / Rackspace cloud files / Memset Memstore (via rclone)
+- Dropbox (via rclone)
+- Google Cloud Storage (via rclone)
+- Amazon Drive (via rclone)
+- Microsoft OneDrive (via rclone)
+- Hubic (via rclone)
+- Backblaze B2 (via rclone)
+- Yandex Disk (via rclone)
+- ... (potentially many more)
 
+### Backup verification
+For long-term storage of backups it is important to check backups regularly.
+zVault offers a simple way to verify the integrity of backups.
 
-## Design
-
+### Mount backups as filesystems
+Backups can be mounted as a user-space filesystem to investigate and restore
+their contents. Once mounted, graphical programs like file managers can be used
+to work on the backup data and find the needed files.
 
 ### Semantic Versioning
-
 zVault sticks to the semantic versioning scheme. In its current pre-1.0 stage
 this has the following implications:
 - Even now the repository format is considered pretty stable. All future
@@ -105,32 +92,3 @@ this has the following implications:
 - The CLI might see breaking changes but at least it is guaranteed that calls
   that are currently non-destructive will not become destructive in the future.
   Running todays commands on a future version will not cause any harm.
-
-
-## TODO
-
-### Packaging
-- Included works
-- Proper manpage
-
-### Core functionality
-- Recompress & combine bundles
-
-### CLI functionality
-- list --tree
-
-### Other
-- Stability
-- Tests & benchmarks
-  - Chunker
-  - Index
-  - BundleDB
-  - Bundle map
-  - Config files
-  - Backup files
-  - Backup
-  - Prune
-  - Vacuum
-- Documentation
-  - All file formats
-  - Design
