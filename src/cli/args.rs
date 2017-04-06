@@ -241,7 +241,7 @@ pub fn parse() -> Result<Arguments, ErrorCode> {
             .arg(Arg::from_usage("bundle_size --bundle-size [SIZE] 'Set the target bundle size in MiB (default: 25)'"))
             .arg(Arg::from_usage("--chunker [CHUNKER] 'Set the chunker algorithm and target chunk size (default: fastcdc/16)'"))
             .arg(Arg::from_usage("-c --compression [COMPRESSION] 'Set the compression method and level (default: brotli/3)'"))
-            .arg(Arg::from_usage("-e --encryption 'Generate a keypair and enable encryption'"))
+            .arg(Arg::from_usage("-e --encrypt 'Generate a keypair and enable encryption'"))
             .arg(Arg::from_usage("--hash [HASH] 'Set the hash method (default: blake2)'"))
             .arg(Arg::from_usage("-r --remote <REMOTE> 'Set the path to the mounted remote storage'"))
             .arg(Arg::from_usage("[REPO] 'The path for the new repository'")))
@@ -327,7 +327,7 @@ pub fn parse() -> Result<Arguments, ErrorCode> {
             bundle_size: (try!(parse_num(args.value_of("bundle_size").unwrap_or(&DEFAULT_BUNDLE_SIZE.to_string()), "Bundle size")) * 1024 * 1024) as usize,
             chunker: try!(parse_chunker(args.value_of("chunker").unwrap_or(DEFAULT_CHUNKER))),
             compression: try!(parse_compression(args.value_of("compression").unwrap_or(DEFAULT_COMPRESSION))),
-            encryption: args.is_present("encryption"),
+            encryption: args.is_present("encrypt"),
             hash: try!(parse_hash(args.value_of("hash").unwrap_or(DEFAULT_HASH))),
             repo_path: repository.to_string(),
             remote_path: args.value_of("remote").unwrap().to_string()

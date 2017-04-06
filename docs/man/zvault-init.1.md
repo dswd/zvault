@@ -45,7 +45,7 @@ configuration can be changed by _zvault-config(1)_ later.
     values.
 
 
-  * `-e`, `--encryption`:
+  * `-e`, `--encrypt`:
 
     Generate a keypair and enable encryption.
     Please see _zvault(1)_ for more information on *encryption*.

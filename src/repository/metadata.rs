@@ -265,6 +265,11 @@ impl Inode {
     pub fn decode(data: &[u8]) -> Result<Self, InodeError> {
         Ok(try!(msgpack::decode(&data)))
     }
+
+    #[inline]
+    pub fn estimate_meta_size(&self) -> u64 {
+        1000
+    }
 }
 
 

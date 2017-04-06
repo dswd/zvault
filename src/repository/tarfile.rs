@@ -68,7 +68,7 @@ impl Repository {
             let path = try!(entry.path()).to_path_buf();
             match self.import_tar_entry(&mut entry) {
                 Ok(mut inode) => {
-                    inode.cum_size = inode.size + 1000;
+                    inode.cum_size = inode.size + inode.estimate_meta_size();
                     if inode.file_type == FileType::Directory {
                         inode.cum_dirs = 1;
                     } else {

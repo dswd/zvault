@@ -153,7 +153,7 @@ impl Repository {
     ) -> Result<Inode, RepositoryError> {
         let path = path.as_ref();
         let mut inode = try!(self.create_inode(path, reference));
-        let meta_size = 1000; // add 1000 for encoded metadata
+        let meta_size = inode.estimate_meta_size();
         inode.cum_size = inode.size + meta_size;
         if let Some(ref_inode) = reference {
             if !ref_inode.is_same_meta_quick(&inode) {
