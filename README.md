@@ -107,36 +107,36 @@ Now I can backup my home directory to the repository.
 
     #$> zvault backup /home/dswd/projects ::projects1
     info: No reference backup found, doing a full scan instead
-    Date: Thu,  6 Apr 2017 12:29:52 +0200
-    Source: capanord:/home/dswd/projects
-    Duration: 0:01:59.5
-    Entries: 29205 files, 9535 dirs
-    Total backup size: 5.4 GiB
-    Modified data size: 5.4 GiB
-    Deduplicated size: 3.2 GiB, 41.8% saved
-    Compressed size: 1.1 GiB in 48 bundles, 63.9% saved
-    Chunk count: 220410, avg size: 15.0 KiB
+    Date: Thu,  6 Apr 2017 20:33:20 +0200
+    Source: dswd-desktop:/home/dswd/projects
+    Duration: 0:00:26.2
+    Entries: 14618 files, 6044 dirs
+    Total backup size: 1.4 GiB
+    Modified data size: 1.4 GiB
+    Deduplicated size: 1.2 GiB, 14.9% saved
+    Compressed size: 0.5 GiB in 23 bundles, 54.7% saved
+    Chunk count: 95151, avg size: 12.8 KiB
 
-The backup run took about 2 minutes and by looking at the data, I see that
-deduplication saved over 40% and compression again saved over 60% so that in the
-end my backup only uses 1.1 GiB out of 5.4 GiB.
+The backup run took about 26 seconds and by looking at the data, I see that
+deduplication saved about 15% and compression again saved over 50% so that in
+the end my backup only uses 0.5 GiB out of 1.4 GiB.
 
 After some work, I create another backup.
 
     #$> zvault backup /home/dswd/projects ::projects2
     info: Using backup projects1 as reference
-    Date: Thu,  6 Apr 2017 13:28:54 +0200
-    Source: capanord:/home/dswd/projects
-    Duration: 0:00:07.9
-    Entries: 29205 files, 9535 dirs
-    Total backup size: 5.4 GiB
-    Modified data size: 24.9 MiB
-    Deduplicated size: 10.6 MiB, 57.3% saved
-    Compressed size: 4.7 MiB in 2 bundles, 55.7% saved
-    Chunk count: 35507, avg size: 313 Bytes
+    Date: Thu,  6 Apr 2017 20:46:19 +0200
+    Source: dswd-desktop:/home/dswd/projects
+    Duration: 0:00:00.7
+    Entries: 14626 files, 6046 dirs
+    Total backup size: 1.4 GiB
+    Modified data size: 27.2 MiB
+    Deduplicated size: 17.2 MiB, 36.9% saved
+    Compressed size: 6.1 MiB in 2 bundles, 64.4% saved
+    Chunk count: 995, avg size: 17.7 KiB
 
-This time, the backup run only took about 8 seconds as zVault skipped most of
-the folder because it was unchanged. The backup only stored 4.7 MiB of data.
+This time, the backup run took less than a second as zVault skipped most of
+the folder because it was unchanged. The backup only stored 6.1 MiB of data.
 This shows the true potential of deduplication.
 
 
