@@ -1,3 +1,8 @@
+https://partner-images.canonical.com/core/xenial/20170331/ubuntu-xenial-core-cloudimg-amd64-root.tar.gz
+http://sun.aei.polsl.pl/~sdeor/corpus/silesia.zip
+http://wanos.co/assets/silesia.tar
+
+
 Algorithm comparison on file test_data/ubuntu-16.04.1.tar
 
 Reading input file... done. 183869440 bytes

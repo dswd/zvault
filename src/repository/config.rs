@@ -160,7 +160,7 @@ pub struct Config {
 impl Default for Config {
     fn default() -> Self {
         Config {
-            compression: None,
+            compression: Some(Compression::from_string("brotli/3").unwrap()),
             encryption: None,
             bundle_size: 25*1024*1024,
             chunker: ChunkerType::from_string("fastcdc/16").unwrap(),

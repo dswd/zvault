@@ -1,6 +1,8 @@
 use ::prelude::*;
 use super::*;
 
+use std::path::Path;
+
 use clap::{App, AppSettings, Arg, SubCommand};
 
 pub enum Arguments {
@@ -127,11 +129,17 @@ pub enum Arguments {
 }
 
 
-pub fn parse_repo_path(repo_path: &str, backup_restr: Option<bool>, path_restr: Option<bool>) -> Result<(&str, Option<&str>, Option<&str>), ErrorCode> {
+fn parse_repo_path(repo_path: &str, existing: bool, backup_restr: Option<bool>, path_restr: Option<bool>) -> Result<(&str, Option<&str>, Option<&str>), String> {
     let mut parts = repo_path.splitn(3, "::");
     let mut repo = parts.next().unwrap_or(&DEFAULT_REPOSITORY);
     if repo.is_empty() {
         repo = &DEFAULT_REPOSITORY;
+    }
+    if existing && !Path::new(repo).join("config.yaml").exists() {
+        return Err("The specified repository does not exist".to_string());
+    }
+    if !existing && Path::new(repo).exists() {
+        return Err("The specified repository already exists".to_string());
     }
     let mut backup = parts.next();
     if let Some(val) = backup {
@@ -147,80 +155,103 @@ pub fn parse_repo_path(repo_path: &str, backup_restr: Option<bool>, path_restr: 
     }
     if let Some(restr) = backup_restr {
         if !restr && backup.is_some() {
-            error!("No backup may be given here");
-            return Err(ErrorCode::InvalidArgs);
+            return Err("No backup may be given here".to_string());
         }
         if restr && backup.is_none() {
-            error!("A backup must be specified");
-            return Err(ErrorCode::InvalidArgs);
+            return Err("A backup must be specified".to_string());
         }
     }
     if let Some(restr) = path_restr {
         if !restr && path.is_some() {
-            error!("No subpath may be given here");
-            return Err(ErrorCode::InvalidArgs);
+            return Err("No subpath may be given here".to_string());
         }
         if restr && path.is_none() {
-            error!("A subpath must be specified");
-            return Err(ErrorCode::InvalidArgs);
+            return Err("A subpath must be specified".to_string());
         }
     }
     Ok((repo, backup, path))
 }
 
-fn parse_num(num: &str, name: &str) -> Result<u64, ErrorCode> {
+#[allow(unknown_lints,needless_pass_by_value)]
+fn validate_repo_path(repo_path: String, existing: bool, backup_restr: Option<bool>, path_restr: Option<bool>) -> Result<(), String> {
+    parse_repo_path(&repo_path, existing, backup_restr, path_restr).map(|_| ())
+}
+
+fn parse_num(num: &str) -> Result<u64, String> {
     if let Ok(num) = num.parse::<u64>() {
         Ok(num)
     } else {
-        error!("{} must be a number, was '{}'", name, num);
-        Err(ErrorCode::InvalidArgs)
+        Err("Must be a number".to_string())
     }
 }
 
-fn parse_chunker(val: &str) -> Result<ChunkerType, ErrorCode> {
+#[allow(unknown_lints,needless_pass_by_value)]
+fn validate_num(val: String) -> Result<(), String> {
+    parse_num(&val).map(|_| ())
+}
+
+fn parse_chunker(val: &str) -> Result<ChunkerType, String> {
     if let Ok(chunker) = ChunkerType::from_string(val) {
         Ok(chunker)
     } else {
-        error!("Invalid chunker method/size: {}", val);
-        Err(ErrorCode::InvalidArgs)
+        Err("Invalid chunker method/size".to_string())
     }
 }
 
-fn parse_compression(val: &str) -> Result<Option<Compression>, ErrorCode> {
+#[allow(unknown_lints,needless_pass_by_value)]
+fn validate_chunker(val: String) -> Result<(), String> {
+    parse_chunker(&val).map(|_| ())
+}
+
+fn parse_compression(val: &str) -> Result<Option<Compression>, String> {
     if val == "none" {
         return Ok(None)
     }
     if let Ok(compression) = Compression::from_string(val) {
         Ok(Some(compression))
     } else {
-        error!("Invalid compression method/level: {}", val);
-        Err(ErrorCode::InvalidArgs)
+        Err("Invalid compression method/level".to_string())
     }
 }
 
-fn parse_public_key(val: &str) -> Result<PublicKey, ErrorCode> {
+#[allow(unknown_lints,needless_pass_by_value)]
+fn validate_compression(val: String) -> Result<(), String> {
+    parse_compression(&val).map(|_| ())
+}
+
+fn parse_public_key(val: &str) -> Result<Option<PublicKey>, String> {
+    if val.to_lowercase() == "none" {
+        return Ok(None);
+    }
     let bytes = match parse_hex(val) {
         Ok(bytes) => bytes,
         Err(_) => {
-            error!("Invalid key: {}", val);
-            return Err(ErrorCode::InvalidArgs);
+            return Err("Invalid hexadecimal".to_string());
         }
     };
     if let Some(key) = PublicKey::from_slice(&bytes) {
-        Ok(key)
+        Ok(Some(key))
     } else {
-        error!("Invalid key: {}", val);
-        Err(ErrorCode::InvalidArgs)
+        return Err("Invalid key".to_string())
     }
 }
 
-fn parse_hash(val: &str) -> Result<HashMethod, ErrorCode> {
+#[allow(unknown_lints,needless_pass_by_value)]
+fn validate_public_key(val: String) -> Result<(), String> {
+    parse_public_key(&val).map(|_| ())
+}
+
+fn parse_hash(val: &str) -> Result<HashMethod, String> {
     if let Ok(hash) = HashMethod::from(val) {
         Ok(hash)
     } else {
-        error!("Invalid hash method: {}", val);
-        Err(ErrorCode::InvalidArgs)
+        Err("Invalid hash method".to_string())
     }
+}
+
+#[allow(unknown_lints,needless_pass_by_value)]
+fn validate_hash(val: String) -> Result<(), String> {
+    parse_hash(&val).map(|_| ())
 }
 
 fn parse_bundle_id(val: &str) -> Result<BundleId, ErrorCode> {
@@ -232,109 +263,166 @@ fn parse_bundle_id(val: &str) -> Result<BundleId, ErrorCode> {
     }
 }
 
+#[allow(unknown_lints,needless_pass_by_value)]
+fn validate_existing_path(val: String) -> Result<(), String> {
+    if !Path::new(&val).exists() {
+        Err("Path does not exist".to_string())
+    } else {
+        Ok(())
+    }
+}
+
+
 #[allow(unknown_lints,cyclomatic_complexity)]
 pub fn parse() -> Result<Arguments, ErrorCode> {
     let args = App::new("zvault").version(crate_version!()).author(crate_authors!(",\n")).about(crate_description!())
         .settings(&[AppSettings::AllowMissingPositional, AppSettings::VersionlessSubcommands, AppSettings::SubcommandRequiredElseHelp])
         .global_settings(&[AppSettings::UnifiedHelpMessage, AppSettings::ColoredHelp, AppSettings::ColorAuto])
         .subcommand(SubCommand::with_name("init").about("Initialize a new repository")
-            .arg(Arg::from_usage("[bundle_size] --bundle-size [SIZE] 'Set the target bundle size in MiB (default: 25)'"))
-            .arg(Arg::from_usage("--chunker [CHUNKER] 'Set the chunker algorithm and target chunk size (default: fastcdc/16)'"))
-            .arg(Arg::from_usage("-c --compression [COMPRESSION] 'Set the compression method and level (default: brotli/3)'"))
+            .arg(Arg::from_usage("[bundle_size] --bundle-size [SIZE] 'Set the target bundle size in MiB'")
+                .default_value(DEFAULT_BUNDLE_SIZE_STR).validator(validate_num))
+            .arg(Arg::from_usage("--chunker [CHUNKER] 'Set the chunker algorithm and target chunk size'")
+                .default_value(DEFAULT_CHUNKER).validator(validate_chunker))
+            .arg(Arg::from_usage("-c --compression [COMPRESSION] 'Set the compression method and level'")
+                .default_value(DEFAULT_COMPRESSION).validator(validate_compression))
             .arg(Arg::from_usage("-e --encrypt 'Generate a keypair and enable encryption'"))
-            .arg(Arg::from_usage("--hash [HASH] 'Set the hash method (default: blake2)'"))
-            .arg(Arg::from_usage("-r --remote <REMOTE> 'Set the path to the mounted remote storage'"))
-            .arg(Arg::from_usage("[REPO] 'The path for the new repository'")))
+            .arg(Arg::from_usage("--hash [HASH] 'Set the hash method'")
+                .default_value(DEFAULT_HASH).validator(validate_hash))
+            .arg(Arg::from_usage("-r --remote <REMOTE> 'Set the path to the mounted remote storage'")
+                .validator(validate_existing_path))
+            .arg(Arg::from_usage("[REPO] 'The path for the new repository'")
+                .default_value("").validator(|val| validate_repo_path(val, false, Some(false), Some(false)))))
         .subcommand(SubCommand::with_name("backup").about("Create a new backup")
             .arg(Arg::from_usage("--full 'Create a full backup without using a reference'"))
-            .arg(Arg::from_usage("[reference] --ref [REF] 'Base the new backup on this reference'").conflicts_with("full"))
+            .arg(Arg::from_usage("[reference] --ref [REF] 'Base the new backup on this reference'")
+                .conflicts_with("full"))
             .arg(Arg::from_usage("[cross_device] -x --xdev 'Allow to cross filesystem boundaries'"))
             .arg(Arg::from_usage("-e --exclude [PATTERN]... 'Exclude this path or file pattern'"))
             .arg(Arg::from_usage("[excludes_from] --excludes-from [FILE] 'Read the list of excludes from this file'"))
             .arg(Arg::from_usage("[no_default_excludes] --no-default-excludes 'Do not load the default excludes file'"))
-            .arg(Arg::from_usage("--tar 'Read the source data from a tar file'").conflicts_with_all(&["reference", "exclude", "excludes_from"]))
-            .arg(Arg::from_usage("<SRC> 'Source path to backup'"))
-            .arg(Arg::from_usage("<BACKUP> 'Backup path, [repository]::backup'")))
+            .arg(Arg::from_usage("--tar 'Read the source data from a tar file'")
+                .conflicts_with_all(&["reference", "exclude", "excludes_from"]))
+            .arg(Arg::from_usage("<SRC> 'Source path to backup'")
+                .validator(validate_existing_path))
+            .arg(Arg::from_usage("<BACKUP> 'Backup path, [repository]::backup'")
+                .validator(|val| validate_repo_path(val, true, Some(true), Some(false)))))
         .subcommand(SubCommand::with_name("restore").about("Restore a backup or subtree")
             .arg(Arg::from_usage("--tar 'Restore in form of a tar file'"))
-            .arg(Arg::from_usage("<BACKUP> 'The backup/subtree path, [repository]::backup[::subtree]'"))
-            .arg(Arg::from_usage("<DST> 'Destination path for backup'")))
+            .arg(Arg::from_usage("<BACKUP> 'The backup/subtree path, [repository]::backup[::subtree]'")
+                .validator(|val| validate_repo_path(val, true, Some(true), None)))
+            .arg(Arg::from_usage("<DST> 'Destination path for backup'")
+                .validator(validate_existing_path)))
         .subcommand(SubCommand::with_name("remove").aliases(&["rm", "delete", "del"]).about("Remove a backup or a subtree")
-            .arg(Arg::from_usage("<BACKUP> 'The backup/subtree path, [repository]::backup[::subtree]'")))
+            .arg(Arg::from_usage("<BACKUP> 'The backup/subtree path, [repository]::backup[::subtree]'")
+                .validator(|val| validate_repo_path(val, true, Some(true), None))))
         .subcommand(SubCommand::with_name("prune").about("Remove backups based on age")
             .arg(Arg::from_usage("-p --prefix [PREFIX] 'Only consider backups starting with this prefix'"))
-            .arg(Arg::from_usage("-d --daily [NUM] 'Keep this number of daily backups'"))
-            .arg(Arg::from_usage("-w --weekly [NUM] 'Keep this number of weekly backups'"))
-            .arg(Arg::from_usage("-m --monthly [NUM] 'Keep this number of monthly backups'"))
-            .arg(Arg::from_usage("-y --yearly [NUM] 'Keep this number of yearly backups'"))
+            .arg(Arg::from_usage("-d --daily [NUM] 'Keep this number of daily backups'")
+                .default_value("0").validator(validate_num))
+            .arg(Arg::from_usage("-w --weekly [NUM] 'Keep this number of weekly backups'")
+                .default_value("0").validator(validate_num))
+            .arg(Arg::from_usage("-m --monthly [NUM] 'Keep this number of monthly backups'")
+                .default_value("0").validator(validate_num))
+            .arg(Arg::from_usage("-y --yearly [NUM] 'Keep this number of yearly backups'")
+                .default_value("0").validator(validate_num))
             .arg(Arg::from_usage("-f --force 'Actually run the prune instead of simulating it'"))
-            .arg(Arg::from_usage("[REPO] 'Path of the repository'")))
+            .arg(Arg::from_usage("[REPO] 'Path of the repository'")
+                .validator(|val| validate_repo_path(val, true, Some(false), Some(false)))))
         .subcommand(SubCommand::with_name("vacuum").about("Reclaim space by rewriting bundles")
-            .arg(Arg::from_usage("-r --ratio [NUM] 'Ratio in % of unused space in a bundle to rewrite that bundle'"))
+            .arg(Arg::from_usage("-r --ratio [NUM] 'Ratio in % of unused space in a bundle to rewrite that bundle'")
+                .default_value(DEFAULT_VACUUM_RATIO_STR).validator(validate_num))
             .arg(Arg::from_usage("-f --force 'Actually run the vacuum instead of simulating it'"))
-            .arg(Arg::from_usage("[REPO] 'Path of the repository'")))
+            .arg(Arg::from_usage("[REPO] 'Path of the repository'")
+                .validator(|val| validate_repo_path(val, true, Some(false), Some(false)))))
         .subcommand(SubCommand::with_name("check").about("Check the repository, a backup or a backup subtree")
             .arg(Arg::from_usage("--full 'Also check file contents (slow)'"))
-            .arg(Arg::from_usage("[PATH] 'Path of the repository/backup/subtree, [repository][::backup[::subtree]]'")))
+            .arg(Arg::from_usage("[PATH] 'Path of the repository/backup/subtree, [repository][::backup[::subtree]]'")
+                .validator(|val| validate_repo_path(val, true, None, None))))
         .subcommand(SubCommand::with_name("list").alias("ls").about("List backups or backup contents")
-            .arg(Arg::from_usage("[PATH] 'Path of the repository/backup/subtree, [repository][::backup[::subtree]]'")))
+            .arg(Arg::from_usage("[PATH] 'Path of the repository/backup/subtree, [repository][::backup[::subtree]]'")
+                .validator(|val| validate_repo_path(val, true, None, None))))
         .subcommand(SubCommand::with_name("mount").about("Mount the repository, a backup or a subtree")
-            .arg(Arg::from_usage("[PATH] 'Path of the repository/backup/subtree, [repository][::backup[::subtree]]'"))
-            .arg(Arg::from_usage("<MOUNTPOINT> 'Existing mount point'")))
+            .arg(Arg::from_usage("[PATH] 'Path of the repository/backup/subtree, [repository][::backup[::subtree]]'")
+                .validator(|val| validate_repo_path(val, true, None, None)))
+            .arg(Arg::from_usage("<MOUNTPOINT> 'Existing mount point'")
+                .validator(validate_existing_path)))
         .subcommand(SubCommand::with_name("bundlelist").about("List bundles in a repository")
-            .arg(Arg::from_usage("[REPO] 'Path of the repository'")))
+            .arg(Arg::from_usage("[REPO] 'Path of the repository'")
+                .validator(|val| validate_repo_path(val, true, Some(false), Some(false)))))
         .subcommand(SubCommand::with_name("bundleinfo").about("Display information on a bundle")
-            .arg(Arg::from_usage("[REPO] 'Path of the repository'"))
+            .arg(Arg::from_usage("[REPO] 'Path of the repository'")
+                .validator(|val| validate_repo_path(val, true, Some(false), Some(false))))
             .arg(Arg::from_usage("<BUNDLE> 'Id of the bundle'")))
         .subcommand(SubCommand::with_name("import").about("Reconstruct a repository from the remote storage")
             .arg(Arg::from_usage("-k --key [FILE]... 'Key file needed to read the bundles'"))
-            .arg(Arg::from_usage("<REMOTE> 'Remote repository path'"))
-            .arg(Arg::from_usage("[REPO] 'The path for the new repository'")))
+            .arg(Arg::from_usage("<REMOTE> 'Remote repository path'")
+                .validator(validate_existing_path))
+            .arg(Arg::from_usage("[REPO] 'The path for the new repository'")
+                .validator(|val| validate_repo_path(val, false, Some(false), Some(false)))))
         .subcommand(SubCommand::with_name("info").about("Display information on a repository, a backup or a subtree")
-            .arg(Arg::from_usage("[PATH] 'Path of the repository/backup/subtree, [repository][::backup[::subtree]]'")))
+            .arg(Arg::from_usage("[PATH] 'Path of the repository/backup/subtree, [repository][::backup[::subtree]]'")
+                .validator(|val| validate_repo_path(val, true, None, None))))
         .subcommand(SubCommand::with_name("analyze").about("Analyze the used and reclaimable space of bundles")
-            .arg(Arg::from_usage("[REPO] 'Path of the repository'")))
+            .arg(Arg::from_usage("[REPO] 'Path of the repository'")
+                .validator(|val| validate_repo_path(val, true, Some(false), Some(false)))))
         .subcommand(SubCommand::with_name("versions").about("Find different versions of a file in all backups")
-            .arg(Arg::from_usage("[REPO] 'Path of the repository'"))
+            .arg(Arg::from_usage("[REPO] 'Path of the repository'")
+                .validator(|val| validate_repo_path(val, true, Some(false), Some(false))))
             .arg(Arg::from_usage("<PATH> 'Path of the file'")))
         .subcommand(SubCommand::with_name("diff").about("Display differences between two backup versions")
-            .arg(Arg::from_usage("<OLD> 'Old version, [repository]::backup[::subpath]'"))
-            .arg(Arg::from_usage("<NEW> 'New version, [repository]::backup[::subpath]'")))
+            .arg(Arg::from_usage("<OLD> 'Old version, [repository]::backup[::subpath]'")
+                .validator(|val| validate_repo_path(val, true, Some(true), None)))
+            .arg(Arg::from_usage("<NEW> 'New version, [repository]::backup[::subpath]'")
+                .validator(|val| validate_repo_path(val, true, Some(true), None))))
         .subcommand(SubCommand::with_name("config").about("Display or change the configuration")
-            .arg(Arg::from_usage("[bundle_size] --bundle-size [SIZE] 'Set the target bundle size in MiB (default: 25)'"))
-            .arg(Arg::from_usage("--chunker [CHUNKER] 'Set the chunker algorithm and target chunk size (default: fastcdc/16)'"))
-            .arg(Arg::from_usage("-c --compression [COMPRESSION] 'Set the compression method and level (default: brotli/3)'"))
-            .arg(Arg::from_usage("-e --encryption [PUBLIC_KEY] 'The public key to use for encryption'"))
-            .arg(Arg::from_usage("--hash [HASH] 'Set the hash method (default: blake2)'"))
-            .arg(Arg::from_usage("[REPO] 'Path of the repository'")))
+            .arg(Arg::from_usage("[bundle_size] --bundle-size [SIZE] 'Set the target bundle size in MiB'")
+                .validator(validate_num))
+            .arg(Arg::from_usage("--chunker [CHUNKER] 'Set the chunker algorithm and target chunk size'")
+                .validator(validate_chunker))
+            .arg(Arg::from_usage("-c --compression [COMPRESSION] 'Set the compression method and level'")
+                .validator(validate_compression))
+            .arg(Arg::from_usage("-e --encryption [PUBLIC_KEY] 'The public key to use for encryption'")
+                .validator(validate_public_key))
+            .arg(Arg::from_usage("--hash [HASH] 'Set the hash method'")
+                .validator(validate_hash))
+            .arg(Arg::from_usage("[REPO] 'Path of the repository'")
+                .validator(|val| validate_repo_path(val, true, Some(false), Some(false)))))
         .subcommand(SubCommand::with_name("genkey").about("Generate a new key pair")
             .arg(Arg::from_usage("[FILE] 'Destination file for the keypair'")))
         .subcommand(SubCommand::with_name("addkey").about("Add a key pair to the repository")
-            .arg(Arg::from_usage("-g --generate 'Generate a new key pair'").conflicts_with("FILE"))
+            .arg(Arg::from_usage("-g --generate 'Generate a new key pair'")
+                .conflicts_with("FILE"))
             .arg(Arg::from_usage("[set_default] --default -d 'Set the key pair as default'"))
-            .arg(Arg::from_usage("[FILE] 'File containing the keypair'").conflicts_with("generate"))
-            .arg(Arg::from_usage("[REPO] 'Path of the repository'")))
+            .arg(Arg::from_usage("[FILE] 'File containing the keypair'")
+                .required_unless("generate").validator(validate_existing_path))
+            .arg(Arg::from_usage("[REPO] 'Path of the repository'")
+                .validator(|val| validate_repo_path(val, true, Some(false), Some(false)))))
         .subcommand(SubCommand::with_name("algotest").about("Test a specific algorithm combination")
-            .arg(Arg::from_usage("[bundle_size] --bundle-size [SIZE] 'Set the target bundle size in MiB (default: 25)'"))
-            .arg(Arg::from_usage("--chunker [CHUNKER] 'Set the chunker algorithm and target chunk size (default: fastcdc/16)'"))
-            .arg(Arg::from_usage("-c --compression [COMPRESSION] 'Set the compression method and level (default: brotli/3)'"))
-            .arg(Arg::from_usage("-e --encryption 'Generate a keypair and enable encryption'"))
-            .arg(Arg::from_usage("--hash [HASH] 'Set the hash method (default: blake2)'"))
-            .arg(Arg::from_usage("<FILE> 'File with test data'"))).get_matches();
+            .arg(Arg::from_usage("[bundle_size] --bundle-size [SIZE] 'Set the target bundle size in MiB'")
+                .default_value(DEFAULT_BUNDLE_SIZE_STR).validator(validate_num))
+            .arg(Arg::from_usage("--chunker [CHUNKER] 'Set the chunker algorithm and target chunk size'")
+                .default_value(DEFAULT_CHUNKER).validator(validate_chunker))
+            .arg(Arg::from_usage("-c --compression [COMPRESSION] 'Set the compression method and level'")
+                .default_value(DEFAULT_COMPRESSION).validator(validate_compression))
+            .arg(Arg::from_usage("-e --encrypt 'Generate a keypair and enable encryption'"))
+            .arg(Arg::from_usage("--hash [HASH] 'Set the hash method'")
+                .default_value(DEFAULT_HASH).validator(validate_hash))
+            .arg(Arg::from_usage("<FILE> 'File with test data'")
+                .validator(validate_existing_path))).get_matches();
     if let Some(args) = args.subcommand_matches("init") {
-        let (repository, _backup, _inode) = try!(parse_repo_path(args.value_of("REPO").unwrap_or(""), Some(false), Some(false)));
+        let (repository, _backup, _inode) = parse_repo_path(args.value_of("REPO").unwrap_or(""), false, Some(false), Some(false)).unwrap();
         return Ok(Arguments::Init {
-            bundle_size: (try!(parse_num(args.value_of("bundle_size").unwrap_or(&DEFAULT_BUNDLE_SIZE.to_string()), "Bundle size")) * 1024 * 1024) as usize,
-            chunker: try!(parse_chunker(args.value_of("chunker").unwrap_or(DEFAULT_CHUNKER))),
-            compression: try!(parse_compression(args.value_of("compression").unwrap_or(DEFAULT_COMPRESSION))),
+            bundle_size: (parse_num(args.value_of("bundle_size").unwrap()).unwrap() * 1024 * 1024) as usize,
+            chunker: parse_chunker(args.value_of("chunker").unwrap()).unwrap(),
+            compression: parse_compression(args.value_of("compression").unwrap()).unwrap(),
             encryption: args.is_present("encrypt"),
-            hash: try!(parse_hash(args.value_of("hash").unwrap_or(DEFAULT_HASH))),
+            hash: parse_hash(args.value_of("hash").unwrap()).unwrap(),
             repo_path: repository.to_string(),
             remote_path: args.value_of("remote").unwrap().to_string()
         })
     }
     if let Some(args) = args.subcommand_matches("backup") {
-        let (repository, backup, _inode) = try!(parse_repo_path(args.value_of("BACKUP").unwrap(), Some(true), Some(false)));
+        let (repository, backup, _inode) = parse_repo_path(args.value_of("BACKUP").unwrap(), true, Some(true), Some(false)).unwrap();
         return Ok(Arguments::Backup {
             repo_path: repository.to_string(),
             backup_name: backup.unwrap().to_string(),
@@ -349,7 +437,7 @@ pub fn parse() -> Result<Arguments, ErrorCode> {
         })
     }
     if let Some(args) = args.subcommand_matches("restore") {
-        let (repository, backup, inode) = try!(parse_repo_path(args.value_of("BACKUP").unwrap(), Some(true), None));
+        let (repository, backup, inode) = parse_repo_path(args.value_of("BACKUP").unwrap(), true, Some(true), None).unwrap();
         return Ok(Arguments::Restore {
             repo_path: repository.to_string(),
             backup_name: backup.unwrap().to_string(),
@@ -359,7 +447,7 @@ pub fn parse() -> Result<Arguments, ErrorCode> {
         })
     }
     if let Some(args) = args.subcommand_matches("remove") {
-        let (repository, backup, inode) = try!(parse_repo_path(args.value_of("BACKUP").unwrap(), Some(true), None));
+        let (repository, backup, inode) = parse_repo_path(args.value_of("BACKUP").unwrap(), true, Some(true), None).unwrap();
         return Ok(Arguments::Remove {
             repo_path: repository.to_string(),
             backup_name: backup.unwrap().to_string(),
@@ -367,39 +455,39 @@ pub fn parse() -> Result<Arguments, ErrorCode> {
         })
     }
     if let Some(args) = args.subcommand_matches("prune") {
-        let (repository, _backup, _inode) = try!(parse_repo_path(args.value_of("REPO").unwrap_or(""), Some(false), Some(false)));
+        let (repository, _backup, _inode) = parse_repo_path(args.value_of("REPO").unwrap_or(""), true, Some(false), Some(false)).unwrap();
         return Ok(Arguments::Prune {
             repo_path: repository.to_string(),
             prefix: args.value_of("prefix").unwrap_or("").to_string(),
             force: args.is_present("force"),
             daily: match args.value_of("daily") {
                 None => None,
-                Some(v) => Some(try!(parse_num(v, "daily backups")) as usize)
+                Some(v) => Some(parse_num(v).unwrap() as usize)
             },
             weekly: match args.value_of("weekly") {
                 None => None,
-                Some(v) => Some(try!(parse_num(v, "weekly backups")) as usize)
+                Some(v) => Some(parse_num(v).unwrap() as usize)
             },
             monthly: match args.value_of("monthly") {
                 None => None,
-                Some(v) => Some(try!(parse_num(v, "monthly backups")) as usize)
+                Some(v) => Some(parse_num(v).unwrap() as usize)
             },
             yearly: match args.value_of("yearly") {
                 None => None,
-                Some(v) => Some(try!(parse_num(v, "yearly backups")) as usize)
+                Some(v) => Some(parse_num(v).unwrap() as usize)
             }
         })
     }
     if let Some(args) = args.subcommand_matches("vacuum") {
-        let (repository, _backup, _inode) = try!(parse_repo_path(args.value_of("REPO").unwrap_or(""), Some(false), Some(false)));
+        let (repository, _backup, _inode) = parse_repo_path(args.value_of("REPO").unwrap_or(""), true, Some(false), Some(false)).unwrap();
         return Ok(Arguments::Vacuum {
             repo_path: repository.to_string(),
             force: args.is_present("force"),
-            ratio: try!(parse_num(args.value_of("ratio").unwrap_or(&DEFAULT_VACUUM_RATIO.to_string()), "ratio")) as f32 / 100.0
+            ratio: parse_num(args.value_of("ratio").unwrap()).unwrap() as f32 / 100.0
         })
     }
     if let Some(args) = args.subcommand_matches("check") {
-        let (repository, backup, inode) = try!(parse_repo_path(args.value_of("PATH").unwrap_or(""), None, None));
+        let (repository, backup, inode) = parse_repo_path(args.value_of("PATH").unwrap_or(""), true, None, None).unwrap();
         return Ok(Arguments::Check {
             repo_path: repository.to_string(),
             backup_name: backup.map(|v| v.to_string()),
@@ -408,7 +496,7 @@ pub fn parse() -> Result<Arguments, ErrorCode> {
         })
     }
     if let Some(args) = args.subcommand_matches("list") {
-        let (repository, backup, inode) = try!(parse_repo_path(args.value_of("PATH").unwrap_or(""), None, None));
+        let (repository, backup, inode) = parse_repo_path(args.value_of("PATH").unwrap_or(""), true, None, None).unwrap();
         return Ok(Arguments::List {
             repo_path: repository.to_string(),
             backup_name: backup.map(|v| v.to_string()),
@@ -416,20 +504,20 @@ pub fn parse() -> Result<Arguments, ErrorCode> {
         })
     }
     if let Some(args) = args.subcommand_matches("bundlelist") {
-        let (repository, _backup, _inode) = try!(parse_repo_path(args.value_of("REPO").unwrap_or(""), Some(false), Some(false)));
+        let (repository, _backup, _inode) = parse_repo_path(args.value_of("REPO").unwrap_or(""), true, Some(false), Some(false)).unwrap();
         return Ok(Arguments::BundleList {
             repo_path: repository.to_string(),
         })
     }
     if let Some(args) = args.subcommand_matches("bundleinfo") {
-        let (repository, _backup, _inode) = try!(parse_repo_path(args.value_of("REPO").unwrap_or(""), Some(false), Some(false)));
+        let (repository, _backup, _inode) = parse_repo_path(args.value_of("REPO").unwrap_or(""), true, Some(false), Some(false)).unwrap();
         return Ok(Arguments::BundleInfo {
             repo_path: repository.to_string(),
             bundle_id: try!(parse_bundle_id(args.value_of("BUNDLE").unwrap()))
         })
     }
     if let Some(args) = args.subcommand_matches("info") {
-        let (repository, backup, inode) = try!(parse_repo_path(args.value_of("PATH").unwrap_or(""), None, None));
+        let (repository, backup, inode) = parse_repo_path(args.value_of("PATH").unwrap_or(""), true, None, None).unwrap();
         return Ok(Arguments::Info {
             repo_path: repository.to_string(),
             backup_name: backup.map(|v| v.to_string()),
@@ -437,7 +525,7 @@ pub fn parse() -> Result<Arguments, ErrorCode> {
         })
     }
     if let Some(args) = args.subcommand_matches("mount") {
-        let (repository, backup, inode) = try!(parse_repo_path(args.value_of("PATH").unwrap_or(""), None, None));
+        let (repository, backup, inode) = parse_repo_path(args.value_of("PATH").unwrap_or(""), true, None, None).unwrap();
         return Ok(Arguments::Mount {
             repo_path: repository.to_string(),
             backup_name: backup.map(|v| v.to_string()),
@@ -446,15 +534,15 @@ pub fn parse() -> Result<Arguments, ErrorCode> {
         })
     }
     if let Some(args) = args.subcommand_matches("versions") {
-        let (repository, _backup, _inode) = try!(parse_repo_path(args.value_of("REPO").unwrap_or(""), Some(false), Some(false)));
+        let (repository, _backup, _inode) = parse_repo_path(args.value_of("REPO").unwrap_or(""), true, Some(false), Some(false)).unwrap();
         return Ok(Arguments::Versions {
             repo_path: repository.to_string(),
             path: args.value_of("PATH").unwrap().to_string()
         })
     }
     if let Some(args) = args.subcommand_matches("diff") {
-        let (repository_old, backup_old, inode_old) = try!(parse_repo_path(args.value_of("OLD").unwrap(), Some(true), None));
-        let (repository_new, backup_new, inode_new) = try!(parse_repo_path(args.value_of("NEW").unwrap(), Some(true), None));
+        let (repository_old, backup_old, inode_old) = parse_repo_path(args.value_of("OLD").unwrap(), true, Some(true), None).unwrap();
+        let (repository_new, backup_new, inode_new) = parse_repo_path(args.value_of("NEW").unwrap(), true, Some(true), None).unwrap();
         return Ok(Arguments::Diff {
             repo_path_old: repository_old.to_string(),
             backup_name_old: backup_old.unwrap().to_string(),
@@ -465,13 +553,13 @@ pub fn parse() -> Result<Arguments, ErrorCode> {
         })
     }
     if let Some(args) = args.subcommand_matches("analyze") {
-        let (repository, _backup, _inode) = try!(parse_repo_path(args.value_of("REPO").unwrap_or(""), Some(false), Some(false)));
+        let (repository, _backup, _inode) = parse_repo_path(args.value_of("REPO").unwrap_or(""), true, Some(false), Some(false)).unwrap();
         return Ok(Arguments::Analyze {
             repo_path: repository.to_string()
         })
     }
     if let Some(args) = args.subcommand_matches("import") {
-        let (repository, _backup, _inode) = try!(parse_repo_path(args.value_of("REPO").unwrap_or(""), Some(false), Some(false)));
+        let (repository, _backup, _inode) = parse_repo_path(args.value_of("REPO").unwrap_or(""), false, Some(false), Some(false)).unwrap();
         return Ok(Arguments::Import {
             repo_path: repository.to_string(),
             remote_path: args.value_of("REMOTE").unwrap().to_string(),
@@ -479,28 +567,27 @@ pub fn parse() -> Result<Arguments, ErrorCode> {
         })
     }
     if let Some(args) = args.subcommand_matches("config") {
-        let (repository, _backup, _inode) = try!(parse_repo_path(args.value_of("REPO").unwrap_or(""), Some(false), Some(false)));
+        let (repository, _backup, _inode) = parse_repo_path(args.value_of("REPO").unwrap_or(""), true, Some(false), Some(false)).unwrap();
         return Ok(Arguments::Config {
             bundle_size: match args.value_of("bundle_size") {
                 None => None,
-                Some(v) => Some((try!(parse_num(v, "Bundle size")) * 1024 * 1024) as usize)
+                Some(v) => Some((parse_num(v).unwrap() * 1024 * 1024) as usize)
             },
             chunker: match args.value_of("chunker") {
                 None => None,
-                Some(v) => Some(try!(parse_chunker(v)))
+                Some(v) => Some(parse_chunker(v).unwrap())
             },
             compression: match args.value_of("compression") {
                 None => None,
-                Some(v) => Some(try!(parse_compression(v)))
+                Some(v) => Some(parse_compression(v).unwrap())
             },
             encryption: match args.value_of("encryption") {
                 None => None,
-                Some("none") => Some(None),
-                Some(v) => Some(Some(try!(parse_public_key(v))))
+                Some(v) => Some(parse_public_key(v).unwrap())
             },
             hash: match args.value_of("hash") {
                 None => None,
-                Some(v) => Some(try!(parse_hash(v)))
+                Some(v) => Some(parse_hash(v).unwrap())
             },
             repo_path: repository.to_string(),
         })
@@ -511,16 +598,7 @@ pub fn parse() -> Result<Arguments, ErrorCode> {
         })
     }
     if let Some(args) = args.subcommand_matches("addkey") {
-        let (repository, _backup, _inode) = try!(parse_repo_path(args.value_of("REPO").unwrap_or(""), Some(false), Some(false)));
-        let generate = args.is_present("generate");
-        if !generate && !args.is_present("FILE") {
-            println!("Without --generate, a file containing the key pair must be given");
-            return Err(ErrorCode::InvalidArgs)
-        }
-        if generate && args.is_present("FILE") {
-            println!("With --generate, no file may be given");
-            return Err(ErrorCode::InvalidArgs)
-        }
+        let (repository, _backup, _inode) = parse_repo_path(args.value_of("REPO").unwrap_or(""), true, Some(false), Some(false)).unwrap();
         return Ok(Arguments::AddKey {
             repo_path: repository.to_string(),
             set_default: args.is_present("set_default"),
@@ -529,11 +607,11 @@ pub fn parse() -> Result<Arguments, ErrorCode> {
     }
     if let Some(args) = args.subcommand_matches("algotest") {
         return Ok(Arguments::AlgoTest {
-            bundle_size: (try!(parse_num(args.value_of("bundle_size").unwrap_or(&DEFAULT_BUNDLE_SIZE.to_string()), "Bundle size")) * 1024 * 1024) as usize,
-            chunker: try!(parse_chunker(args.value_of("chunker").unwrap_or(DEFAULT_CHUNKER))),
-            compression: try!(parse_compression(args.value_of("compression").unwrap_or(DEFAULT_COMPRESSION))),
+            bundle_size: (parse_num(args.value_of("bundle_size").unwrap()).unwrap() * 1024 * 1024) as usize,
+            chunker: parse_chunker(args.value_of("chunker").unwrap()).unwrap(),
+            compression: parse_compression(args.value_of("compression").unwrap()).unwrap(),
             encrypt: args.is_present("encrypt"),
-            hash: try!(parse_hash(args.value_of("hash").unwrap_or(DEFAULT_HASH))),
+            hash: parse_hash(args.value_of("hash").unwrap()).unwrap(),
             file: args.value_of("FILE").unwrap().to_string(),
         })
     }

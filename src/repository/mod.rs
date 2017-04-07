@@ -140,11 +140,14 @@ impl Repository {
             try!(repo.crypto.lock().unwrap().register_keyfile(file));
         }
         repo = try!(Repository::open(path));
-        let mut backups: Vec<Backup> = try!(repo.get_backups()).into_iter().map(|(_, v)| v).collect();
-        backups.sort_by_key(|b| b.date);
-        if let Some(backup) = backups.pop() {
+        let mut backups: Vec<(String, Backup)> = try!(repo.get_backups()).into_iter().collect();
+        backups.sort_by_key(|&(_, ref b)| b.date);
+        if let Some((name, backup)) = backups.pop() {
+            info!("Taking configuration from the last backup '{}'", name);
             repo.config = backup.config;
             try!(repo.save_config())
+        } else {
+            warn!("No backup found in the repository to take configuration from, please set the configuration manually.");
         }
         Ok(repo)
     }

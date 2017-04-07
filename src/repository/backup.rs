@@ -112,12 +112,13 @@ impl Repository {
             mark_needed(&backups, &mut keep, max, |d| (d.year(), d.month(), d.day()));
         }
         let mut remove = Vec::new();
+        info!("Removing the following backups");
         for (i, backup) in backups.into_iter().enumerate() {
             if !keep.get(i) {
+                println!("  - {}", backup.0);
                 remove.push(backup.0);
             }
         }
-        info!("Removing the following backups: {:?}", remove);
         if force {
             for name in remove {
                 try!(self.delete_backup(&name));

@@ -172,6 +172,7 @@ impl BundleDb {
     pub fn update_cache(&mut self, new: &[StoredBundle], gone: &[StoredBundle]) -> Result<(), BundleDbError> {
         for bundle in new {
             if bundle.info.mode == BundleMode::Meta {
+                info!("Copying new meta bundle to local cache: {}", bundle.info.id);
                 try!(self.copy_remote_bundle_to_cache(bundle));
             }
         }

@@ -67,8 +67,8 @@ impl ErrorCode {
 pub const DEFAULT_CHUNKER: &'static str = "fastcdc/16";
 pub const DEFAULT_HASH: &'static str = "blake2";
 pub const DEFAULT_COMPRESSION: &'static str = "brotli/3";
-pub const DEFAULT_BUNDLE_SIZE: usize = 25;
-pub const DEFAULT_VACUUM_RATIO: usize = 0;
+pub const DEFAULT_BUNDLE_SIZE_STR: &'static str = "25";
+pub const DEFAULT_VACUUM_RATIO_STR: &'static str = "0";
 lazy_static! {
     pub static ref DEFAULT_REPOSITORY: String = {
         env::home_dir().unwrap().join(".zvault").to_string_lossy().to_string()
@@ -271,11 +271,13 @@ pub fn run() -> Result<(), ErrorCode> {
             }, remote_path), "create repository", ErrorCode::CreateRepository);
             if encryption {
                 let (public, secret) = gen_keypair();
+                info!("Created the following key pair");
                 println!("public: {}", to_hex(&public[..]));
                 println!("secret: {}", to_hex(&secret[..]));
                 repo.set_encryption(Some(&public));
                 checked!(repo.register_key(public, secret), "add key", ErrorCode::AddKey);
                 checked!(repo.save_config(), "save config", ErrorCode::SaveConfig);
+                warn!("Please store this key pair in a secure location before using the repository");
                 println!();
             }
             print_config(&repo.config);
@@ -337,6 +339,7 @@ pub fn run() -> Result<(), ErrorCode> {
             } else {
                 repo.create_backup_recursively(&src_path, reference_backup.as_ref(), &options)
             };
+            info!("Backup finished");
             let backup = match result {
                 Ok(backup) => backup,
                 Err(RepositoryError::Backup(BackupError::FailedPaths(backup, _failed_paths))) => {
@@ -364,6 +367,7 @@ pub fn run() -> Result<(), ErrorCode> {
             } else {
                 checked!(repo.restore_inode_tree(inode, &dst_path), "restore backup", ErrorCode::RestoreRun);
             }
+            info!("Backup finished");
         },
         Arguments::Remove{repo_path, backup_name, inode} => {
             let mut repo = try!(open_repository(&repo_path));
@@ -468,6 +472,8 @@ pub fn run() -> Result<(), ErrorCode> {
             } else {
                 checked!(FuseFilesystem::from_repository(&mut repo), "create fuse filesystem", ErrorCode::FuseMount)
             };
+            info!("Mounting the filesystem...");
+            info!("Please unmount the filesystem via 'fusermount -u {}' when done.", mount_point);
             checked!(fs.mount(&mount_point), "mount filesystem", ErrorCode::FuseMount);
         },
         Arguments::Analyze{repo_path} => {
@@ -491,12 +497,18 @@ pub fn run() -> Result<(), ErrorCode> {
         },
         Arguments::Import{repo_path, remote_path, key_files} => {
             checked!(Repository::import(repo_path, remote_path, key_files), "import repository", ErrorCode::ImportRun);
+            info!("Import finished");
         },
         Arguments::Versions{repo_path, path} => {
             let mut repo = try!(open_repository(&repo_path));
+            let mut found = false;
             for (name, mut inode) in checked!(repo.find_versions(&path), "find versions", ErrorCode::VersionsRun) {
                 inode.name = format!("{}::{}", name, &path);
                 println!("{}", format_inode_one_line(&inode));
+                found = true;
+            }
+            if !found {
+                info!("No versions of that file were found.");
             }
         },
         Arguments::Diff{repo_path_old, backup_name_old, inode_old, repo_path_new, backup_name_new, inode_new} => {
@@ -510,38 +522,52 @@ pub fn run() -> Result<(), ErrorCode> {
             let inode1 = checked!(repo.get_backup_inode(&backup_old, inode_old.unwrap_or_else(|| "/".to_string())), "load subpath inode", ErrorCode::LoadInode);
             let inode2 = checked!(repo.get_backup_inode(&backup_new, inode_new.unwrap_or_else(|| "/".to_string())), "load subpath inode", ErrorCode::LoadInode);
             let diffs = checked!(repo.find_differences(&inode1, &inode2), "find differences", ErrorCode::DiffRun);
-            for diff in diffs {
+            for diff in &diffs {
                 println!("{} {:?}", match diff.0 {
                     DiffType::Add => "add",
                     DiffType::Mod => "mod",
                     DiffType::Del => "del"
                 }, diff.1);
             }
+            if diffs.is_empty() {
+                info!("No differences found");
+            }
         },
         Arguments::Config{repo_path, bundle_size, chunker, compression, encryption, hash} => {
             let mut repo = try!(open_repository(&repo_path));
+            let mut changed = false;
             if let Some(bundle_size) = bundle_size {
-                repo.config.bundle_size = bundle_size
+                repo.config.bundle_size = bundle_size;
+                changed = true;
             }
             if let Some(chunker) = chunker {
                 warn!("Changing the chunker makes it impossible to use existing data for deduplication");
-                repo.config.chunker = chunker
+                repo.config.chunker = chunker;
+                changed = true;
             }
             if let Some(compression) = compression {
-                repo.config.compression = compression
+                repo.config.compression = compression;
+                changed = true;
             }
             if let Some(encryption) = encryption {
-                repo.set_encryption(encryption.as_ref())
+                repo.set_encryption(encryption.as_ref());
+                changed = true;
             }
             if let Some(hash) = hash {
                 warn!("Changing the hash makes it impossible to use existing data for deduplication");
-                repo.config.hash = hash
+                repo.config.hash = hash;
+                changed = true;
             }
-            checked!(repo.save_config(), "save config", ErrorCode::SaveConfig);
-            print_config(&repo.config);
+            if changed {
+                checked!(repo.save_config(), "save config", ErrorCode::SaveConfig);
+                info!("The configuration has been updated.");
+            } else {
+                print_config(&repo.config);
+            }
         },
         Arguments::GenKey{file} => {
             let (public, secret) = gen_keypair();
+            info!("Created the following key pair");
             println!("public: {}", to_hex(&public[..]));
             println!("secret: {}", to_hex(&secret[..]));
             if let Some(file) = file {
@@ -553,6 +579,7 @@ pub fn run() -> Result<(), ErrorCode> {
             let (public, secret) = if let Some(file) = file {
                 checked!(Crypto::load_keypair_from_file(file), "load key pair", ErrorCode::LoadKey)
             } else {
+                info!("Created the following key pair");
                 let (public, secret) = gen_keypair();
                 println!("public: {}", to_hex(&public[..]));
                 println!("secret: {}", to_hex(&secret[..]));
@@ -562,6 +589,7 @@ pub fn run() -> Result<(), ErrorCode> {
             if set_default {
                 repo.set_encryption(Some(&public));
                 checked!(repo.save_config(), "save config", ErrorCode::SaveConfig);
+                warn!("Please store this key pair in a secure location before using the repository");
             }
         },
         Arguments::AlgoTest{bundle_size, chunker, compression, encrypt, hash, file} => {
