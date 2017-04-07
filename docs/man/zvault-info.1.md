@@ -3,7 +3,7 @@ zvault-info(1) -- Display information on a repository, a backup or a subtree
 
 ## SYNOPSIS
 
-`zvault info [PATH]`
+`zvault info <PATH>`
 
 
 ## DESCRIPTION
@@ -13,7 +13,6 @@ specified by `PATH`.
 
 The repository, backup or backup subtree given by `PATH` must be in the format
 `[repository][::backup_name[::subtree]]` as described in _zvault(1)_.
-If `PATH` is omitted, the default repository location is used instead.
 
 
 ## OPTIONS

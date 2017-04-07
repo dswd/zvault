@@ -232,6 +232,17 @@ impl Repository {
         Ok(())
     }
 
+    pub fn rebuild_index(&mut self) -> Result<(), RepositoryError> {
+        self.index.clear();
+        for (num, id) in self.bundle_map.bundles() {
+            let chunks = try!(self.bundles.get_chunk_list(&id));
+            for (i, (hash, _len)) in chunks.into_inner().into_iter().enumerate() {
+                try!(self.index.set(&hash, &Location{bundle: num as u32, chunk: i as u32}));
+            }
+        }
+        Ok(())
+    }
+
     fn remove_gone_remote_bundle(&mut self, bundle: BundleInfo) -> Result<(), RepositoryError> {
         if let Some(id) = self.bundle_map.find(&bundle.id) {
             info!("Removing bundle from index: {}", bundle.id);

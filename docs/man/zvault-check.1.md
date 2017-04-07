@@ -3,7 +3,7 @@ zvault-check(1) -- Check the repository, a backup or a backup subtree
 
 ## SYNOPSIS
 
-`zvault check [OPTIONS] [PATH]`
+`zvault check [OPTIONS] <PATH>`
 
 
 ## DESCRIPTION
@@ -13,7 +13,6 @@ This subcommand checks the repository, a backup or a backup subtree given by
 
 The repository, backup, of subtree given by `PATH` must be in the format
 `[repository][::backup_name[::subtree]]` as described in _zvault(1)_.
-If `PATH` is omitted, the default repository location is used instead.
 
 The command will perform the following checks in order:
 - Bundle integrity

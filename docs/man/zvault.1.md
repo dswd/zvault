@@ -65,8 +65,8 @@ location.
 ### Path syntax
 
 Most subcommands work with a repository that has to be specified as a parameter.
-If this repository is not specified, the default repository in `~/.zvault` will
-be used instead.
+If this repository is specified as `::`, the default repository in `~/.zvault`
+will be used instead.
 
 Some subcommands need to reference a specific backup in the repository. This is
 done via the syntax `repository::backup_name` where `repository` is the path to
@@ -86,8 +86,9 @@ this case it is important to note that if a path component is empty, it is
 regarded as not set at all.
 
 Examples:
+
 - `~/.zvault` references the repository in `~/.zvault` and is identical with
-  `::` (as well as not setting the path at all).
+  `::`.
 - `::backup1` references the backup `backup1` in the default repository
 - `::backup1::/` references the root folder of the backup `backup1` in the
   default repository
@@ -131,12 +132,14 @@ changed.
 
 ZVault offers different chunker algorithms with different properties to choose
 from:
+
 - The **rabin** chunker is a very common algorithm with a good quality but a
   mediocre speed (about 350 MB/s).
 - The **ae** chunker is a novel approach that can reach very high speeds
   (over 750 MB/s) at a cost of deduplication rate.
 - The **fastcdc** algorithm reaches a similar deduplication rate as the rabin
   chunker but is faster (about 550 MB/s).
+
 The recommended chunker is **fastcdc**.
 
 Besides the chunker algorithm, an important setting is the target chunk size,
@@ -155,6 +158,7 @@ per chunk should be a safe value to calculate with.
 
 The configured value for chunk size needs to be a power of 2. Here is a
 selection of chunk sizes and their estimated RAM usage:
+
 - Chunk size 4 KiB => ~40 GiB data stored in 1 GiB RAM
 - Chunk size 8 KiB => ~80 GiB data stored in 1 GiB RAM
 - Chunk size 16 KiB => ~160 GiB data stored in 1 GiB RAM
@@ -164,6 +168,7 @@ selection of chunk sizes and their estimated RAM usage:
 - Chunk size 256 KiB => ~2.5 TiB data stored in 1 GiB RAM
 - Chunk size 512 KiB => ~5 TiB data stored in 1 GiB RAM
 - Chunk size 1024 KiB => ~10 TiB data stored in 1 GiB RAM
+
 The recommended chunk size for normal computers is 16 KiB. Servers with lots of
 data might want to use 128 KiB or 1024 KiB instead.
 
@@ -189,6 +194,7 @@ space. Higher compression takes longer and saves more space while low
 compression is faster but needs more space.
 
 ZVault supports the following compression methods:
+
 - **deflate** (also called *zlib* and *gzip*) is the most common algorithm today
   and guarantees that backups can be decompressed in future centuries. Its
   speed and compression ratio are acceptable but other algorithms are better.
@@ -208,6 +214,7 @@ ZVault supports the following compression methods:
   9 (best).
 
 The recommended combinations are:
+
 - Focusing speed: lz4 with level between 1 and 7
 - Balanced focus: brotli with levels between 1 and 10
 - Focusing storage space: lzma with levels between 1 and 9
@@ -215,6 +222,7 @@ The recommended combinations are:
 The compression algorithm and level are configured together via the syntax
 `algorithm/level` where `algorithm` is either `deflate`, `lz4`, `brotli` or
 `lzma` and `level` is a number.
+
 The default compression setting is **brotli/3**.
 
 Since the compression ratio and speed hugely depend on the input data,
@@ -272,7 +280,7 @@ The recommended hash algorithm is **blake2**.
 This command will initialize a repository in the default location with
 encryption enabled:
 
-    $> zvault init -e --remote /mnt/remote/backups
+    $> zvault init :: -e --remote /mnt/remote/backups
 
 Before using this repository, the key pair located at `~/.zvault/keys` should be
 backed up in a safe location (e.g. printed to paper).
@@ -288,7 +296,7 @@ backup them separatly (zVault will not backup mounted folders by default):
 
 The backups can be listed by this command:
 
-    $> zvault list
+    $> zvault list ::
 
 and inspected by this command (the date needs to be adapted):
 
@@ -309,12 +317,12 @@ A single backup can be removed with this command:
 Multiple backups can be removed based on their date with the following command
 (add `-f` to actually remove backups):
 
-    $> zvault prune --prefix system --daily 7 --weekly 5 --monthly 12
+    $> zvault prune :: --prefix system --daily 7 --weekly 5 --monthly 12
 
 To reclaim storage space after removing some backups vacuum needs to be run
 (add `-f` to actually remove bundles):
 
-    $> zvault vacuum
+    $> zvault vacuum ::
 
 
 

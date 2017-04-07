@@ -65,8 +65,8 @@ impl Repository {
         for (id, bundle) in self.bundle_map.bundles() {
             let bundle = try!(self.bundles.get_bundle_info(&bundle).ok_or_else(|| RepositoryIntegrityError::MissingBundle(bundle)));
             usage.insert(id, BundleAnalysis {
-                chunk_usage: Bitmap::new(bundle.chunk_count),
-                info: bundle.clone(),
+                chunk_usage: Bitmap::new(bundle.info.chunk_count),
+                info: bundle.info.clone(),
                 used_raw_size: 0
             });
         }
@@ -110,7 +110,7 @@ impl Repository {
     }
 
     #[inline]
-    pub fn get_bundle(&self, bundle: &BundleId) -> Option<&BundleInfo> {
+    pub fn get_bundle(&self, bundle: &BundleId) -> Option<&StoredBundle> {
         self.bundles.get_bundle_info(bundle)
     }
 

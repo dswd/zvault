@@ -3,7 +3,7 @@ zvault-list(1) -- List backups or backup contents
 
 ## SYNOPSIS
 
-`zvault list [PATH]`
+`zvault list <PATH>`
 
 
 ## DESCRIPTION
@@ -13,7 +13,6 @@ specified by `PATH`.
 
 The repository, backup or backup subtree given by `PATH` must be in the format
 `[repository][::backup_name[::subtree]]` as described in _zvault(1)_.
-If `PATH` is omitted, the default repository location is used instead.
 
 If `PATH` specifies a repository, all backups of this repository are listed.
 

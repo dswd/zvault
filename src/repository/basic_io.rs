@@ -80,10 +80,7 @@ impl Repository {
         self.put_chunk_override(mode, hash, data)
     }
 
-    pub fn put_chunk_override(&mut self, mode: BundleMode, hash: Hash, data: &[u8]) -> Result<(), RepositoryError> {
-        // Calculate the next free bundle id now (late lifetime prevents this)
-        let next_free_bundle_id = self.next_free_bundle_id();
-        // Select a bundle writer according to the mode and...
+    fn write_chunk_to_bundle_and_index(&mut self, mode: BundleMode, hash: Hash, data: &[u8]) -> Result<(), RepositoryError> {
         let writer = match mode {
             BundleMode::Data => &mut self.data_bundle,
             BundleMode::Meta => &mut self.meta_bundle
@@ -98,37 +95,71 @@ impl Repository {
             )));
         }
         debug_assert!(writer.is_some());
-        let chunk_id;
-        let size;
-        let raw_size;
-        {
-            // Add chunk to bundle writer and determine the size of the bundle
-            let writer_obj = writer.as_mut().unwrap();
-            chunk_id = try!(writer_obj.add(data, hash));
-            size = writer_obj.size();
-            raw_size = writer_obj.raw_size();
+        // Add chunk to bundle writer and determine the size of the bundle
+        let writer_obj = writer.as_mut().unwrap();
+        let chunk_id = try!(writer_obj.add(data, hash));
+        let bundle_id = match mode {
+            BundleMode::Data => self.next_data_bundle,
+            BundleMode::Meta => self.next_meta_bundle
+        };
+        // Add location to the index
+        try!(self.index.set(&hash, &Location::new(bundle_id, chunk_id as u32)));
+        Ok(())
+    }
+
+    fn finish_bundle(&mut self, mode: BundleMode) -> Result<(), RepositoryError> {
+        // Calculate the next free bundle id now (late lifetime prevents this)
+        let next_free_bundle_id = self.next_free_bundle_id();
+        let writer = match mode {
+            BundleMode::Data => &mut self.data_bundle,
+            BundleMode::Meta => &mut self.meta_bundle
+        };
+        if writer.is_none() {
+            return Ok(())
         }
         let bundle_id = match mode {
             BundleMode::Data => self.next_data_bundle,
             BundleMode::Meta => self.next_meta_bundle
         };
-        // Finish bundle if over maximum size
-        if size >= self.config.bundle_size || raw_size >= 4 * self.config.bundle_size {
-            let mut finished = None;
-            mem::swap(writer, &mut finished);
-            let bundle = try!(self.bundles.add_bundle(finished.unwrap()));
-            self.bundle_map.set(bundle_id, bundle.id.clone());
-            if self.next_meta_bundle == bundle_id {
-                self.next_meta_bundle = next_free_bundle_id
-            }
-            if self.next_data_bundle == bundle_id {
-                self.next_data_bundle = next_free_bundle_id
-            }
-            // Not saving the bundle map, this will be done by flush
+        let mut finished = None;
+        mem::swap(writer, &mut finished);
+        let bundle = try!(self.bundles.add_bundle(finished.unwrap()));
+        self.bundle_map.set(bundle_id, bundle.id.clone());
+        if self.next_meta_bundle == bundle_id {
+            self.next_meta_bundle = next_free_bundle_id
         }
-        // Add location to the index
-        try!(self.index.set(&hash, &Location::new(bundle_id, chunk_id as u32)));
+        if self.next_data_bundle == bundle_id {
+            self.next_data_bundle = next_free_bundle_id
+        }
         Ok(())
+    }
+
+    fn finish_bundle_if_needed(&mut self, mode: BundleMode) -> Result<(), RepositoryError> {
+        let (size, raw_size) = {
+            let writer = match mode {
+                BundleMode::Data => &mut self.data_bundle,
+                BundleMode::Meta => &mut self.meta_bundle
+            };
+            if let Some(ref writer) = *writer {
+                (writer.size(), writer.raw_size())
+            } else {
+                return Ok(())
+            }
+        };
+        if size >= self.config.bundle_size || raw_size >= 4 * self.config.bundle_size {
+            if mode == BundleMode::Meta {
+                //First store the current data bundle as meta referrs to those chunks
+                try!(self.finish_bundle(BundleMode::Data))
+            }
+            try!(self.finish_bundle(mode))
+        }
+        Ok(())
+    }
+
+    #[inline]
+    pub fn put_chunk_override(&mut self, mode: BundleMode, hash: Hash, data: &[u8]) -> Result<(), RepositoryError> {
+        try!(self.write_chunk_to_bundle_and_index(mode, hash, data));
+        self.finish_bundle_if_needed(mode)
     }
 
     #[inline]

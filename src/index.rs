@@ -523,4 +523,12 @@ impl Index {
     pub fn capacity(&self) -> usize {
         self.capacity
     }
+
+    #[inline]
+    pub fn clear(&mut self) {
+        for entry in &mut self.data[..] {
+            entry.clear();
+        }
+        self.entries = 0;
+    }
 }

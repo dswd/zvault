@@ -90,7 +90,7 @@ As an example, I am going to backup my projects folder. To do that, I am
 initializing an encrypted zVault repository, storing the data on a remote
 filesystem which has been mounted on `/mnt/backup`.
 
-    #$> zvault init --encrypt --remote /mnt/backup
+    #$> zvault init :: --encrypt --remote /mnt/backup
     public: 2bea1d15...
     secret: 3698a88c...
 

@@ -3,13 +3,12 @@ zvault-vacuum(1) -- Reclaim space by rewriting bundles
 
 ## SYNOPSIS
 
-`zvault vacuum [OPTIONS] [REPO]`
+`zvault vacuum [OPTIONS] <REPO>`
 
 
 ## DESCRIPTION
 
 This subcommand reclaims space by rewriting bundles in the repository `REPO`.
-If `REPO` is omitted, the default repository location is used instead.
 
 This command rewrites bundles to remove unused chunks of backups that have been
 removed by _zvault-remove(1)_ or _zvault-prune(1)_.

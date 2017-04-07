@@ -3,14 +3,14 @@ zvault-init(1) -- Initialize a new repository
 
 ## SYNOPSIS
 
-`zvault init [OPTIONS] --remote <REMOTE> [REPO]`
+`zvault init [OPTIONS] --remote <REMOTE> <REPO>`
 
 
 ## DESCRIPTION
 
-This subcommand initializes a new repository at the location `REPO`. If `REPO`
-is omitted, the default repository location will be used. It is important that
-the path given as `REPO` does not yet exist, so that it can be created.
+This subcommand initializes a new repository at the location `REPO`. It is
+important that the path given as `REPO` does not yet exist, so that it can be
+created.
 
 The remote storage path `REMOTE` must be an existing empty folder. ZVault
 supports mounted remote filesystems, so it is a good idea to use such a folder

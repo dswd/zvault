@@ -3,7 +3,7 @@ zvault-import(1) -- Reconstruct a repository from the remote storage
 
 ## SYNOPSIS
 
-`zvault import <REMOTE> [REPO]`
+`zvault import <REMOTE> <REPO>`
 
 
 ## DESCRIPTION
@@ -12,9 +12,8 @@ This subcommand imports a repository from remote storage. First, an empty
 repository will be created and then the remote bundles will be imported and
 added to the local index.
 
-The repository will be created at the location `REPO`. If `REPO` is omitted,
-the default repository location will be used. It is important that the path
-given as `REPO` does not yet exist, so that it can be created.
+The repository will be created at the location `REPO`. It is important that the
+path given as `REPO` does not yet exist, so that it can be created.
 
 The remote storage path `REMOTE` must be an existing remote storage folder
 initialized by _zvault-init(1)_.

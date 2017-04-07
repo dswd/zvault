@@ -24,7 +24,7 @@ pub enum ErrorCode {
     SaveConfig,
     LoadExcludes, InvalidExcludes,
     BackupRun, RestoreRun, RemoveRun, PruneRun, VacuumRun, CheckRun, AnalyzeRun, DiffRun,
-    VersionsRun, ImportRun, FuseMount
+    VersionsRun, ImportRun, FuseMount, RebuildIndexRun
 }
 impl ErrorCode {
     pub fn code(&self) -> i32 {
@@ -59,6 +59,7 @@ impl ErrorCode {
             ErrorCode::VersionsRun => 22,
             ErrorCode::ImportRun => 23,
             ErrorCode::FuseMount => 24,
+            ErrorCode::RebuildIndexRun => 25
         }
     }
 }
@@ -189,21 +190,22 @@ fn print_repoinfo(info: &RepositoryInfo) {
     println!("Index: {}, {:.0}% full", to_file_size(info.index_size as u64), index_usage * 100.0);
 }
 
-fn print_bundle(bundle: &BundleInfo) {
-    println!("Bundle {}", bundle.id);
-    println!("  - Mode: {:?}", bundle.mode);
-    println!("  - Hash method: {:?}", bundle.hash_method);
-    let encryption = if let Some((_, ref key)) = bundle.encryption {
+fn print_bundle(bundle: &StoredBundle) {
+    println!("Bundle {}", bundle.info.id);
+    println!("  - Mode: {:?}", bundle.info.mode);
+    println!("  - Path: {:?}", bundle.path);
+    println!("  - Hash method: {:?}", bundle.info.hash_method);
+    let encryption = if let Some((_, ref key)) = bundle.info.encryption {
         to_hex(key)
     } else {
         "none".to_string()
     };
     println!("  - Encryption: {}", encryption);
-    println!("  - Chunks: {}", bundle.chunk_count);
-    println!("  - Size: {}", to_file_size(bundle.encoded_size as u64));
-    println!("  - Data size: {}", to_file_size(bundle.raw_size as u64));
-    let ratio = bundle.encoded_size as f32 / bundle.raw_size as f32;
-    let compression = if let Some(ref c) = bundle.compression {
+    println!("  - Chunks: {}", bundle.info.chunk_count);
+    println!("  - Size: {}", to_file_size(bundle.info.encoded_size as u64));
+    println!("  - Data size: {}", to_file_size(bundle.info.raw_size as u64));
+    let ratio = bundle.info.encoded_size as f32 / bundle.info.raw_size as f32;
+    let compression = if let Some(ref c) = bundle.info.compression {
         c.to_string()
     } else {
         "none".to_string()
@@ -383,7 +385,7 @@ pub fn run() -> Result<(), ErrorCode> {
         },
         Arguments::Prune{repo_path, prefix, daily, weekly, monthly, yearly, force} => {
             let repo = try!(open_repository(&repo_path));
-            if daily.is_none() && weekly.is_none() && monthly.is_none() && yearly.is_none() {
+            if daily + weekly + monthly + yearly == 0 {
                 error!("This would remove all those backups");
                 return Err(ErrorCode::UnsafeArgs)
             }
@@ -479,6 +481,10 @@ pub fn run() -> Result<(), ErrorCode> {
         Arguments::Analyze{repo_path} => {
             let mut repo = try!(open_repository(&repo_path));
             print_analysis(&checked!(repo.analyze_usage(), "analyze repository", ErrorCode::AnalyzeRun));
+        },
+        Arguments::RebuildIndex{repo_path} => {
+            let mut repo = try!(open_repository(&repo_path));
+            checked!(repo.rebuild_index(), "rebuild index", ErrorCode::RebuildIndexRun);
         },
         Arguments::BundleList{repo_path} => {
             let repo = try!(open_repository(&repo_path));

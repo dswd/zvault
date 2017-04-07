@@ -64,7 +64,7 @@ impl Repository {
     }
 
 
-    pub fn prune_backups(&self, prefix: &str, daily: Option<usize>, weekly: Option<usize>, monthly: Option<usize>, yearly: Option<usize>, force: bool) -> Result<(), RepositoryError> {
+    pub fn prune_backups(&self, prefix: &str, daily: usize, weekly: usize, monthly: usize, yearly: usize, force: bool) -> Result<(), RepositoryError> {
         let mut backups = Vec::new();
         let backup_map = match self.get_backups() {
             Ok(backup_map) => backup_map,
@@ -99,17 +99,17 @@ impl Repository {
                 }
             }
         }
-        if let Some(max) = yearly {
-            mark_needed(&backups, &mut keep, max, |d| d.year());
+        if yearly > 0 {
+            mark_needed(&backups, &mut keep, yearly, |d| d.year());
         }
-        if let Some(max) = monthly {
-            mark_needed(&backups, &mut keep, max, |d| (d.year(), d.month()));
+        if monthly > 0 {
+            mark_needed(&backups, &mut keep, monthly, |d| (d.year(), d.month()));
         }
-        if let Some(max) = weekly {
-            mark_needed(&backups, &mut keep, max, |d| (d.isoweekdate().0, d.isoweekdate().1));
+        if weekly > 0 {
+            mark_needed(&backups, &mut keep, weekly, |d| (d.isoweekdate().0, d.isoweekdate().1));
         }
-        if let Some(max) = daily {
-            mark_needed(&backups, &mut keep, max, |d| (d.year(), d.month(), d.day()));
+        if daily > 0 {
+            mark_needed(&backups, &mut keep, daily, |d| (d.year(), d.month(), d.day()));
         }
         let mut remove = Vec::new();
         info!("Removing the following backups");
@@ -189,11 +189,12 @@ impl Repository {
                     .and_then(|chunks| self.get_inode(chunks).ok());
                 let child_inode = match self.create_backup_recurse(&child_path, ref_child.as_ref(), options, backup, failed_paths) {
                     Ok(inode) => inode,
-                    Err(_) => {
+                    Err(RepositoryError::Inode(_)) | Err(RepositoryError::Chunker(_)) | Err(RepositoryError::Io(_)) => {
                         warn!("Failed to backup {:?}", child_path);
                         failed_paths.push(child_path);
                         continue
-                    }
+                    },
+                    Err(err) => return Err(err)
                 };
                 let chunks = try!(self.put_inode(&child_inode));
                 children.insert(name, chunks);

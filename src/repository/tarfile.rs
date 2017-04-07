@@ -81,10 +81,13 @@ impl Repository {
                     }
                     inodes.insert(path, (inode, HashSet::new()));
                 },
-                Err(_) => {
+                Err(RepositoryError::Inode(_)) | Err(RepositoryError::Chunker(_)) | Err(RepositoryError::Io(_)) => {
                     warn!("Failed to backup {:?}", path);
                     failed_paths.push(path);
                     continue
+                },
+                Err(err) => {
+                    return Err(err);
                 }
             }
         }

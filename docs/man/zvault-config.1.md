@@ -3,13 +3,12 @@ zvault-config(1) -- Display or change the configuration
 
 ## SYNOPSIS
 
-`zvault config [REPO]`
+`zvault config <REPO>`
 
 
 ## DESCRIPTION
 
 This subcommand displays or changes the configuration of the repository `REPO`.
-If `REPO` is omitted, the default repository location will be used.
 The configuration can be changes using the options described below. If no
 options are set, the current configuration is displayed. Otherwise, the
 configuration is changed as specified and then displayed.

@@ -20,7 +20,7 @@ quick_error!{
         }
         NoSuchChunk(bundle: BundleId, chunk: u32) {
             description("No such chunk")
-            display("Bundle {} does not conain the chunk {}", bundle, chunk)
+            display("Bundle {} does not contain the chunk {}", bundle, chunk)
         }
         InvalidNextBundleId {
             description("Invalid next bundle id")
@@ -40,7 +40,7 @@ impl Repository {
                 return Err(RepositoryIntegrityError::MissingBundle(bundle_id.clone()).into())
             };
             // Get chunk from bundle
-            if bundle.chunk_count <= location.chunk as usize {
+            if bundle.info.chunk_count <= location.chunk as usize {
                 return Err(RepositoryIntegrityError::NoSuchChunk(bundle_id.clone(), location.chunk).into())
             }
             Ok(())

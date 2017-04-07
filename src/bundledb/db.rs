@@ -274,8 +274,8 @@ impl BundleDb {
     }
 
     #[inline]
-    pub fn get_bundle_info(&self, bundle: &BundleId) -> Option<&BundleInfo> {
-        self.get_stored_bundle(bundle).ok().map(|stored| &stored.info)
+    pub fn get_bundle_info(&self, bundle: &BundleId) -> Option<&StoredBundle> {
+        self.get_stored_bundle(bundle).ok()
     }
 
     #[inline]

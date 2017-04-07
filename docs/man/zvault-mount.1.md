@@ -3,7 +3,7 @@ zvault-mount(1) -- Mount the repository, a backup or a subtree
 
 ## SYNOPSIS
 
-`zvault mount [PATH] <MOUNTPOINT>`
+`zvault mount <PATH> <MOUNTPOINT>`
 
 
 ## DESCRIPTION
@@ -14,7 +14,6 @@ filesystem.
 
 The repository, backup or backup subtree given by `PATH` must be in the format
 `[repository][::backup_name[::subtree]]` as described in _zvault(1)_.
-If `PATH` is omitted, the default repository location is used instead.
 
 If `PATH` specifies a backup or backup subtree, the root of that backup or the
 respective subtree is mounted onto the given location.

@@ -3,14 +3,12 @@ zvault-prune(1) -- Remove backups based on age
 
 ## SYNOPSIS
 
-`zvault prune [OPTIONS] [REPO]`
+`zvault prune [OPTIONS] <REPO>`
 
 
 ## DESCRIPTION
 
 This subcommand removes backups in the repository `REPO` based on their age.
-
-If `REPO` is omitted, the default repository location is used instead.
 
 If a prefix is specified via `--prefix`, only backups which start with this
 string are considered for removal.

@@ -98,7 +98,7 @@ serde_impl!(BundleInfo(u64?) {
     id: BundleId => 0,
     mode: BundleMode => 1,
     compression: Option<Compression> => 2,
-    //encryption: already in the header
+    encryption: Option<Encryption> => 3,
     hash_method: HashMethod => 4,
     raw_size: usize => 6,
     encoded_size: usize => 7,
