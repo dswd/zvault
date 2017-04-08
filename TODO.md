@@ -22,7 +22,6 @@
 * Benchmarks
 * Full fuse method coverage
 * Clippy
-* Central repository layout class
 
 ## Other
 * Homepage

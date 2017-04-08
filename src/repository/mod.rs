@@ -9,12 +9,13 @@ mod error;
 mod vacuum;
 mod backup_file;
 mod tarfile;
+mod layout;
 
 use ::prelude::*;
 
 use std::mem;
 use std::cmp::max;
-use std::path::{PathBuf, Path};
+use std::path::Path;
 use std::fs::{self, File};
 use std::sync::{Arc, Mutex};
 use std::os::unix::fs::symlink;
@@ -27,6 +28,7 @@ pub use self::backup::{BackupError, BackupOptions, DiffType};
 pub use self::backup_file::{Backup, BackupFileError};
 pub use self::integrity::RepositoryIntegrityError;
 pub use self::info::{RepositoryInfo, BundleAnalysis};
+pub use self::layout::RepositoryLayout;
 use self::bundle_map::BundleMap;
 
 
@@ -35,9 +37,7 @@ const DEFAULT_EXCLUDES: &'static [u8] = include_bytes!("../../docs/excludes.defa
 
 
 pub struct Repository {
-    path: PathBuf,
-    backups_path: PathBuf,
-    pub excludes_path: PathBuf,
+    pub layout: RepositoryLayout,
     pub config: Config,
     index: Index,
     crypto: Arc<Mutex<Crypto>>,
@@ -55,62 +55,32 @@ pub struct Repository {
 impl Repository {
     pub fn create<P: AsRef<Path>, R: AsRef<Path>>(path: P, config: Config, remote: R) -> Result<Self, RepositoryError> {
         let path = path.as_ref().to_owned();
-        try!(fs::create_dir(&path));
-        let mut excludes = try!(File::create(path.join("excludes")));
-        try!(excludes.write_all(DEFAULT_EXCLUDES));
-        try!(fs::create_dir(path.join("keys")));
-        let crypto = Arc::new(Mutex::new(try!(Crypto::open(path.join("keys")))));
-        try!(symlink(remote, path.join("remote")));
-        let mut remote_readme = try!(File::create(path.join("remote/README.md")));
-        try!(remote_readme.write_all(REPOSITORY_README));
-        try!(fs::create_dir_all(path.join("remote/locks")));
-        let locks = LockFolder::new(path.join("remote/locks"));
-        let bundles = try!(BundleDb::create(
-            path.to_path_buf(),
-            path.join("remote/bundles"),
-            path.join("bundles"),
-            crypto.clone()
-        ));
-        let index = try!(Index::create(&path.join("index")));
-        try!(config.save(path.join("config.yaml")));
-        let bundle_map = BundleMap::create();
-        try!(bundle_map.save(path.join("bundles.map")));
-        try!(fs::create_dir_all(&path.join("remote/backups")));
-        Ok(Repository {
-            backups_path: path.join("remote/backups"),
-            excludes_path: path.join("excludes"),
-            path: path,
-            chunker: config.chunker.create(),
-            config: config,
-            index: index,
-            bundle_map: bundle_map,
-            next_data_bundle: 1,
-            next_meta_bundle: 0,
-            bundles: bundles,
-            data_bundle: None,
-            meta_bundle: None,
-            crypto: crypto,
-            locks: locks
-        })
+        let layout = RepositoryLayout::new(path.clone());
+        try!(fs::create_dir(layout.base_path()));
+        try!(File::create(layout.excludes_path()).and_then(|mut f| f.write_all(DEFAULT_EXCLUDES)));
+        try!(fs::create_dir(layout.keys_path()));
+        try!(symlink(remote, layout.remote_path()));
+        try!(File::create(layout.remote_readme_path()).and_then(|mut f| f.write_all(REPOSITORY_README)));
+        try!(fs::create_dir_all(layout.remote_locks_path()));
+        try!(config.save(layout.config_path()));
+        try!(BundleDb::create(layout.clone()));
+        try!(Index::create(layout.index_path()));
+        try!(BundleMap::create().save(layout.bundle_map_path()));
+        try!(fs::create_dir_all(layout.backups_path()));
+        Self::open(path)
     }
 
     pub fn open<P: AsRef<Path>>(path: P) -> Result<Self, RepositoryError> {
         let path = path.as_ref().to_owned();
-        let config = try!(Config::load(path.join("config.yaml")));
-        let locks = LockFolder::new(path.join("remote/locks"));
-        let crypto = Arc::new(Mutex::new(try!(Crypto::open(path.join("keys")))));
-        let (bundles, new, gone) = try!(BundleDb::open(
-            path.to_path_buf(),
-            path.join("remote/bundles"),
-            path.join("bundles"),
-            crypto.clone()
-        ));
-        let index = try!(Index::open(&path.join("index")));
-        let bundle_map = try!(BundleMap::load(path.join("bundles.map")));
+        let layout = RepositoryLayout::new(path.clone());
+        let config = try!(Config::load(layout.config_path()));
+        let locks = LockFolder::new(layout.remote_locks_path());
+        let crypto = Arc::new(Mutex::new(try!(Crypto::open(layout.keys_path()))));
+        let (bundles, new, gone) = try!(BundleDb::open(layout.clone(), crypto.clone()));
+        let index = try!(Index::open(layout.index_path()));
+        let bundle_map = try!(BundleMap::load(layout.bundle_map_path()));
         let mut repo = Repository {
-            backups_path: path.join("remote/backups"),
-            excludes_path: path.join("excludes"),
-            path: path,
+            layout: layout,
             chunker: config.chunker.create(),
             config: config,
             index: index,
@@ -160,7 +130,7 @@ impl Repository {
     }
 
     pub fn save_config(&mut self) -> Result<(), RepositoryError> {
-        try!(self.config.save(self.path.join("config.yaml")));
+        try!(self.config.save(self.layout.config_path()));
         Ok(())
     }
 
@@ -180,7 +150,7 @@ impl Repository {
 
     #[inline]
     fn save_bundle_map(&self) -> Result<(), RepositoryError> {
-        try!(self.bundle_map.save(self.path.join("bundles.map")));
+        try!(self.bundle_map.save(self.layout.bundle_map_path()));
         Ok(())
     }
 

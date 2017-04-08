@@ -306,7 +306,7 @@ pub fn run() -> Result<(), ErrorCode> {
             }
             let reference_backup = reference_backup.map(|(_, backup)| backup);
             if !no_default_excludes && !tar {
-                for line in BufReader::new(checked!(File::open(&repo.excludes_path), "open default excludes file", ErrorCode::LoadExcludes)).lines() {
+                for line in BufReader::new(checked!(File::open(&repo.layout.excludes_path()), "open default excludes file", ErrorCode::LoadExcludes)).lines() {
                     excludes.push(checked!(line, "read default excludes file", ErrorCode::LoadExcludes));
                 }
             }

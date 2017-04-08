@@ -38,25 +38,25 @@ pub enum DiffType {
 
 impl Repository {
     pub fn get_backups(&self) -> Result<HashMap<String, Backup>, RepositoryError> {
-        Ok(try!(Backup::get_all_from(&self.crypto.lock().unwrap(), &self.backups_path)))
+        Ok(try!(Backup::get_all_from(&self.crypto.lock().unwrap(), self.layout.backups_path())))
     }
 
     pub fn get_backup(&self, name: &str) -> Result<Backup, RepositoryError> {
-        Ok(try!(Backup::read_from(&self.crypto.lock().unwrap(), self.backups_path.join(name))))
+        Ok(try!(Backup::read_from(&self.crypto.lock().unwrap(), self.layout.backup_path(name))))
     }
 
     pub fn save_backup(&mut self, backup: &Backup, name: &str) -> Result<(), RepositoryError> {
-        let path = &self.backups_path.join(name);
+        let path = self.layout.backup_path(name);
         try!(fs::create_dir_all(path.parent().unwrap()));
         Ok(try!(backup.save_to(&self.crypto.lock().unwrap(), self.config.encryption.clone(), path)))
     }
 
     pub fn delete_backup(&self, name: &str) -> Result<(), RepositoryError> {
-        let mut path = self.backups_path.join(name);
+        let mut path = self.layout.backup_path(name);
         try!(fs::remove_file(&path));
         loop {
             path = path.parent().unwrap().to_owned();
-            if path == self.backups_path || fs::remove_dir(&path).is_err() {
+            if path == self.layout.backups_path() || fs::remove_dir(&path).is_err() {
                 break
             }
         }

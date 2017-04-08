@@ -64,7 +64,7 @@ impl Repository {
         for id in rewrite_bundles {
             try!(self.delete_bundle(id));
         }
-        try!(self.bundle_map.save(self.path.join("bundles.map")));
+        try!(self.save_bundle_map());
         Ok(())
     }
 }

@@ -152,13 +152,13 @@ impl Index {
     }
 
     #[inline]
-    pub fn open(path: &Path) -> Result<Index, IndexError> {
-        Index::new(path, false)
+    pub fn open<P: AsRef<Path>>(path: P) -> Result<Index, IndexError> {
+        Index::new(path.as_ref(), false)
     }
 
     #[inline]
-    pub fn create(path: &Path) -> Result<Index, IndexError> {
-        Index::new(path, true)
+    pub fn create<P: AsRef<Path>>(path: P) -> Result<Index, IndexError> {
+        Index::new(path.as_ref(), true)
     }
 
     #[inline]
