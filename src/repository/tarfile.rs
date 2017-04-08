@@ -68,10 +68,15 @@ impl Repository {
             let path = try!(entry.path()).to_path_buf();
             match self.import_tar_entry(&mut entry) {
                 Ok(mut inode) => {
-                    inode.cum_size = inode.size + inode.estimate_meta_size();
+                    inode.cum_size = inode.size;
                     if inode.file_type == FileType::Directory {
                         inode.cum_dirs = 1;
                     } else {
+                        if let Some(FileData::ChunkedIndirect(ref chunks)) = inode.data {
+                            for &(_, len) in chunks.iter() {
+                                inode.cum_size += len as u64;
+                            }
+                        }
                         inode.cum_files = 1;
                     }
                     if let Some(parent_path) = path.parent() {
@@ -106,10 +111,13 @@ impl Repository {
                 if let Some(parent_path) = path.parent() {
                     if let Some(&mut (ref mut parent_inode, ref mut children)) = inodes.get_mut(parent_path) {
                         children.remove(&inode.name);
-                        parent_inode.children.as_mut().unwrap().insert(inode.name.clone(), chunks);
                         parent_inode.cum_size += inode.cum_size;
+                        for &(_, len) in chunks.iter() {
+                            parent_inode.cum_size += len as u64;
+                        }
                         parent_inode.cum_files += inode.cum_files;
                         parent_inode.cum_dirs += inode.cum_dirs;
+                        parent_inode.children.as_mut().unwrap().insert(inode.name.clone(), chunks);
                         continue
                     }
                 }
@@ -124,17 +132,20 @@ impl Repository {
                 file_type: FileType::Directory,
                 mode: 0o755,
                 name: "archive".to_string(),
-                cum_size: 1000,
+                cum_size: 0,
                 cum_files: 0,
                 cum_dirs: 1,
                 ..Default::default()
             };
             let mut children = BTreeMap::new();
             for (inode, chunks) in roots {
-                children.insert(inode.name, chunks);
                 root_inode.cum_size += inode.cum_size;
+                for &(_, len) in chunks.iter() {
+                    root_inode.cum_size += len as u64;
+                }
                 root_inode.cum_files += inode.cum_files;
                 root_inode.cum_dirs += inode.cum_dirs;
+                children.insert(inode.name, chunks);
             }
             root_inode.children = Some(children);
             let chunks = try!(self.put_inode(&root_inode));

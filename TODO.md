@@ -22,7 +22,7 @@
 * Benchmarks
 * Full fuse method coverage
 * Clippy
-* Do not estimate meta size
+* Central repository layout class
 
 ## Other
 * Homepage

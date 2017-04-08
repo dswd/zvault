@@ -154,15 +154,8 @@ impl Repository {
     ) -> Result<Inode, RepositoryError> {
         let path = path.as_ref();
         let mut inode = try!(self.create_inode(path, reference));
-        let meta_size = inode.estimate_meta_size();
-        inode.cum_size = inode.size + meta_size;
-        if let Some(ref_inode) = reference {
-            if !ref_inode.is_same_meta_quick(&inode) {
-                backup.changed_data_size += inode.size + meta_size;
-            }
-        } else {
-            backup.changed_data_size += inode.size + meta_size;
-        }
+        let mut meta_size = 0;
+        inode.cum_size = inode.size;
         if inode.file_type == FileType::Directory {
             inode.cum_dirs = 1;
             let mut children = BTreeMap::new();
@@ -197,14 +190,30 @@ impl Repository {
                     Err(err) => return Err(err)
                 };
                 let chunks = try!(self.put_inode(&child_inode));
-                children.insert(name, chunks);
                 inode.cum_size += child_inode.cum_size;
+                for &(_, len) in chunks.iter() {
+                    meta_size += len as u64;
+                }
                 inode.cum_dirs += child_inode.cum_dirs;
                 inode.cum_files += child_inode.cum_files;
+                children.insert(name, chunks);
             }
             inode.children = Some(children);
         } else {
             inode.cum_files = 1;
+            if let Some(FileData::ChunkedIndirect(ref chunks)) = inode.data {
+                for &(_, len) in chunks.iter() {
+                    meta_size += len as u64;
+                }
+            }
+        }
+        inode.cum_size += meta_size;
+        if let Some(ref_inode) = reference {
+            if !ref_inode.is_same_meta_quick(&inode) {
+                backup.changed_data_size += inode.size + meta_size;
+            }
+        } else {
+            backup.changed_data_size += inode.size + meta_size;
         }
         Ok(inode)
     }
@@ -226,6 +235,9 @@ impl Repository {
         let elapsed = Local::now().signed_duration_since(start);
         backup.date = start.timestamp();
         backup.total_data_size = root_inode.cum_size;
+        for &(_, len) in backup.root.iter() {
+            backup.total_data_size += len as u64;
+        }
         backup.file_count = root_inode.cum_files;
         backup.dir_count = root_inode.cum_dirs;
         backup.duration = elapsed.num_milliseconds() as f32 / 1_000.0;
