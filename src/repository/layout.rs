@@ -46,6 +46,10 @@ impl RepositoryLayout {
         self.0.join("remote")
     }
 
+    pub fn remote_exists(&self) -> bool {
+        self.remote_bundles_path().exists() && self.backups_path().exists() && self.remote_locks_path().exists()
+    }
+
     pub fn remote_readme_path(&self) -> PathBuf {
         self.0.join("remote/README.md")
     }

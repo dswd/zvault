@@ -54,8 +54,7 @@ pub struct Repository {
 
 impl Repository {
     pub fn create<P: AsRef<Path>, R: AsRef<Path>>(path: P, config: Config, remote: R) -> Result<Self, RepositoryError> {
-        let path = path.as_ref().to_owned();
-        let layout = RepositoryLayout::new(path.clone());
+        let layout = RepositoryLayout::new(path.as_ref().to_path_buf());
         try!(fs::create_dir(layout.base_path()));
         try!(File::create(layout.excludes_path()).and_then(|mut f| f.write_all(DEFAULT_EXCLUDES)));
         try!(fs::create_dir(layout.keys_path()));
@@ -71,8 +70,10 @@ impl Repository {
     }
 
     pub fn open<P: AsRef<Path>>(path: P) -> Result<Self, RepositoryError> {
-        let path = path.as_ref().to_owned();
-        let layout = RepositoryLayout::new(path.clone());
+        let layout = RepositoryLayout::new(path.as_ref().to_path_buf());
+        if !layout.remote_exists() {
+            return Err(RepositoryError::NoRemote)
+        }
         let config = try!(Config::load(layout.config_path()));
         let locks = LockFolder::new(layout.remote_locks_path());
         let crypto = Arc::new(Mutex::new(try!(Crypto::open(layout.keys_path()))));

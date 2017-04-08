@@ -12,9 +12,10 @@
 
 ## Usability
 * Verbosity control
+* Error: Backup already exists
+* Backup directories as a thing (list, remove)
 * Display backup name and path on backup integrity error
 * Better control over what is checked in `check` subcommand
-* Nice error when remote storage is not mounted
 * Man pages for all minor subcommands
 
 ## Code quality

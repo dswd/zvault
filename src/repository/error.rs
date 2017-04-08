@@ -14,6 +14,10 @@ quick_error!{
     #[derive(Debug)]
     #[allow(unknown_lints,large_enum_variant)]
     pub enum RepositoryError {
+        NoRemote {
+            description("Remote storage not found")
+            display("Repository error: The remote storage has not been found, may be it needs to be mounted?")
+        }
         Index(err: IndexError) {
             from()
             cause(err)
