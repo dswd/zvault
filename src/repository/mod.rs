@@ -78,8 +78,20 @@ impl Repository {
         let locks = LockFolder::new(layout.remote_locks_path());
         let crypto = Arc::new(Mutex::new(try!(Crypto::open(layout.keys_path()))));
         let (bundles, new, gone) = try!(BundleDb::open(layout.clone(), crypto.clone()));
-        let index = try!(Index::open(layout.index_path()));
-        let bundle_map = try!(BundleMap::load(layout.bundle_map_path()));
+        let (index, mut rebuild_index) = match Index::open(layout.index_path()) {
+            Ok(index) => (index, false),
+            Err(err) => {
+                error!("Failed to load local index:\n\tcaused by: {}", err);
+                (try!(Index::create(layout.index_path())), true)
+            }
+        };
+        let (bundle_map, rebuild_bundle_map) = match BundleMap::load(layout.bundle_map_path()) {
+            Ok(bundle_map) => (bundle_map, false),
+            Err(err) => {
+                error!("Failed to load local bundle map:\n\tcaused by: {}", err);
+                (BundleMap::create(), true)
+            }
+        };
         let mut repo = Repository {
             layout: layout,
             chunker: config.chunker.create(),
@@ -103,6 +115,13 @@ impl Repository {
         try!(repo.save_bundle_map());
         repo.next_meta_bundle = repo.next_free_bundle_id();
         repo.next_data_bundle = repo.next_free_bundle_id();
+        if rebuild_bundle_map {
+            try!(repo.rebuild_bundle_map());
+            rebuild_index = true;
+        }
+        if rebuild_index {
+            try!(repo.rebuild_index());
+        }
         Ok(repo)
     }
 
@@ -208,7 +227,26 @@ impl Repository {
         Ok(())
     }
 
-    pub fn rebuild_index(&mut self) -> Result<(), RepositoryError> {
+    fn rebuild_bundle_map(&mut self) -> Result<(), RepositoryError> {
+        info!("Rebuilding bundle map from bundles");
+        for bundle in self.bundles.list_bundles() {
+            let bundle_id = match bundle.mode {
+                BundleMode::Data => self.next_data_bundle,
+                BundleMode::Meta => self.next_meta_bundle
+            };
+            self.bundle_map.set(bundle_id, bundle.id.clone());
+            if self.next_meta_bundle == bundle_id {
+                self.next_meta_bundle = self.next_free_bundle_id()
+            }
+            if self.next_data_bundle == bundle_id {
+                self.next_data_bundle = self.next_free_bundle_id()
+            }
+        }
+        self.save_bundle_map()
+    }
+
+    fn rebuild_index(&mut self) -> Result<(), RepositoryError> {
+        info!("Rebuilding index from bundles");
         self.index.clear();
         for (num, id) in self.bundle_map.bundles() {
             let chunks = try!(self.bundles.get_chunk_list(&id));

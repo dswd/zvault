@@ -24,7 +24,7 @@ pub enum ErrorCode {
     SaveConfig,
     LoadExcludes, InvalidExcludes,
     BackupRun, RestoreRun, RemoveRun, PruneRun, VacuumRun, CheckRun, AnalyzeRun, DiffRun,
-    VersionsRun, ImportRun, FuseMount, RebuildIndexRun
+    VersionsRun, ImportRun, FuseMount
 }
 impl ErrorCode {
     pub fn code(&self) -> i32 {
@@ -58,8 +58,7 @@ impl ErrorCode {
             ErrorCode::DiffRun => 21,
             ErrorCode::VersionsRun => 22,
             ErrorCode::ImportRun => 23,
-            ErrorCode::FuseMount => 24,
-            ErrorCode::RebuildIndexRun => 25
+            ErrorCode::FuseMount => 24
         }
     }
 }
@@ -481,10 +480,6 @@ pub fn run() -> Result<(), ErrorCode> {
         Arguments::Analyze{repo_path} => {
             let mut repo = try!(open_repository(&repo_path));
             print_analysis(&checked!(repo.analyze_usage(), "analyze repository", ErrorCode::AnalyzeRun));
-        },
-        Arguments::RebuildIndex{repo_path} => {
-            let mut repo = try!(open_repository(&repo_path));
-            checked!(repo.rebuild_index(), "rebuild index", ErrorCode::RebuildIndexRun);
         },
         Arguments::BundleList{repo_path} => {
             let repo = try!(open_repository(&repo_path));

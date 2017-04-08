@@ -125,9 +125,6 @@ pub enum Arguments {
         compression: Option<Compression>,
         encrypt: bool,
         hash: HashMethod
-    },
-    RebuildIndex {
-        repo_path: String
     }
 }
 
@@ -400,9 +397,6 @@ pub fn parse() -> Result<Arguments, ErrorCode> {
                 .validator(|val| validate_repo_path(val, true, Some(false), Some(false))))
             .arg(Arg::from_usage("[FILE] 'File containing the keypair'")
                 .required_unless("generate").validator(validate_existing_path)))
-        .subcommand(SubCommand::with_name("rebuild-index").about("Rebuild the index")
-            .arg(Arg::from_usage("<REPO> 'Path of the repository'")
-                .validator(|val| validate_repo_path(val, true, Some(false), Some(false)))))
         .subcommand(SubCommand::with_name("algotest").about("Test a specific algorithm combination")
             .arg(Arg::from_usage("[bundle_size] --bundle-size [SIZE] 'Set the target bundle size in MiB'")
                 .default_value(DEFAULT_BUNDLE_SIZE_STR).validator(validate_num))
@@ -550,12 +544,6 @@ pub fn parse() -> Result<Arguments, ErrorCode> {
         ("analyze", Some(args)) => {
             let (repository, _backup, _inode) = parse_repo_path(args.value_of("REPO").unwrap(), true, Some(false), Some(false)).unwrap();
             Ok(Arguments::Analyze {
-                repo_path: repository.to_string()
-            })
-        },
-        ("rebuild-index", Some(args)) => {
-            let (repository, _backup, _inode) = parse_repo_path(args.value_of("REPO").unwrap(), true, Some(false), Some(false)).unwrap();
-            Ok(Arguments::RebuildIndex {
                 repo_path: repository.to_string()
             })
         },
