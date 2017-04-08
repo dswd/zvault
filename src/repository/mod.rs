@@ -167,6 +167,9 @@ impl Repository {
     #[inline]
     pub fn set_encryption(&mut self, public: Option<&PublicKey>) {
         if let Some(key) = public {
+            if !self.crypto.lock().unwrap().contains_secret_key(key) {
+                warn!("The secret key for that public key is not stored in the repository.")
+            }
             let mut key_bytes = Vec::new();
             key_bytes.extend_from_slice(&key[..]);
             self.config.encryption = Some((EncryptionMethod::Sodium, key_bytes.into()))

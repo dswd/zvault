@@ -12,7 +12,6 @@
 
 ## Usability
 * Verbosity control
-* Check for private key when encryption is set
 * Display backup name and path on backup integrity error
 * Better control over what is checked in `check` subcommand
 * Nice error when remote storage is not mounted
