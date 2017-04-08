@@ -66,6 +66,7 @@ impl Repository {
         try!(fs::create_dir_all(path.join("remote/locks")));
         let locks = LockFolder::new(path.join("remote/locks"));
         let bundles = try!(BundleDb::create(
+            path.to_path_buf(),
             path.join("remote/bundles"),
             path.join("bundles"),
             crypto.clone()
@@ -99,6 +100,7 @@ impl Repository {
         let locks = LockFolder::new(path.join("remote/locks"));
         let crypto = Arc::new(Mutex::new(try!(Crypto::open(path.join("keys")))));
         let (bundles, new, gone) = try!(BundleDb::open(
+            path.to_path_buf(),
             path.join("remote/bundles"),
             path.join("bundles"),
             crypto.clone()
