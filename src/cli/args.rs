@@ -2,7 +2,7 @@ use ::prelude::*;
 use super::*;
 
 use std::path::Path;
-
+use log::LogLevel;
 use clap::{App, AppSettings, Arg, SubCommand};
 
 pub enum Arguments {
@@ -274,10 +274,11 @@ fn validate_existing_path(val: String) -> Result<(), String> {
 
 
 #[allow(unknown_lints,cyclomatic_complexity)]
-pub fn parse() -> Result<Arguments, ErrorCode> {
+pub fn parse() -> Result<(LogLevel, Arguments), ErrorCode> {
     let args = App::new("zvault").version(crate_version!()).author(crate_authors!(",\n")).about(crate_description!())
         .settings(&[AppSettings::VersionlessSubcommands, AppSettings::SubcommandRequiredElseHelp])
         .global_settings(&[AppSettings::AllowMissingPositional, AppSettings::UnifiedHelpMessage, AppSettings::ColoredHelp, AppSettings::ColorAuto])
+        .arg(Arg::from_usage("-v --verbose 'Print more information'").global(true).multiple(true).max_values(3).takes_value(false))
         .subcommand(SubCommand::with_name("init").about("Initialize a new repository")
             .arg(Arg::from_usage("[bundle_size] --bundle-size [SIZE] 'Set the target bundle size in MiB'")
                 .default_value(DEFAULT_BUNDLE_SIZE_STR).validator(validate_num))
@@ -409,10 +410,16 @@ pub fn parse() -> Result<Arguments, ErrorCode> {
                 .default_value(DEFAULT_HASH).validator(validate_hash))
             .arg(Arg::from_usage("<FILE> 'File with test data'")
                 .validator(validate_existing_path))).get_matches();
-    match args.subcommand() {
+    let log_level = match args.subcommand().1.map(|m| m.occurrences_of("verbose")).unwrap_or(0) + args.occurrences_of("verbose") {
+        0 => LogLevel::Warn,
+        1 => LogLevel::Info,
+        2 => LogLevel::Debug,
+        _ => LogLevel::Trace
+    };
+    let args = match args.subcommand() {
         ("init", Some(args)) => {
             let (repository, _backup, _inode) = parse_repo_path(args.value_of("REPO").unwrap(), false, Some(false), Some(false)).unwrap();
-            Ok(Arguments::Init {
+            Arguments::Init {
                 bundle_size: (parse_num(args.value_of("bundle_size").unwrap()).unwrap() * 1024 * 1024) as usize,
                 chunker: parse_chunker(args.value_of("chunker").unwrap()).unwrap(),
                 compression: parse_compression(args.value_of("compression").unwrap()).unwrap(),
@@ -420,11 +427,11 @@ pub fn parse() -> Result<Arguments, ErrorCode> {
                 hash: parse_hash(args.value_of("hash").unwrap()).unwrap(),
                 repo_path: repository.to_string(),
                 remote_path: args.value_of("remote").unwrap().to_string()
-            })
+            }
         },
         ("backup", Some(args)) => {
             let (repository, backup, _inode) = parse_repo_path(args.value_of("BACKUP").unwrap(), true, Some(true), Some(false)).unwrap();
-            Ok(Arguments::Backup {
+            Arguments::Backup {
                 repo_path: repository.to_string(),
                 backup_name: backup.unwrap().to_string(),
                 full: args.is_present("full"),
@@ -435,29 +442,29 @@ pub fn parse() -> Result<Arguments, ErrorCode> {
                 reference: args.value_of("reference").map(|v| v.to_string()),
                 no_default_excludes: args.is_present("no_default_excludes"),
                 tar: args.is_present("tar")
-            })
+            }
         },
         ("restore", Some(args)) => {
             let (repository, backup, inode) = parse_repo_path(args.value_of("BACKUP").unwrap(), true, Some(true), None).unwrap();
-            Ok(Arguments::Restore {
+            Arguments::Restore {
                 repo_path: repository.to_string(),
                 backup_name: backup.unwrap().to_string(),
                 inode: inode.map(|v| v.to_string()),
                 dst_path: args.value_of("DST").unwrap().to_string(),
                 tar: args.is_present("tar")
-            })
+            }
         },
         ("remove", Some(args)) => {
             let (repository, backup, inode) = parse_repo_path(args.value_of("BACKUP").unwrap(), true, Some(true), None).unwrap();
-            Ok(Arguments::Remove {
+            Arguments::Remove {
                 repo_path: repository.to_string(),
                 backup_name: backup.unwrap().to_string(),
                 inode: inode.map(|v| v.to_string())
-            })
+            }
         },
         ("prune", Some(args)) => {
             let (repository, _backup, _inode) = parse_repo_path(args.value_of("REPO").unwrap(), true, Some(false), Some(false)).unwrap();
-            Ok(Arguments::Prune {
+            Arguments::Prune {
                 repo_path: repository.to_string(),
                 prefix: args.value_of("prefix").unwrap_or("").to_string(),
                 force: args.is_present("force"),
@@ -465,133 +472,134 @@ pub fn parse() -> Result<Arguments, ErrorCode> {
                 weekly: parse_num(args.value_of("weekly").unwrap()).unwrap() as usize,
                 monthly: parse_num(args.value_of("monthly").unwrap()).unwrap() as usize,
                 yearly: parse_num(args.value_of("yearly").unwrap()).unwrap() as usize
-            })
+            }
         },
         ("vacuum", Some(args)) => {
             let (repository, _backup, _inode) = parse_repo_path(args.value_of("REPO").unwrap(), true, Some(false), Some(false)).unwrap();
-            Ok(Arguments::Vacuum {
+            Arguments::Vacuum {
                 repo_path: repository.to_string(),
                 force: args.is_present("force"),
                 ratio: parse_num(args.value_of("ratio").unwrap()).unwrap() as f32 / 100.0
-            })
+            }
         },
         ("check", Some(args)) => {
             let (repository, backup, inode) = parse_repo_path(args.value_of("PATH").unwrap(), true, None, None).unwrap();
-            Ok(Arguments::Check {
+            Arguments::Check {
                 repo_path: repository.to_string(),
                 backup_name: backup.map(|v| v.to_string()),
                 inode: inode.map(|v| v.to_string()),
                 full: args.is_present("full")
-            })
+            }
         },
         ("list", Some(args)) => {
             let (repository, backup, inode) = parse_repo_path(args.value_of("PATH").unwrap(), true, None, None).unwrap();
-            Ok(Arguments::List {
+            Arguments::List {
                 repo_path: repository.to_string(),
                 backup_name: backup.map(|v| v.to_string()),
                 inode: inode.map(|v| v.to_string())
-            })
+            }
         },
         ("bundlelist", Some(args)) => {
             let (repository, _backup, _inode) = parse_repo_path(args.value_of("REPO").unwrap(), true, Some(false), Some(false)).unwrap();
-            Ok(Arguments::BundleList {
+            Arguments::BundleList {
                 repo_path: repository.to_string(),
-            })
+            }
         },
         ("bundleinfo", Some(args)) => {
             let (repository, _backup, _inode) = parse_repo_path(args.value_of("REPO").unwrap(), true, Some(false), Some(false)).unwrap();
-            Ok(Arguments::BundleInfo {
+            Arguments::BundleInfo {
                 repo_path: repository.to_string(),
                 bundle_id: try!(parse_bundle_id(args.value_of("BUNDLE").unwrap()))
-            })
+            }
         },
         ("info", Some(args)) => {
             let (repository, backup, inode) = parse_repo_path(args.value_of("PATH").unwrap(), true, None, None).unwrap();
-            Ok(Arguments::Info {
+            Arguments::Info {
                 repo_path: repository.to_string(),
                 backup_name: backup.map(|v| v.to_string()),
                 inode: inode.map(|v| v.to_string())
-            })
+            }
         },
         ("mount", Some(args)) => {
             let (repository, backup, inode) = parse_repo_path(args.value_of("PATH").unwrap(), true, None, None).unwrap();
-            Ok(Arguments::Mount {
+            Arguments::Mount {
                 repo_path: repository.to_string(),
                 backup_name: backup.map(|v| v.to_string()),
                 inode: inode.map(|v| v.to_string()),
                 mount_point: args.value_of("MOUNTPOINT").unwrap().to_string()
-            })
+            }
         },
         ("versions", Some(args)) => {
             let (repository, _backup, _inode) = parse_repo_path(args.value_of("REPO").unwrap(), true, Some(false), Some(false)).unwrap();
-            Ok(Arguments::Versions {
+            Arguments::Versions {
                 repo_path: repository.to_string(),
                 path: args.value_of("PATH").unwrap().to_string()
-            })
+            }
         },
         ("diff", Some(args)) => {
             let (repository_old, backup_old, inode_old) = parse_repo_path(args.value_of("OLD").unwrap(), true, Some(true), None).unwrap();
             let (repository_new, backup_new, inode_new) = parse_repo_path(args.value_of("NEW").unwrap(), true, Some(true), None).unwrap();
-            Ok(Arguments::Diff {
+            Arguments::Diff {
                 repo_path_old: repository_old.to_string(),
                 backup_name_old: backup_old.unwrap().to_string(),
                 inode_old: inode_old.map(|v| v.to_string()),
                 repo_path_new: repository_new.to_string(),
                 backup_name_new: backup_new.unwrap().to_string(),
                 inode_new: inode_new.map(|v| v.to_string()),
-            })
+            }
         },
         ("analyze", Some(args)) => {
             let (repository, _backup, _inode) = parse_repo_path(args.value_of("REPO").unwrap(), true, Some(false), Some(false)).unwrap();
-            Ok(Arguments::Analyze {
+            Arguments::Analyze {
                 repo_path: repository.to_string()
-            })
+            }
         },
         ("import", Some(args)) => {
             let (repository, _backup, _inode) = parse_repo_path(args.value_of("REPO").unwrap(), false, Some(false), Some(false)).unwrap();
-            Ok(Arguments::Import {
+            Arguments::Import {
                 repo_path: repository.to_string(),
                 remote_path: args.value_of("REMOTE").unwrap().to_string(),
                 key_files: args.values_of("key").map(|v| v.map(|k| k.to_string()).collect()).unwrap_or_else(|| vec![])
-            })
+            }
         },
         ("config", Some(args)) => {
             let (repository, _backup, _inode) = parse_repo_path(args.value_of("REPO").unwrap(), true, Some(false), Some(false)).unwrap();
-            Ok(Arguments::Config {
+            Arguments::Config {
                 bundle_size: args.value_of("bundle_size").map(|v| parse_num(v).unwrap() as usize * 1024 * 1024),
                 chunker: args.value_of("chunker").map(|v| parse_chunker(v).unwrap()),
                 compression: args.value_of("compression").map(|v| parse_compression(v).unwrap()),
                 encryption: args.value_of("encryption").map(|v| parse_public_key(v).unwrap()),
                 hash: args.value_of("hash").map(|v| parse_hash(v).unwrap()),
                 repo_path: repository.to_string(),
-            })
+            }
         },
         ("genkey", Some(args)) => {
-            Ok(Arguments::GenKey {
+            Arguments::GenKey {
                 file: args.value_of("FILE").map(|v| v.to_string())
-            })
+            }
         },
         ("addkey", Some(args)) => {
             let (repository, _backup, _inode) = parse_repo_path(args.value_of("REPO").unwrap(), true, Some(false), Some(false)).unwrap();
-            Ok(Arguments::AddKey {
+            Arguments::AddKey {
                 repo_path: repository.to_string(),
                 set_default: args.is_present("set_default"),
                 file: args.value_of("FILE").map(|v| v.to_string())
-            })
+            }
         },
         ("algotest", Some(args)) => {
-            Ok(Arguments::AlgoTest {
+            Arguments::AlgoTest {
                 bundle_size: (parse_num(args.value_of("bundle_size").unwrap()).unwrap() * 1024 * 1024) as usize,
                 chunker: parse_chunker(args.value_of("chunker").unwrap()).unwrap(),
                 compression: parse_compression(args.value_of("compression").unwrap()).unwrap(),
                 encrypt: args.is_present("encrypt"),
                 hash: parse_hash(args.value_of("hash").unwrap()).unwrap(),
                 file: args.value_of("FILE").unwrap().to_string(),
-            })
+            }
         },
         _ => {
             error!("No subcommand given");
-            Err(ErrorCode::InvalidArgs)
+            return Err(ErrorCode::InvalidArgs)
         }
-    }
+    };
+    Ok((log_level, args))
 }

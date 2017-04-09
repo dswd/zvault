@@ -112,7 +112,7 @@ impl Repository {
             mark_needed(&backups, &mut keep, daily, |d| (d.year(), d.month(), d.day()));
         }
         let mut remove = Vec::new();
-        info!("Removing the following backups");
+        println!("Removing the following backups");
         for (i, backup) in backups.into_iter().enumerate() {
             if !keep.get(i) {
                 println!("  - {}", backup.0);
@@ -183,7 +183,7 @@ impl Repository {
                 let child_inode = match self.create_backup_recurse(&child_path, ref_child.as_ref(), options, backup, failed_paths) {
                     Ok(inode) => inode,
                     Err(RepositoryError::Inode(_)) | Err(RepositoryError::Chunker(_)) | Err(RepositoryError::Io(_)) => {
-                        warn!("Failed to backup {:?}", child_path);
+                        info!("Failed to backup {:?}", child_path);
                         failed_paths.push(child_path);
                         continue
                     },

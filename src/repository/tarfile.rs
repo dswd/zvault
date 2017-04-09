@@ -87,7 +87,7 @@ impl Repository {
                     inodes.insert(path, (inode, HashSet::new()));
                 },
                 Err(RepositoryError::Inode(_)) | Err(RepositoryError::Chunker(_)) | Err(RepositoryError::Io(_)) => {
-                    warn!("Failed to backup {:?}", path);
+                    info!("Failed to backup {:?}", path);
                     failed_paths.push(path);
                     continue
                 },

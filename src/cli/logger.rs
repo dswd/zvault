@@ -1,20 +1,19 @@
-use log::{self, LogRecord, LogLevel, LogMetadata, LogLevelFilter};
+use log::{self, LogRecord, LogLevel, LogMetadata};
 pub use log::SetLoggerError;
 
 use ansi_term::{Color, Style};
 
 
-struct Logger;
+struct Logger(LogLevel);
 
 impl log::Log for Logger {
     fn enabled(&self, metadata: &LogMetadata) -> bool {
-        metadata.level() <= LogLevel::Info
+        metadata.level() <= self.0
     }
 
     fn log(&self, record: &LogRecord) {
         if self.enabled(record.metadata()) {
-            let lvl = record.level();
-            match lvl {
+            match record.level() {
                 LogLevel::Error => println!("{}: {}", Color::Red.bold().paint("error"), record.args()),
                 LogLevel::Warn => println!("{}: {}", Color::Yellow.bold().paint("warning"), record.args()),
                 LogLevel::Info => println!("{}: {}", Color::Green.bold().paint("info"), record.args()),
@@ -25,9 +24,9 @@ impl log::Log for Logger {
     }
 }
 
-pub fn init() -> Result<(), SetLoggerError> {
+pub fn init(level: LogLevel) -> Result<(), SetLoggerError> {
     log::set_logger(|max_log_level| {
-        max_log_level.set(LogLevelFilter::Info);
-        Box::new(Logger)
+        max_log_level.set(level.to_log_level_filter());
+        Box::new(Logger(level))
     })
 }

@@ -106,8 +106,14 @@ impl Repository {
             meta_bundle: None,
             locks: locks
         };
+        if !new.is_empty() {
+            info!("Adding {} new bundles to index", new.len());
+        }
         for bundle in new {
             try!(repo.add_new_remote_bundle(bundle))
+        }
+        if !gone.is_empty() {
+            info!("Removig {} old bundles from index", gone.len());
         }
         for bundle in gone {
             try!(repo.remove_gone_remote_bundle(bundle))
@@ -208,7 +214,7 @@ impl Repository {
     }
 
     fn add_new_remote_bundle(&mut self, bundle: BundleInfo) -> Result<(), RepositoryError> {
-        info!("Adding new bundle to index: {}", bundle.id);
+        debug!("Adding new bundle to index: {}", bundle.id);
         let bundle_id = match bundle.mode {
             BundleMode::Data => self.next_data_bundle,
             BundleMode::Meta => self.next_meta_bundle
@@ -259,7 +265,7 @@ impl Repository {
 
     fn remove_gone_remote_bundle(&mut self, bundle: BundleInfo) -> Result<(), RepositoryError> {
         if let Some(id) = self.bundle_map.find(&bundle.id) {
-            info!("Removing bundle from index: {}", bundle.id);
+            debug!("Removing bundle from index: {}", bundle.id);
             try!(self.bundles.delete_local_bundle(&bundle.id));
             try!(self.index.filter(|_key, data| data.bundle != id));
             self.bundle_map.remove(id);

@@ -10,7 +10,6 @@
 * Lock the local repository to avoid index corruption
 
 ## Usability
-* Verbosity control
 * Error: Backup already exists
 * Backup directories as a thing (list, remove)
 * Display backup name and path on backup integrity error

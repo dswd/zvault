@@ -120,11 +120,15 @@ impl BundleDb {
             for bundle in list {
                 self.local_bundles.insert(bundle.id(), bundle);
             }
+        } else {
+            warn!("Failed to read local bundle cache, rebuilding cache");
         }
         if let Ok(list) = StoredBundle::read_list_from(&self.layout.remote_bundle_cache_path()) {
             for bundle in list {
                 self.remote_bundles.insert(bundle.id(), bundle);
             }
+        } else {
+            warn!("Failed to read remote bundle cache, rebuilding cache");
         }
         let base_path = self.layout.base_path();
         let (new, gone) = try!(load_bundles(&self.layout.local_bundles_path(), base_path, &mut self.local_bundles, self.crypto.clone()));

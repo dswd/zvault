@@ -257,11 +257,12 @@ fn print_analysis(analysis: &HashMap<u32, BundleAnalysis>) {
 
 #[allow(unknown_lints,cyclomatic_complexity)]
 pub fn run() -> Result<(), ErrorCode> {
-    if let Err(err) = logger::init() {
+    let (log_level, args) = try!(args::parse());
+    if let Err(err) = logger::init(log_level) {
         println!("Failed to initialize the logger: {}", err);
         return Err(ErrorCode::InitializeLogger)
     }
-    match try!(args::parse()) {
+    match args {
         Arguments::Init{repo_path, bundle_size, chunker, compression, encryption, hash, remote_path} => {
             let mut repo = checked!(Repository::create(repo_path, Config {
                 bundle_size: bundle_size,
