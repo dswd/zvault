@@ -20,6 +20,7 @@ pub enum ErrorCode {
     InitializeLogger,
     CreateRepository,
     LoadRepository, SaveBackup, LoadBackup, LoadInode, LoadBundle,
+    NoSuchBackup, BackupAlreadyExists,
     AddKey, LoadKey, SaveKey,
     SaveConfig,
     LoadExcludes, InvalidExcludes,
@@ -58,7 +59,10 @@ impl ErrorCode {
             ErrorCode::DiffRun => 21,
             ErrorCode::VersionsRun => 22,
             ErrorCode::ImportRun => 23,
-            ErrorCode::FuseMount => 24
+            ErrorCode::FuseMount => 24,
+            //
+            ErrorCode::NoSuchBackup => 25,
+            ErrorCode::BackupAlreadyExists => 26
         }
     }
 }
@@ -92,6 +96,10 @@ fn open_repository(path: &str) -> Result<Repository, ErrorCode> {
 }
 
 fn get_backup(repo: &Repository, backup_name: &str) -> Result<Backup, ErrorCode> {
+    if !repo.has_backup(backup_name) {
+        error!("A backup with that name does not exist");
+        return Err(ErrorCode::NoSuchBackup)
+    }
     Ok(checked!(repo.get_backup(backup_name), "load backup", ErrorCode::LoadBackup))
 }
 
@@ -286,6 +294,10 @@ pub fn run() -> Result<(), ErrorCode> {
         },
         Arguments::Backup{repo_path, backup_name, src_path, full, reference, same_device, mut excludes, excludes_from, no_default_excludes, tar} => {
             let mut repo = try!(open_repository(&repo_path));
+            if repo.has_backup(&backup_name) {
+                error!("A backup with that name already exists");
+                return Err(ErrorCode::BackupAlreadyExists)
+            }
             let mut reference_backup = None;
             if !full && !tar {
                 reference_backup = match reference {

@@ -41,6 +41,10 @@ impl Repository {
         Ok(try!(Backup::get_all_from(&self.crypto.lock().unwrap(), self.layout.backups_path())))
     }
 
+    pub fn has_backup(&self, name: &str) -> bool {
+        self.layout.backup_path(name).exists()
+    }
+
     pub fn get_backup(&self, name: &str) -> Result<Backup, RepositoryError> {
         Ok(try!(Backup::read_from(&self.crypto.lock().unwrap(), self.layout.backup_path(name))))
     }
