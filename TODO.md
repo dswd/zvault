@@ -10,7 +10,6 @@
 
 ## Usability
 * Backup directories as a thing (list, remove)
-* Better control over what is checked in `check` subcommand
 * Man pages for all minor subcommands
 
 ## Code quality

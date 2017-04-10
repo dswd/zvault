@@ -281,7 +281,7 @@ impl BundleDb {
 
     #[inline]
     pub fn get_bundle_info(&self, bundle: &BundleId) -> Option<&StoredBundle> {
-        self.get_stored_bundle(bundle).ok()
+        self.remote_bundles.get(bundle)
     }
 
     #[inline]

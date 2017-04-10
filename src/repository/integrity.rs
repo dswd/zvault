@@ -64,19 +64,6 @@ impl Repository {
         })
     }
 
-    fn check_repository(&self) -> Result<(), RepositoryError> {
-        if self.next_data_bundle == self.next_meta_bundle {
-            return Err(IntegrityError::InvalidNextBundleId.into())
-        }
-        if self.bundle_map.get(self.next_data_bundle).is_some() {
-            return Err(IntegrityError::InvalidNextBundleId.into())
-        }
-        if self.bundle_map.get(self.next_meta_bundle).is_some() {
-            return Err(IntegrityError::InvalidNextBundleId.into())
-        }
-        Ok(())
-    }
-
     fn check_chunks(&self, checked: &mut Bitmap, chunks: &[Chunk]) -> Result<bool, RepositoryError> {
         let mut new = false;
         for &(hash, _len) in chunks {
@@ -132,11 +119,13 @@ impl Repository {
     }
 
     pub fn check_backup(&mut self, backup: &Backup) -> Result<(), RepositoryError> {
+        info!("Checking backup...");
         let mut checked = Bitmap::new(self.index.capacity());
         self.check_subtree(Path::new("").to_path_buf(), &backup.root, &mut checked)
     }
 
     pub fn check_inode(&mut self, inode: &Inode, path: &Path) -> Result<(), RepositoryError> {
+        info!("Checking inode...");
         let mut checked = Bitmap::new(self.index.capacity());
         try!(self.check_inode_contents(inode, &mut checked));
         if let Some(ref children) = inode.children {
@@ -147,7 +136,8 @@ impl Repository {
         Ok(())
     }
 
-    fn check_backups(&mut self) -> Result<(), RepositoryError> {
+    pub fn check_backups(&mut self) -> Result<(), RepositoryError> {
+        info!("Checking backups...");
         let mut checked = Bitmap::new(self.index.capacity());
         let backup_map = match self.get_backups() {
             Ok(backup_map) => backup_map,
@@ -164,7 +154,17 @@ impl Repository {
         Ok(())
     }
 
-    fn check_bundle_map(&mut self) -> Result<(), RepositoryError> {
+    pub fn check_repository(&mut self) -> Result<(), RepositoryError> {
+        info!("Checking repository integrity...");
+        if self.next_data_bundle == self.next_meta_bundle {
+            return Err(IntegrityError::InvalidNextBundleId.into())
+        }
+        if self.bundle_map.get(self.next_data_bundle).is_some() {
+            return Err(IntegrityError::InvalidNextBundleId.into())
+        }
+        if self.bundle_map.get(self.next_meta_bundle).is_some() {
+            return Err(IntegrityError::InvalidNextBundleId.into())
+        }
         for (_id, bundle_id) in self.bundle_map.bundles() {
             if self.bundles.get_bundle_info(&bundle_id).is_none() {
                 return Err(IntegrityError::MissingBundle(bundle_id).into())
@@ -179,20 +179,15 @@ impl Repository {
         Ok(())
     }
 
-    pub fn check(&mut self, full: bool) -> Result<(), RepositoryError> {
-        try!(self.flush());
-        info!("Checking bundle integrity...");
-        try!(self.bundles.check(full));
+    pub fn check_index(&mut self) -> Result<(), RepositoryError> {
         info!("Checking index integrity...");
         try!(self.index.check());
-        info!("Checking bundle map...");
-        try!(self.check_bundle_map());
         info!("Checking index entries...");
-        try!(self.check_index_chunks());
-        info!("Checking backup integrity...");
-        try!(self.check_backups());
-        info!("Checking repository integrity...");
-        try!(self.check_repository());
-        Ok(())
+        self.check_index_chunks()
+    }
+
+    pub fn check_bundles(&mut self, full: bool) -> Result<(), RepositoryError> {
+        info!("Checking bundle integrity...");
+        Ok(try!(self.bundles.check(full)))
     }
 }

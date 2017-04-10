@@ -418,8 +418,15 @@ pub fn run() -> Result<(), ErrorCode> {
                 info!("Reclaimed {}", to_file_size(info_before.encoded_data_size - info_after.encoded_data_size));
             }
         },
-        Arguments::Check{repo_path, backup_name, inode, full} => {
+        Arguments::Check{repo_path, backup_name, inode, bundles, index, bundle_data} => {
             let mut repo = try!(open_repository(&repo_path));
+            checked!(repo.check_repository(), "check repository", ErrorCode::CheckRun);
+            if bundles {
+                checked!(repo.check_bundles(bundle_data), "check bundles", ErrorCode::CheckRun);
+            }
+            if index {
+                checked!(repo.check_index(), "check index", ErrorCode::CheckRun);
+            }
             if let Some(backup_name) = backup_name {
                 let backup = try!(get_backup(&repo, &backup_name));
                 if let Some(path) = inode {
@@ -429,7 +436,7 @@ pub fn run() -> Result<(), ErrorCode> {
                     checked!(repo.check_backup(&backup), "check backup", ErrorCode::CheckRun)
                 }
             } else {
-                checked!(repo.check(full), "check repository", ErrorCode::CheckRun)
+                checked!(repo.check_backups(), "check repository", ErrorCode::CheckRun)
             }
             info!("Integrity verified")
         },
