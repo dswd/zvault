@@ -216,6 +216,9 @@ impl Repository {
 
     fn add_new_remote_bundle(&mut self, bundle: BundleInfo) -> Result<(), RepositoryError> {
         debug!("Adding new bundle to index: {}", bundle.id);
+        if self.bundle_map.find(&bundle.id).is_some() {
+            return Ok(())
+        }
         let bundle_id = match bundle.mode {
             BundleMode::Data => self.next_data_bundle,
             BundleMode::Meta => self.next_meta_bundle
@@ -236,6 +239,7 @@ impl Repository {
 
     fn rebuild_bundle_map(&mut self) -> Result<(), RepositoryError> {
         info!("Rebuilding bundle map from bundles");
+        self.bundle_map = BundleMap::create();
         for bundle in self.bundles.list_bundles() {
             let bundle_id = match bundle.mode {
                 BundleMode::Data => self.next_data_bundle,

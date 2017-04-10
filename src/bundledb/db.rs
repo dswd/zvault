@@ -69,7 +69,7 @@ pub fn load_bundles(path: &Path, base: &Path, bundles: &mut HashMap<BundleId, St
         }
     }
     let mut gone = HashSet::new();
-    for (id, bundle) in bundles.iter_mut() {
+    for (id, bundle) in bundles.iter() {
         if !bundle_paths.contains(&bundle.path) {
             gone.insert(id.clone());
         } else {
@@ -157,7 +157,7 @@ impl BundleDb {
     pub fn update_cache(&mut self, new: &[StoredBundle], gone: &[StoredBundle]) -> Result<(), BundleDbError> {
         for bundle in new {
             if bundle.info.mode == BundleMode::Meta {
-                info!("Copying new meta bundle to local cache: {}", bundle.info.id);
+                debug!("Copying new meta bundle to local cache: {}", bundle.info.id);
                 try!(self.copy_remote_bundle_to_cache(bundle));
             }
         }
@@ -304,4 +304,10 @@ impl BundleDb {
         }
         Ok(())
     }
+
+    #[inline]
+    pub fn len(&self) -> usize {
+        self.remote_bundles.len()
+    }
+
 }

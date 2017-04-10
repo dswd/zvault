@@ -23,6 +23,12 @@ quick_error!{
             description("No such chunk")
             display("Bundle {} does not contain the chunk {}", bundle, chunk)
         }
+        RemoteBundlesNotInMap {
+            description("Remote bundles missing from map")
+        }
+        MapContainsDuplicates {
+            description("Map contains duplicates")
+        }
         InvalidNextBundleId {
             description("Invalid next bundle id")
         }
@@ -158,12 +164,30 @@ impl Repository {
         Ok(())
     }
 
+    fn check_bundle_map(&mut self) -> Result<(), RepositoryError> {
+        for (_id, bundle_id) in self.bundle_map.bundles() {
+            if self.bundles.get_bundle_info(&bundle_id).is_none() {
+                return Err(IntegrityError::MissingBundle(bundle_id).into())
+            }
+        }
+        if self.bundle_map.len() < self.bundles.len() {
+            return Err(IntegrityError::RemoteBundlesNotInMap.into())
+        }
+        if self.bundle_map.len() > self.bundles.len() {
+            return Err(IntegrityError::MapContainsDuplicates.into())
+        }
+        Ok(())
+    }
+
     pub fn check(&mut self, full: bool) -> Result<(), RepositoryError> {
         try!(self.flush());
         info!("Checking bundle integrity...");
         try!(self.bundles.check(full));
         info!("Checking index integrity...");
         try!(self.index.check());
+        info!("Checking bundle map...");
+        try!(self.check_bundle_map());
+        info!("Checking index entries...");
         try!(self.check_index_chunks());
         info!("Checking backup integrity...");
         try!(self.check_backups());

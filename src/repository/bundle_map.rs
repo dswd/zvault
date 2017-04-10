@@ -96,4 +96,9 @@ impl BundleMap {
     pub fn bundles(&self) -> Vec<(u32, BundleId)> {
         self.0.iter().map(|(id, bundle)| (*id, bundle.clone())).collect()
     }
+
+    #[inline]
+    pub fn len(&self) -> usize {
+        self.0.len()
+    }
 }
