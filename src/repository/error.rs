@@ -78,6 +78,10 @@ quick_error!{
             description("Integrity error")
             display("Repository error: integrity error\n\tcaused by: {}", err)
         }
+        Dirty {
+            description("Dirty repository")
+            display("The repository is dirty, please run a check")
+        }
         Backup(err: BackupError) {
             from()
             cause(err)

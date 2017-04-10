@@ -438,6 +438,7 @@ pub fn run() -> Result<(), ErrorCode> {
             } else {
                 checked!(repo.check_backups(), "check repository", ErrorCode::CheckRun)
             }
+            repo.set_clean();
             info!("Integrity verified")
         },
         Arguments::List{repo_path, backup_name, inode} => {

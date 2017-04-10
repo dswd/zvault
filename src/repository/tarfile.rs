@@ -155,6 +155,10 @@ impl Repository {
 
     pub fn import_tarfile<P: AsRef<Path>>(&mut self, tarfile: P) -> Result<Backup, RepositoryError> {
         let _lock = try!(self.lock(false));
+        if self.dirty {
+            return Err(RepositoryError::Dirty)
+        }
+        self.dirty = true;
         let mut backup = Backup::default();
         backup.config = self.config.clone();
         backup.host = get_hostname().unwrap_or_else(|_| "".to_string());
@@ -177,6 +181,7 @@ impl Repository {
         backup.bundle_count = info_after.bundle_count - info_before.bundle_count;
         backup.chunk_count = info_after.chunk_count - info_before.chunk_count;
         backup.avg_chunk_size = backup.deduplicated_data_size as f32 / backup.chunk_count as f32;
+        self.dirty = false;
         if failed_paths.is_empty() {
             Ok(backup)
         } else {

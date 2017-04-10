@@ -61,6 +61,10 @@ impl Repository {
     }
 
     pub fn analyze_usage(&mut self) -> Result<HashMap<u32, BundleAnalysis>, RepositoryError> {
+        if self.dirty {
+            return Err(RepositoryError::Dirty)
+        }
+        self.dirty = true;
         let mut usage = HashMap::new();
         for (id, bundle) in self.bundle_map.bundles() {
             let bundle = try!(self.bundles.get_bundle_info(&bundle).ok_or_else(|| IntegrityError::MissingBundle(bundle)));
@@ -101,6 +105,7 @@ impl Repository {
                 }
             }
         }
+        self.dirty = false;
         Ok(usage)
     }
 

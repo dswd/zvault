@@ -3,7 +3,7 @@
 ## Functionality
 * XAttrs in fuse
 * XAttrs in tar
-* `check --repair`
+* Repair
 
 ## Stability / Reliability
 * Lock the local repository to avoid index corruption

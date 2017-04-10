@@ -102,4 +102,8 @@ impl RepositoryLayout {
     pub fn remote_bundle_cache_path(&self) -> PathBuf {
         self.0.join("bundles/remote.cache")
     }
+
+    pub fn dirtyfile_path(&self) -> PathBuf {
+        self.0.join("dirty")
+    }
 }

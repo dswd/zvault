@@ -17,6 +17,10 @@ impl Repository {
         try!(self.flush());
         info!("Locking repository");
         let _lock = try!(self.lock(true));
+        if self.dirty {
+            return Err(RepositoryError::Dirty)
+        }
+        self.dirty = true;
         info!("Analyzing chunk usage");
         let usage = try!(self.analyze_usage());
         let mut data_total = 0;
@@ -36,6 +40,7 @@ impl Repository {
         }
         info!("Reclaiming {} by rewriting {} bundles", to_file_size(reclaim_space as u64), rewrite_bundles.len());
         if !force {
+            self.dirty = false;
             return Ok(())
         }
         for id in &rewrite_bundles {
@@ -65,6 +70,7 @@ impl Repository {
             try!(self.delete_bundle(id));
         }
         try!(self.save_bundle_map());
+        self.dirty = false;
         Ok(())
     }
 }

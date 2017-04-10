@@ -48,7 +48,8 @@ pub struct Repository {
     data_bundle: Option<BundleWriter>,
     meta_bundle: Option<BundleWriter>,
     chunker: Chunker,
-    locks: LockFolder
+    locks: LockFolder,
+    dirty: bool
 }
 
 
@@ -92,8 +93,10 @@ impl Repository {
                 (BundleMap::create(), true)
             }
         };
+        let dirty = layout.dirtyfile_path().exists();
         let mut repo = Repository {
             layout: layout,
+            dirty: true,
             chunker: config.chunker.create(),
             config: config,
             index: index,
@@ -128,6 +131,7 @@ impl Repository {
         if rebuild_index {
             try!(repo.rebuild_index());
         }
+        repo.dirty = dirty;
         Ok(repo)
     }
 
@@ -190,6 +194,10 @@ impl Repository {
     }
 
     pub fn flush(&mut self) -> Result<(), RepositoryError> {
+        let dirtyfile = self.layout.dirtyfile_path();
+        if self.dirty && !dirtyfile.exists() {
+            try!(File::create(&dirtyfile));
+        }
         if self.data_bundle.is_some() {
             let mut finished = None;
             mem::swap(&mut self.data_bundle, &mut finished);
@@ -211,6 +219,9 @@ impl Repository {
         try!(self.bundles.finish_uploads());
         try!(self.save_bundle_map());
         try!(self.bundles.save_cache());
+        if !self.dirty && dirtyfile.exists() {
+            try!(fs::remove_file(&dirtyfile));
+        }
         Ok(())
     }
 
@@ -280,6 +291,10 @@ impl Repository {
 
     fn lock(&self, exclusive: bool) -> Result<LockHandle, RepositoryError> {
         Ok(try!(self.locks.lock(exclusive)))
+    }
+
+    pub fn set_clean(&mut self) {
+        self.dirty = false;        
     }
 }
 
