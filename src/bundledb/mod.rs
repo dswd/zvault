@@ -2,11 +2,13 @@ mod writer;
 mod reader;
 mod db;
 mod cache;
+mod uploader;
 
 pub use self::cache::{StoredBundle, BundleCacheError};
 pub use self::writer::{BundleWriter, BundleWriterError};
 pub use self::reader::{BundleReader, BundleReaderError};
 pub use self::db::*;
+pub use self::uploader::BundleUploader;
 
 use ::prelude::*;
 

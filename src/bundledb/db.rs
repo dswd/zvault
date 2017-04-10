@@ -6,6 +6,7 @@ use std::collections::{HashMap, HashSet};
 use std::fs;
 use std::sync::{Arc, Mutex};
 use std::io;
+use std::mem;
 
 
 quick_error!{
@@ -97,6 +98,7 @@ pub fn load_bundles(path: &Path, base: &Path, bundles: &mut HashMap<BundleId, St
 
 pub struct BundleDb {
     pub layout: RepositoryLayout,
+    uploader: Option<Arc<BundleUploader>>,
     crypto: Arc<Mutex<Crypto>>,
     local_bundles: HashMap<BundleId, StoredBundle>,
     remote_bundles: HashMap<BundleId, StoredBundle>,
@@ -109,6 +111,7 @@ impl BundleDb {
         BundleDb {
             layout: layout,
             crypto: crypto,
+            uploader: None,
             local_bundles: HashMap::new(),
             remote_bundles: HashMap::new(),
             bundle_cache: LruCache::new(5, 10)
@@ -230,15 +233,31 @@ impl BundleDb {
 
     #[inline]
     pub fn add_bundle(&mut self, bundle: BundleWriter) -> Result<BundleInfo, BundleDbError> {
-        let bundle = try!(bundle.finish(&self));
+        let mut bundle = try!(bundle.finish(&self));
         if bundle.info.mode == BundleMode::Meta {
             try!(self.copy_remote_bundle_to_cache(&bundle))
         }
         let (folder, filename) = self.layout.remote_bundle_path(self.remote_bundles.len());
-        try!(fs::create_dir_all(&folder).context(&folder as &Path));
-        let bundle = try!(bundle.move_to(&self.layout.base_path(), folder.join(filename)));
+        let dst_path = folder.join(filename);
+        let src_path = bundle.path;
+        bundle.path = dst_path.clone();
+        if self.uploader.is_none() {
+            self.uploader = Some(BundleUploader::new(5));
+        }
+        try!(self.uploader.as_ref().unwrap().queue(src_path, dst_path));
         self.remote_bundles.insert(bundle.id(), bundle.clone());
         Ok(bundle.info)
+    }
+
+    #[inline]
+    pub fn finish_uploads(&mut self) -> Result<(), BundleDbError> {
+        let mut uploader = None;
+        mem::swap(&mut self.uploader, &mut uploader);
+        if let Some(uploader) = uploader {
+            uploader.finish()
+        } else {
+            Ok(())
+        }
     }
 
     #[inline]

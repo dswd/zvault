@@ -1,7 +1,6 @@
 # TODO
 
 ## Functionality
-* Detach bundle upload
 * XAttrs in fuse
 * XAttrs in tar
 * `check --repair`

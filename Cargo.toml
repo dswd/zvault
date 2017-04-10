@@ -28,6 +28,7 @@ lazy_static = "0.2"
 rand = "0.3"
 tar = "0.4"
 xattr = "0.1"
+crossbeam = "0.2"
 time = "*"
 libc = "*"
 

@@ -62,17 +62,6 @@ impl StoredBundle {
         self.info.id.clone()
     }
 
-    pub fn move_to<P: AsRef<Path>>(mut self, base_path: &Path, path: P) -> Result<Self, BundleDbError> {
-        let src_path = base_path.join(&self.path);
-        let dst_path = path.as_ref();
-        if fs::rename(&src_path, dst_path).is_err() {
-            try!(fs::copy(&src_path, dst_path).context(dst_path));
-            try!(fs::remove_file(&src_path).context(&src_path as &Path));
-        }
-        self.path = dst_path.strip_prefix(base_path).unwrap().to_path_buf();
-        Ok(self)
-    }
-
     pub fn copy_to<P: AsRef<Path>>(&self, base_path: &Path, path: P) -> Result<Self, BundleDbError> {
         let src_path = base_path.join(&self.path);
         let dst_path = path.as_ref();

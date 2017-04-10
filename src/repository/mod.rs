@@ -208,6 +208,7 @@ impl Repository {
             }
             self.next_meta_bundle = self.next_free_bundle_id()
         }
+        try!(self.bundles.finish_uploads());
         try!(self.save_bundle_map());
         try!(self.bundles.save_cache());
         Ok(())
