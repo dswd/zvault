@@ -154,17 +154,30 @@ impl BundleDb {
         Ok(try!(StoredBundle::save_list_to(&bundles, &self.layout.remote_bundle_cache_path())))
     }
 
-    pub fn update_cache(&mut self, new: &[StoredBundle], gone: &[StoredBundle]) -> Result<(), BundleDbError> {
-        for bundle in new {
+    pub fn update_cache(&mut self) -> Result<(), BundleDbError> {
+        let mut meta_bundles = HashSet::new();
+        for (id, bundle) in &self.remote_bundles {
             if bundle.info.mode == BundleMode::Meta {
+                meta_bundles.insert(id.clone());
+            }
+        }
+        let mut remove = vec![];
+        for id in self.local_bundles.keys() {
+            if !meta_bundles.contains(id) {
+                remove.push(id.clone());
+            }
+        }
+        for id in meta_bundles {
+            if !self.local_bundles.contains_key(&id) {
+                let bundle = self.remote_bundles[&id].clone();
                 debug!("Copying new meta bundle to local cache: {}", bundle.info.id);
-                try!(self.copy_remote_bundle_to_cache(bundle));
+                try!(self.copy_remote_bundle_to_cache(&bundle));
             }
         }
         let base_path = self.layout.base_path();
-        for bundle in gone {
-            if let Some(bundle) = self.local_bundles.remove(&bundle.id()) {
-                try!(fs::remove_file(base_path.join(&bundle.path)).map_err(|e| BundleDbError::Remove(e, bundle.id())))
+        for id in remove {
+            if let Some(bundle) = self.local_bundles.remove(&id) {
+                try!(fs::remove_file(base_path.join(&bundle.path)).map_err(|e| BundleDbError::Remove(e, id)))
             }
         }
         Ok(())
@@ -174,7 +187,7 @@ impl BundleDb {
     pub fn open(layout: RepositoryLayout, crypto: Arc<Mutex<Crypto>>) -> Result<(Self, Vec<BundleInfo>, Vec<BundleInfo>), BundleDbError> {
         let mut self_ = Self::new(layout, crypto);
         let (new, gone) = try!(self_.load_bundle_list());
-        try!(self_.update_cache(&new, &gone));
+        try!(self_.update_cache());
         let new = new.into_iter().map(|s| s.info).collect();
         let gone = gone.into_iter().map(|s| s.info).collect();
         Ok((self_, new, gone))
