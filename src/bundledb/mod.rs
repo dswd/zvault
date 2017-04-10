@@ -25,12 +25,14 @@ pub static HEADER_VERSION: u8 = 1;
 pub struct BundleId(pub Hash);
 
 impl Serialize for BundleId {
+    #[inline]
     fn serialize<S: serde::Serializer>(&self, ser: S) -> Result<S::Ok, S::Error> {
         self.0.serialize(ser)
     }
 }
 
 impl Deserialize for BundleId {
+    #[inline]
     fn deserialize<D: serde::Deserializer>(de: D) -> Result<Self, D::Error> {
         let hash = try!(Hash::deserialize(de));
         Ok(BundleId(hash))
@@ -43,6 +45,7 @@ impl BundleId {
         self.0.to_string()
     }
 
+    #[inline]
     pub fn random() -> Self {
         BundleId(Hash{high: rand::random(), low: rand::random()})
     }

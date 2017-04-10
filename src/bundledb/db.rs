@@ -183,7 +183,6 @@ impl BundleDb {
         Ok(())
     }
 
-    #[inline]
     pub fn open(layout: RepositoryLayout, crypto: Arc<Mutex<Crypto>>) -> Result<(Self, Vec<BundleInfo>, Vec<BundleInfo>), BundleDbError> {
         let mut self_ = Self::new(layout, crypto);
         let (new, gone) = try!(self_.load_bundle_list());
@@ -193,7 +192,6 @@ impl BundleDb {
         Ok((self_, new, gone))
     }
 
-    #[inline]
     pub fn create(layout: RepositoryLayout) -> Result<(), BundleDbError> {
         try!(fs::create_dir_all(layout.remote_bundles_path()).context(&layout.remote_bundles_path() as &Path));
         try!(fs::create_dir_all(layout.local_bundles_path()).context(&layout.local_bundles_path() as &Path));
@@ -214,6 +212,7 @@ impl BundleDb {
         }
     }
 
+    #[inline]
     fn get_bundle(&self, stored: &StoredBundle) -> Result<BundleReader, BundleDbError> {
         let base_path = self.layout.base_path();
         Ok(try!(BundleReader::load(base_path.join(&stored.path), self.crypto.clone())))
@@ -244,7 +243,6 @@ impl BundleDb {
         Ok(())
     }
 
-    #[inline]
     pub fn add_bundle(&mut self, bundle: BundleWriter) -> Result<BundleInfo, BundleDbError> {
         let mut bundle = try!(bundle.finish(&self));
         if bundle.info.mode == BundleMode::Meta {
@@ -262,7 +260,6 @@ impl BundleDb {
         Ok(bundle.info)
     }
 
-    #[inline]
     pub fn finish_uploads(&mut self) -> Result<(), BundleDbError> {
         let mut uploader = None;
         mem::swap(&mut self.uploader, &mut uploader);
@@ -273,7 +270,6 @@ impl BundleDb {
         }
     }
 
-    #[inline]
     pub fn get_chunk_list(&self, bundle: &BundleId) -> Result<ChunkList, BundleDbError> {
         let mut bundle = try!(self.get_stored_bundle(bundle).and_then(|stored| self.get_bundle(&stored)));
         Ok(try!(bundle.get_chunk_list()).clone())
@@ -289,7 +285,6 @@ impl BundleDb {
         self.remote_bundles.values().map(|b| &b.info).collect()
     }
 
-    #[inline]
     pub fn delete_local_bundle(&mut self, bundle: &BundleId) -> Result<(), BundleDbError> {
         if let Some(bundle) = self.local_bundles.remove(bundle) {
             let path = self.layout.base_path().join(&bundle.path);
@@ -298,7 +293,6 @@ impl BundleDb {
         Ok(())
     }
 
-    #[inline]
     pub fn delete_bundle(&mut self, bundle: &BundleId) -> Result<(), BundleDbError> {
         try!(self.delete_local_bundle(bundle));
         if let Some(bundle) = self.remote_bundles.remove(bundle) {
@@ -309,7 +303,6 @@ impl BundleDb {
         }
     }
 
-    #[inline]
     pub fn check(&mut self, full: bool) -> Result<(), BundleDbError> {
         for stored in self.remote_bundles.values() {
             let mut bundle = try!(self.get_bundle(stored));

@@ -77,7 +77,6 @@ impl BundleMap {
         self.0.remove(&id)
     }
 
-    #[inline]
     pub fn find(&self, bundle: &BundleId) -> Option<u32> {
         for (id, bundle_id) in &self.0 {
             if bundle == bundle_id {
@@ -92,7 +91,6 @@ impl BundleMap {
         self.0.insert(id, bundle);
     }
 
-    #[inline]
     pub fn bundles(&self) -> Vec<(u32, BundleId)> {
         self.0.iter().map(|(id, bundle)| (*id, bundle.clone())).collect()
     }

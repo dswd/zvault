@@ -118,6 +118,7 @@ impl Repository {
         Ok(())
     }
 
+    #[inline]
     pub fn check_backup(&mut self, backup: &Backup) -> Result<(), RepositoryError> {
         info!("Checking backup...");
         let mut checked = Bitmap::new(self.index.capacity());
@@ -179,6 +180,7 @@ impl Repository {
         Ok(())
     }
 
+    #[inline]
     pub fn check_index(&mut self) -> Result<(), RepositoryError> {
         info!("Checking index integrity...");
         try!(self.index.check());
@@ -186,6 +188,7 @@ impl Repository {
         self.check_index_chunks()
     }
 
+    #[inline]
     pub fn check_bundles(&mut self, full: bool) -> Result<(), RepositoryError> {
         info!("Checking bundle integrity...");
         Ok(try!(self.bundles.check(full)))

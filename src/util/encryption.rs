@@ -111,7 +111,6 @@ impl Crypto {
         Crypto { path: PathBuf::new(), keys: HashMap::new() }
     }
 
-    #[inline]
     pub fn open<P: AsRef<Path>>(path: P) -> Result<Self, EncryptionError> {
         let path = path.as_ref().to_owned();
         let mut keys: HashMap<PublicKey, SecretKey> = HashMap::default();
@@ -138,7 +137,6 @@ impl Crypto {
         self.register_secret_key(public, secret)
     }
 
-    #[inline]
     pub fn load_keypair_from_file<P: AsRef<Path>>(path: P) -> Result<(PublicKey, SecretKey), EncryptionError> {
         let keyfile = try!(KeyfileYaml::load(path));
         let public = try!(parse_hex(&keyfile.public).map_err(|_| EncryptionError::InvalidKey));

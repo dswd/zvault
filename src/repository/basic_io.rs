@@ -54,6 +54,7 @@ impl<'a> Read for ChunkReader<'a> {
 
 
 impl Repository {
+    #[inline]
     pub fn get_bundle_id(&self, id: u32) -> Result<BundleId, RepositoryError> {
         self.bundle_map.get(id).ok_or_else(|| IntegrityError::MissingBundleId(id).into())
     }
@@ -187,7 +188,6 @@ impl Repository {
         Ok(chunks.into())
     }
 
-    #[inline]
     pub fn get_data(&mut self, chunks: &[Chunk]) -> Result<Vec<u8>, RepositoryError> {
         let mut data = Vec::with_capacity(chunks.iter().map(|&(_, size)| size).sum::<u32>() as usize);
         try!(self.get_stream(chunks, &mut data));
@@ -199,7 +199,6 @@ impl Repository {
         ChunkReader::new(self, chunks)
     }
 
-    #[inline]
     pub fn get_stream<W: Write>(&mut self, chunks: &[Chunk], w: &mut W) -> Result<(), RepositoryError> {
         for &(ref hash, len) in chunks {
             let data = try!(try!(self.get_chunk(*hash)).ok_or_else(|| IntegrityError::MissingChunk(hash.clone())));

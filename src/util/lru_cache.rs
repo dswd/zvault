@@ -52,7 +52,6 @@ impl<K: Eq+Hash, V> LruCache<K, V> {
         }
     }
 
-    #[inline]
     fn shrink(&mut self) {
         let mut tags: Vec<u64> = self.items.values().map(|&(_, n)| n).collect();
         tags.sort();

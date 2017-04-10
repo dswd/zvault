@@ -41,6 +41,7 @@ impl Repository {
         Ok(try!(Backup::get_all_from(&self.crypto.lock().unwrap(), self.layout.backups_path())))
     }
 
+    #[inline]
     pub fn has_backup(&self, name: &str) -> bool {
         self.layout.backup_path(name).exists()
     }
@@ -222,7 +223,6 @@ impl Repository {
         Ok(inode)
     }
 
-    #[allow(dead_code)]
     pub fn create_backup_recursively<P: AsRef<Path>>(&mut self, path: P, reference: Option<&Backup>, options: &BackupOptions) -> Result<Backup, RepositoryError> {
         let _lock = try!(self.lock(false));
         if self.dirty {
@@ -307,7 +307,6 @@ impl Repository {
         self.get_backup_path(backup, path).map(|mut inodes| inodes.pop().unwrap())
     }
 
-    #[inline]
     pub fn find_versions<P: AsRef<Path>>(&mut self, path: P) -> Result<Vec<(String, Inode)>, RepositoryError> {
         let path = path.as_ref();
         let mut versions = HashMap::new();
@@ -325,7 +324,6 @@ impl Repository {
         Ok(versions)
     }
 
-    #[inline]
     fn find_differences_recurse(&mut self, inode1: &Inode, inode2: &Inode, path: PathBuf, diffs: &mut Vec<(DiffType, PathBuf)>) -> Result<(), RepositoryError> {
         if !inode1.is_same_meta(inode2) || inode1.data != inode2.data {
             diffs.push((DiffType::Mod, path.clone()));

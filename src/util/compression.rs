@@ -72,7 +72,6 @@ impl Compression {
         format!("{}/{}", self.name(), self.level)
     }
 
-    #[inline]
     pub fn from_string(name: &str) -> Result<Self, CompressionError> {
         let (name, level) = if let Some(pos) = name.find('/') {
             let level = try!(u8::from_str(&name[pos+1..]).map_err(|_| CompressionError::UnsupportedCodec(name.to_string())));
@@ -91,7 +90,6 @@ impl Compression {
         Ok(Compression { method: method, level: level })
     }
 
-    #[inline]
     pub fn name(&self) -> &'static str {
         match self.method {
             CompressionMethod::Deflate => "deflate",
@@ -101,7 +99,6 @@ impl Compression {
         }
     }
 
-    #[inline]
     fn codec(&self) -> Result<*mut SquashCodec, CompressionError> {
         let name = CString::new(self.name().as_bytes()).unwrap();
         let codec = unsafe { squash_get_codec(name.as_ptr()) };
@@ -194,7 +191,6 @@ impl Compression {
         Ok(buf)
     }
 
-    #[inline]
     pub fn compress_stream(&self) -> Result<CompressionStream, CompressionError> {
         let codec = try!(self.codec());
         let options = try!(self.options());
@@ -207,7 +203,6 @@ impl Compression {
         Ok(CompressionStream::new(stream))
     }
 
-    #[inline]
     pub fn decompress_stream(&self) -> Result<CompressionStream, CompressionError> {
         let codec = try!(self.codec());
         let stream = unsafe { squash_stream_new(

@@ -58,7 +58,6 @@ pub enum Chunker {
 
 
 impl IChunker for Chunker {
-    #[inline]
     fn get_type(&self) -> ChunkerType {
         match *self {
             Chunker::Ae(ref c) => c.get_type(),
@@ -92,7 +91,6 @@ serde_impl!(ChunkerType(u64) {
 
 
 impl ChunkerType {
-    #[inline]
     pub fn from(name: &str, avg_size: usize, seed: u64) -> Result<Self, &'static str> {
         match name {
             "ae" => Ok(ChunkerType::Ae(avg_size)),
@@ -102,7 +100,6 @@ impl ChunkerType {
         }
     }
 
-    #[inline]
     pub fn from_string(name: &str) -> Result<Self, &'static str> {
         let (name, size) = if let Some(pos) = name.find('/') {
             let size = try!(usize::from_str(&name[pos+1..]).map_err(|_| "Chunk size must be a number"));
@@ -124,7 +121,6 @@ impl ChunkerType {
         }
     }
 
-    #[inline]
     pub fn name(&self) -> &'static str {
         match *self {
             ChunkerType::Ae(_size) => "ae",
@@ -133,7 +129,6 @@ impl ChunkerType {
         }
     }
 
-    #[inline]
     pub fn avg_size(&self) -> usize {
         match *self {
             ChunkerType::Ae(size) => size,
@@ -142,12 +137,10 @@ impl ChunkerType {
         }
     }
 
-    #[inline]
     pub fn to_string(&self) -> String {
         format!("{}/{}", self.name(), self.avg_size()/1024)
     }
 
-    #[inline]
     pub fn seed(&self) -> u64 {
         match *self {
             ChunkerType::Ae(_size) => 0,

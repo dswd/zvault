@@ -159,6 +159,7 @@ impl Repository {
         Ok(try!(self.crypto.lock().unwrap().register_secret_key(public, secret)))
     }
 
+    #[inline]
     pub fn save_config(&mut self) -> Result<(), RepositoryError> {
         try!(self.config.save(self.layout.config_path()));
         Ok(())
@@ -289,12 +290,14 @@ impl Repository {
         Ok(())
     }
 
+    #[inline]
     fn lock(&self, exclusive: bool) -> Result<LockHandle, RepositoryError> {
         Ok(try!(self.locks.lock(exclusive)))
     }
 
+    #[inline]
     pub fn set_clean(&mut self) {
-        self.dirty = false;        
+        self.dirty = false;
     }
 }
 

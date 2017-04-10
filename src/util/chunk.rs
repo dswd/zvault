@@ -40,7 +40,6 @@ impl ChunkList {
         self.0.push(chunk)
     }
 
-    #[inline]
     pub fn write_to(&self, dst: &mut Write) -> Result<(), io::Error> {
         for chunk in &self.0 {
             try!(chunk.0.write_to(dst));
@@ -49,7 +48,6 @@ impl ChunkList {
         Ok(())
     }
 
-    #[inline]
     pub fn read_n_from(n: usize, src: &mut Read) -> Result<Self, io::Error> {
         let mut chunks = Vec::with_capacity(n);
         for _ in 0..n {
@@ -112,6 +110,7 @@ impl DerefMut for ChunkList {
 }
 
 impl Serialize for ChunkList {
+    #[inline]
     fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error> where S: serde::Serializer {
         let mut buf = Vec::with_capacity(self.encoded_size());
         self.write_to(&mut buf).unwrap();
@@ -120,6 +119,7 @@ impl Serialize for ChunkList {
 }
 
 impl Deserialize for ChunkList {
+    #[inline]
     fn deserialize<D>(deserializer: D) -> Result<Self, D::Error> where D: serde::Deserializer {
         let data: Vec<u8> = try!(ByteBuf::deserialize(deserializer)).into();
         if data.len() % 20 != 0 {

@@ -153,7 +153,6 @@ impl BundleReader {
         Ok(self.chunks.as_ref().unwrap())
     }
 
-    #[inline]
     fn load_encoded_contents(&self) -> Result<Vec<u8>, BundleReaderError> {
         debug!("Load bundle data {} ({:?})", self.info.id, self.info.mode);
         let mut file = BufReader::new(try!(File::open(&self.path).context(&self.path as &Path)));
@@ -163,7 +162,6 @@ impl BundleReader {
         Ok(data)
     }
 
-    #[inline]
     fn decode_contents(&self, mut data: Vec<u8>) -> Result<Vec<u8>, BundleReaderError> {
         if let Some(ref encryption) = self.info.encryption {
             data = try!(self.crypto.lock().unwrap().decrypt(&encryption, &data).context(&self.path as &Path));
@@ -183,7 +181,6 @@ impl BundleReader {
         self.load_encoded_contents().and_then(|data| self.decode_contents(data))
     }
 
-    #[inline]
     pub fn get_chunk_position(&mut self, id: usize) -> Result<(usize, usize), BundleReaderError> {
         if id >= self.info.chunk_count {
             return Err(BundleReaderError::NoSuchChunk(self.id(), id))

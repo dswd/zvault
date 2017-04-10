@@ -206,7 +206,6 @@ impl Inode {
         Ok(inode)
     }
 
-    #[allow(dead_code)]
     pub fn create_at<P: AsRef<Path>>(&self, path: P) -> Result<Option<File>, InodeError> {
         let full_path = path.as_ref().join(&self.name);
         let mut file = None;
@@ -244,12 +243,14 @@ impl Inode {
         Ok(file)
     }
 
+    #[inline]
     pub fn is_same_meta(&self, other: &Inode) -> bool {
         self.file_type == other.file_type && self.size == other.size && self.mode == other.mode
         && self.user == other.user && self.group == other.group && self.name == other.name
         && self.timestamp == other.timestamp && self.symlink_target == other.symlink_target
     }
 
+    #[inline]
     pub fn is_same_meta_quick(&self, other: &Inode) -> bool {
         self.timestamp == other.timestamp
         && self.file_type == other.file_type
@@ -308,7 +309,6 @@ impl Repository {
         Ok(try!(Inode::decode(&try!(self.get_data(chunks)))))
     }
 
-    #[inline]
     pub fn save_inode_at<P: AsRef<Path>>(&mut self, inode: &Inode, path: P) -> Result<(), RepositoryError> {
         if let Some(mut file) = try!(inode.create_at(path.as_ref())) {
             if let Some(ref contents) = inode.data {
