@@ -72,7 +72,7 @@ quick_error!{
             description("Bundle map error")
             display("Repository error: bundle map error\n\tcaused by: {}", err)
         }
-        Integrity(err: RepositoryIntegrityError) {
+        Integrity(err: IntegrityError) {
             from()
             cause(err)
             description("Integrity error")

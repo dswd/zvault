@@ -11,6 +11,7 @@ use std::collections::HashMap;
 use std::io::{BufReader, BufRead};
 use std::fs::File;
 use std::env;
+use std::path::Path;
 
 use self::args::Arguments;
 
@@ -421,9 +422,9 @@ pub fn run() -> Result<(), ErrorCode> {
             let mut repo = try!(open_repository(&repo_path));
             if let Some(backup_name) = backup_name {
                 let backup = try!(get_backup(&repo, &backup_name));
-                if let Some(inode) = inode {
-                    let inode = checked!(repo.get_backup_inode(&backup, inode), "load subpath inode", ErrorCode::LoadInode);
-                    checked!(repo.check_inode(&inode), "check inode", ErrorCode::CheckRun)
+                if let Some(path) = inode {
+                    let inode = checked!(repo.get_backup_inode(&backup, &path), "load subpath inode", ErrorCode::LoadInode);
+                    checked!(repo.check_inode(&inode, Path::new(&path)), "check inode", ErrorCode::CheckRun)
                 } else {
                     checked!(repo.check_backup(&backup), "check backup", ErrorCode::CheckRun)
                 }

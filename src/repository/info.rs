@@ -51,10 +51,10 @@ impl Repository {
                         bundle.used_raw_size += len as usize;
                     }
                 } else {
-                    return Err(RepositoryIntegrityError::MissingBundleId(pos.bundle).into());
+                    return Err(IntegrityError::MissingBundleId(pos.bundle).into());
                 }
             } else {
-                return Err(RepositoryIntegrityError::MissingChunk(hash).into());
+                return Err(IntegrityError::MissingChunk(hash).into());
             }
         }
         Ok(new)
@@ -63,7 +63,7 @@ impl Repository {
     pub fn analyze_usage(&mut self) -> Result<HashMap<u32, BundleAnalysis>, RepositoryError> {
         let mut usage = HashMap::new();
         for (id, bundle) in self.bundle_map.bundles() {
-            let bundle = try!(self.bundles.get_bundle_info(&bundle).ok_or_else(|| RepositoryIntegrityError::MissingBundle(bundle)));
+            let bundle = try!(self.bundles.get_bundle_info(&bundle).ok_or_else(|| IntegrityError::MissingBundle(bundle)));
             usage.insert(id, BundleAnalysis {
                 chunk_usage: Bitmap::new(bundle.info.chunk_count),
                 info: bundle.info.clone(),

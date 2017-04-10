@@ -9,7 +9,7 @@ impl Repository {
             try!(self.bundles.delete_bundle(&bundle));
             Ok(())
         } else {
-            Err(RepositoryIntegrityError::MissingBundleId(id).into())
+            Err(IntegrityError::MissingBundleId(id).into())
         }
     }
 

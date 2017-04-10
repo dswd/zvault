@@ -1,11 +1,12 @@
 use ::prelude::*;
 
 use std::collections::VecDeque;
+use std::path::{Path, PathBuf};
 
 
 quick_error!{
     #[derive(Debug)]
-    pub enum RepositoryIntegrityError {
+    pub enum IntegrityError {
         MissingChunk(hash: Hash) {
             description("Missing chunk")
             display("Missing chunk: {}", hash)
@@ -25,6 +26,16 @@ quick_error!{
         InvalidNextBundleId {
             description("Invalid next bundle id")
         }
+        BrokenInode(path: PathBuf, err: Box<RepositoryError>) {
+            cause(err)
+            description("Broken inode")
+            display("Broken inode: {:?}\n\tcaused by: {}", path, err)
+        }
+        MissingInodeData(path: PathBuf, err: Box<RepositoryError>) {
+            cause(err)
+            description("Missing inode data")
+            display("Missing inode data in: {:?}\n\tcaused by: {}", path, err)
+        }
     }
 }
 
@@ -37,11 +48,11 @@ impl Repository {
             let bundle = if let Some(bundle) = self.bundles.get_bundle_info(&bundle_id) {
                 bundle
             } else {
-                return Err(RepositoryIntegrityError::MissingBundle(bundle_id.clone()).into())
+                return Err(IntegrityError::MissingBundle(bundle_id.clone()).into())
             };
             // Get chunk from bundle
             if bundle.info.chunk_count <= location.chunk as usize {
-                return Err(RepositoryIntegrityError::NoSuchChunk(bundle_id.clone(), location.chunk).into())
+                return Err(IntegrityError::NoSuchChunk(bundle_id.clone(), location.chunk).into())
             }
             Ok(())
         })
@@ -49,13 +60,13 @@ impl Repository {
 
     fn check_repository(&self) -> Result<(), RepositoryError> {
         if self.next_data_bundle == self.next_meta_bundle {
-            return Err(RepositoryIntegrityError::InvalidNextBundleId.into())
+            return Err(IntegrityError::InvalidNextBundleId.into())
         }
         if self.bundle_map.get(self.next_data_bundle).is_some() {
-            return Err(RepositoryIntegrityError::InvalidNextBundleId.into())
+            return Err(IntegrityError::InvalidNextBundleId.into())
         }
         if self.bundle_map.get(self.next_meta_bundle).is_some() {
-            return Err(RepositoryIntegrityError::InvalidNextBundleId.into())
+            return Err(IntegrityError::InvalidNextBundleId.into())
         }
         Ok(())
     }
@@ -67,7 +78,7 @@ impl Repository {
                 new |= !checked.get(pos);
                 checked.set(pos);
             } else {
-                return Err(RepositoryIntegrityError::MissingChunk(hash).into())
+                return Err(IntegrityError::MissingChunk(hash).into())
             }
         }
         Ok(new)
@@ -90,20 +101,24 @@ impl Repository {
         Ok(())
     }
 
-    fn check_subtree(&mut self, chunks: &[Chunk], checked: &mut Bitmap) -> Result<(), RepositoryError> {
+    fn check_subtree(&mut self, path: PathBuf, chunks: &[Chunk], checked: &mut Bitmap) -> Result<(), RepositoryError> {
         let mut todo = VecDeque::new();
-        todo.push_back(ChunkList::from(chunks.to_vec()));
-        while let Some(chunks) = todo.pop_front() {
-            if !try!(self.check_chunks(checked, &chunks)) {
-                continue
+        todo.push_back((path, ChunkList::from(chunks.to_vec())));
+        while let Some((path, chunks)) = todo.pop_front() {
+            match self.check_chunks(checked, &chunks) {
+                Ok(false) => continue, // checked this chunk list before
+                Ok(true) => (),
+                Err(err) => return Err(IntegrityError::BrokenInode(path, Box::new(err)).into())
             }
             let inode = try!(self.get_inode(&chunks));
             // Mark the content chunks as used
-            try!(self.check_inode_contents(&inode, checked));
+            if let Err(err) = self.check_inode_contents(&inode, checked) {
+                return Err(IntegrityError::MissingInodeData(path, Box::new(err)).into())
+            }
             // Put children in todo
             if let Some(children) = inode.children {
-                for (_name, chunks) in children {
-                    todo.push_back(chunks);
+                for (name, chunks) in children {
+                    todo.push_back((path.join(name), chunks));
                 }
             }
         }
@@ -112,15 +127,15 @@ impl Repository {
 
     pub fn check_backup(&mut self, backup: &Backup) -> Result<(), RepositoryError> {
         let mut checked = Bitmap::new(self.index.capacity());
-        self.check_subtree(&backup.root, &mut checked)
+        self.check_subtree(Path::new("").to_path_buf(), &backup.root, &mut checked)
     }
 
-    pub fn check_inode(&mut self, inode: &Inode) -> Result<(), RepositoryError> {
+    pub fn check_inode(&mut self, inode: &Inode, path: &Path) -> Result<(), RepositoryError> {
         let mut checked = Bitmap::new(self.index.capacity());
         try!(self.check_inode_contents(inode, &mut checked));
         if let Some(ref children) = inode.children {
             for chunks in children.values() {
-                try!(self.check_subtree(chunks, &mut checked))
+                try!(self.check_subtree(path.to_path_buf(), chunks, &mut checked))
             }
         }
         Ok(())
@@ -136,8 +151,9 @@ impl Repository {
             },
             Err(err) => return Err(err)
         };
-        for (_name, backup) in backup_map {
-            try!(self.check_subtree(&backup.root, &mut checked));
+        for (name, backup) in backup_map {
+            let path = name+"::";
+            try!(self.check_subtree(Path::new(&path).to_path_buf(), &backup.root, &mut checked));
         }
         Ok(())
     }

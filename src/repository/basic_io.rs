@@ -35,7 +35,7 @@ impl<'a> Read for ChunkReader<'a> {
                 if let Some(chunk) = self.chunks.pop_front() {
                     self.data = match self.repo.get_chunk(chunk.0) {
                         Ok(Some(data)) => data,
-                        Ok(None) => return Err(io::Error::new(io::ErrorKind::Other, RepositoryIntegrityError::MissingChunk(chunk.0))),
+                        Ok(None) => return Err(io::Error::new(io::ErrorKind::Other, IntegrityError::MissingChunk(chunk.0))),
                         Err(err) => return Err(io::Error::new(io::ErrorKind::Other, err))
                     };
                     self.pos = 0;
@@ -55,7 +55,7 @@ impl<'a> Read for ChunkReader<'a> {
 
 impl Repository {
     pub fn get_bundle_id(&self, id: u32) -> Result<BundleId, RepositoryError> {
-        self.bundle_map.get(id).ok_or_else(|| RepositoryIntegrityError::MissingBundleId(id).into())
+        self.bundle_map.get(id).ok_or_else(|| IntegrityError::MissingBundleId(id).into())
     }
 
     pub fn get_chunk(&mut self, hash: Hash) -> Result<Option<Vec<u8>>, RepositoryError> {
@@ -202,7 +202,7 @@ impl Repository {
     #[inline]
     pub fn get_stream<W: Write>(&mut self, chunks: &[Chunk], w: &mut W) -> Result<(), RepositoryError> {
         for &(ref hash, len) in chunks {
-            let data = try!(try!(self.get_chunk(*hash)).ok_or_else(|| RepositoryIntegrityError::MissingChunk(hash.clone())));
+            let data = try!(try!(self.get_chunk(*hash)).ok_or_else(|| IntegrityError::MissingChunk(hash.clone())));
             debug_assert_eq!(data.len() as u32, len);
             try!(w.write_all(&data));
         }

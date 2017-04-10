@@ -26,7 +26,7 @@ pub use self::config::Config;
 pub use self::metadata::{Inode, FileType, FileData, InodeError};
 pub use self::backup::{BackupError, BackupOptions, DiffType};
 pub use self::backup_file::{Backup, BackupFileError};
-pub use self::integrity::RepositoryIntegrityError;
+pub use self::integrity::IntegrityError;
 pub use self::info::{RepositoryInfo, BundleAnalysis};
 pub use self::layout::RepositoryLayout;
 use self::bundle_map::BundleMap;

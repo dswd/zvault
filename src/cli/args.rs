@@ -279,6 +279,7 @@ pub fn parse() -> Result<(LogLevel, Arguments), ErrorCode> {
         .settings(&[AppSettings::VersionlessSubcommands, AppSettings::SubcommandRequiredElseHelp])
         .global_settings(&[AppSettings::AllowMissingPositional, AppSettings::UnifiedHelpMessage, AppSettings::ColoredHelp, AppSettings::ColorAuto])
         .arg(Arg::from_usage("-v --verbose 'Print more information'").global(true).multiple(true).max_values(3).takes_value(false))
+        .arg(Arg::from_usage("-q --quiet 'Print less information'").global(true).conflicts_with("verbose"))
         .subcommand(SubCommand::with_name("init").about("Initialize a new repository")
             .arg(Arg::from_usage("[bundle_size] --bundle-size [SIZE] 'Set the target bundle size in MiB'")
                 .default_value(DEFAULT_BUNDLE_SIZE_STR).validator(validate_num))
@@ -410,7 +411,9 @@ pub fn parse() -> Result<(LogLevel, Arguments), ErrorCode> {
                 .default_value(DEFAULT_HASH).validator(validate_hash))
             .arg(Arg::from_usage("<FILE> 'File with test data'")
                 .validator(validate_existing_path))).get_matches();
-    let log_level = match args.subcommand().1.map(|m| m.occurrences_of("verbose")).unwrap_or(0) + args.occurrences_of("verbose") {
+    let verbose_count = args.subcommand().1.map(|m| m.occurrences_of("verbose")).unwrap_or(0) + args.occurrences_of("verbose");
+    let quiet_count= args.subcommand().1.map(|m| m.occurrences_of("quiet")).unwrap_or(0) + args.occurrences_of("quiet");
+    let log_level = match 1 + verbose_count - quiet_count {
         0 => LogLevel::Warn,
         1 => LogLevel::Info,
         2 => LogLevel::Debug,
