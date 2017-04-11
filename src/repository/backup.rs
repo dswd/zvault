@@ -121,10 +121,16 @@ impl Repository {
             } else {
                 backup.file_count +=1;
                 // Non-directories are stored directly and the chunks are put into the children map of their parents
-                let chunks = try!(self.put_inode(&inode));
                 if let Some(parent) = path.parent() {
                     let parent = parent.to_owned();
-                    if let Some(ref mut parent) = directories.get_mut(&parent) {
+                    if !directories.contains_key(&parent) {
+                        // This is a backup of one one file, put it in the directories map so it will be saved later
+                        assert!(scan_stack.is_empty() && save_stack.is_empty() && directories.is_empty());
+                        save_stack.push(path.clone());
+                        directories.insert(path.clone(), inode);
+                    } else {
+                        let mut parent = directories.get_mut(&parent).unwrap();
+                        let chunks = try!(self.put_inode(&inode));
                         let children = parent.children.as_mut().unwrap();
                         children.insert(inode.name.clone(), chunks);
                     }
