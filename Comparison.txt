@@ -1,259 +1,269 @@
 ++ mkdir repos
 ++ target/release/zvault init --compression brotli/3 repos/zvault_brotli3
 
-real    0m0.009s
-user    0m0.008s
+real    0m0.003s
+user    0m0.000s
 sys     0m0.000s
 ++ target/release/zvault init --compression brotli/6 repos/zvault_brotli6
 
-real    0m0.010s
-user    0m0.004s
-sys     0m0.004s
+real    0m0.004s
+user    0m0.000s
+sys     0m0.000s
 ++ target/release/zvault init --compression lzma2/2 repos/zvault_lzma2
 
-real    0m0.009s
-user    0m0.004s
-sys     0m0.004s
+real    0m0.004s
+user    0m0.000s
+sys     0m0.000s
 ++ attic init repos/attic
 Initializing repository at "repos/attic"
 Encryption NOT enabled.
 Use the "--encryption=passphrase|keyfile" to enable encryption.
 Initializing cache...
 
-real    0m0.136s
-user    0m0.100s
-sys     0m0.016s
+real    0m0.147s
+user    0m0.116s
+sys     0m0.012s
 ++ borg init -e none repos/borg
 
-real    0m0.253s
-user    0m0.204s
-sys     0m0.012s
+real    0m0.403s
+user    0m0.336s
+sys     0m0.048s
 ++ borg init -e none repos/borg-zlib
 
-real    0m0.243s
-user    0m0.200s
-sys     0m0.008s
+real    0m0.338s
+user    0m0.292s
+sys     0m0.024s
+++ zbackup init --non-encrypted repos/zbackup
+
+real    0m0.009s
+user    0m0.000s
+sys     0m0.000s
+++ cat
+++ target/release/zvault backup repos/zvault_brotli3::silesia1 test_data/silesia.tar
+WARN - Partial backups are not implemented yet, creating full backup
+
+real    0m6.034s
+user    0m5.508s
+sys     0m0.424s
+++ target/release/zvault backup repos/zvault_brotli3::silesia2 test_data/silesia.tar
+WARN - Partial backups are not implemented yet, creating full backup
+
+real    0m1.425s
+user    0m1.348s
+sys     0m0.076s
+++ target/release/zvault backup repos/zvault_brotli6::silesia1 test_data/silesia.tar
+WARN - Partial backups are not implemented yet, creating full backup
+
+real    0m23.035s
+user    0m22.156s
+sys     0m0.692s
+++ target/release/zvault backup repos/zvault_brotli6::silesia2 test_data/silesia.tar
+WARN - Partial backups are not implemented yet, creating full backup
+
+real    0m1.150s
+user    0m1.120s
+sys     0m0.024s
+++ target/release/zvault backup repos/zvault_lzma2::silesia1 test_data/silesia.tar
+WARN - Partial backups are not implemented yet, creating full backup
+
+real    0m54.011s
+user    0m53.044s
+sys     0m0.728s
+++ target/release/zvault backup repos/zvault_lzma2::silesia2 test_data/silesia.tar
+WARN - Partial backups are not implemented yet, creating full backup
+
+real    0m1.157s
+user    0m1.108s
+sys     0m0.040s
+++ attic create repos/attic::silesia1 test_data/silesia.tar
+
+real    0m13.427s
+user    0m12.256s
+sys     0m0.476s
+++ attic create repos/attic::silesia2 test_data/silesia.tar
+
+real    0m1.930s
+user    0m1.804s
+sys     0m0.092s
+++ borg create -C none repos/borg::silesia1 test_data/silesia.tar
+
+real    0m5.246s
+user    0m2.516s
+sys     0m1.132s
+++ borg create -C none repos/borg::silesia2 test_data/silesia.tar
+
+real    0m3.029s
+user    0m2.408s
+sys     0m0.428s
+++ borg create -C zlib repos/borg-zlib::silesia1 test_data/silesia.tar
+
+real    0m14.833s
+user    0m13.524s
+sys     0m0.692s
+++ borg create -C zlib repos/borg-zlib::silesia2 test_data/silesia.tar
+
+real    0m2.413s
+user    0m1.996s
+sys     0m0.368s
+++ zbackup backup --non-encrypted repos/zbackup/backups/silesia1
+Loading index...
+Index loaded.
+Using up to 4 thread(s) for compression
+
+real    0m52.613s
+user    3m12.460s
+sys     0m2.568s
+++ zbackup backup --non-encrypted repos/zbackup/backups/silesia2
+Loading index...
+Loading index file 1e374b3c9ce07b4d9ad4238e35e5834c07d3a4ca984bb842...
+Index loaded.
+Using up to 4 thread(s) for compression
+
+real    0m2.141s
+user    0m2.072s
+sys     0m0.064s
+++ du -h test_data/silesia.tar
+203M    test_data/silesia.tar
+++ du -sh repos/zvault_brotli3/bundles repos/zvault_brotli6/bundles repos/zvault_lzma2/bundles repos/attic repos/borg repos/borg-zlib repos/zbackup
+66M     repos/zvault_brotli3/bundles
+58M     repos/zvault_brotli6/bundles
+55M     repos/zvault_lzma2/bundles
+68M     repos/attic
+203M    repos/borg
+66M     repos/borg-zlib
+52M     repos/zbackup
+++ rm -rf repos
+++ mkdir repos
+++ target/release/zvault init --compression brotli/3 repos/zvault_brotli3
+
+real    0m0.004s
+user    0m0.000s
+sys     0m0.000s
+++ target/release/zvault init --compression brotli/6 repos/zvault_brotli6
+
+real    0m0.003s
+user    0m0.000s
+sys     0m0.000s
+++ target/release/zvault init --compression lzma2/2 repos/zvault_lzma2
+
+real    0m0.003s
+user    0m0.000s
+sys     0m0.000s
+++ attic init repos/attic
+Initializing repository at "repos/attic"
+Encryption NOT enabled.
+Use the "--encryption=passphrase|keyfile" to enable encryption.
+Initializing cache...
+
+real    0m0.169s
+user    0m0.136s
+sys     0m0.012s
+++ borg init -e none repos/borg
+
+real    0m0.364s
+user    0m0.320s
+sys     0m0.020s
+++ borg init -e none repos/borg-zlib
+
+real    0m0.393s
+user    0m0.352s
+sys     0m0.020s
 ++ zbackup init --non-encrypted repos/zbackup
 
 real    0m0.003s
 user    0m0.000s
 sys     0m0.000s
 ++ cat
-++ target/release/zvault put repos/zvault_brotli3::silesia1 test_data/silesia.tar
+++ target/release/zvault backup repos/zvault_brotli3::ubuntu1 test_data/ubuntu.tar
+WARN - Partial backups are not implemented yet, creating full backup
 
-real    0m3.389s
-user    0m3.172s
-sys     0m0.220s
-++ target/release/zvault put repos/zvault_brotli3::silesia2 test_data/silesia.tar
+real    0m5.496s
+user    0m5.000s
+sys     0m0.492s
+++ target/release/zvault backup repos/zvault_brotli3::ubuntu2 test_data/ubuntu.tar
+WARN - Partial backups are not implemented yet, creating full backup
 
-real    0m0.741s
-user    0m0.708s
+real    0m1.156s
+user    0m1.104s
+sys     0m0.048s
+++ target/release/zvault backup repos/zvault_brotli6::ubuntu1 test_data/ubuntu.tar
+WARN - Partial backups are not implemented yet, creating full backup
+
+real    0m21.012s
+user    0m20.524s
+sys     0m0.464s
+++ target/release/zvault backup repos/zvault_brotli6::ubuntu2 test_data/ubuntu.tar
+WARN - Partial backups are not implemented yet, creating full backup
+
+real    0m0.999s
+user    0m0.964s
 sys     0m0.032s
-++ target/release/zvault put repos/zvault_brotli6::silesia1 test_data/silesia.tar
+++ target/release/zvault backup repos/zvault_lzma2::ubuntu1 test_data/ubuntu.tar
+WARN - Partial backups are not implemented yet, creating full backup
 
-real    0m10.166s
-user    0m9.880s
-sys     0m0.284s
-++ target/release/zvault put repos/zvault_brotli6::silesia2 test_data/silesia.tar
+real    0m55.683s
+user    0m54.992s
+sys     0m0.656s
+++ target/release/zvault backup repos/zvault_lzma2::ubuntu2 test_data/ubuntu.tar
+WARN - Partial backups are not implemented yet, creating full backup
 
-real    0m0.707s
-user    0m0.660s
-sys     0m0.044s
-++ target/release/zvault put repos/zvault_lzma2::silesia1 test_data/silesia.tar
-
-real    0m26.277s
-user    0m25.988s
-sys     0m0.288s
-++ target/release/zvault put repos/zvault_lzma2::silesia2 test_data/silesia.tar
-
-real    0m0.710s
-user    0m0.656s
-sys     0m0.052s
-++ attic create repos/attic::silesia1 test_data/silesia.tar
-
-real    0m9.304s
-user    0m8.440s
-sys     0m0.328s
-++ attic create repos/attic::silesia2 test_data/silesia.tar
-
-real    0m1.210s
-user    0m1.128s
-sys     0m0.040s
-++ borg create -C none repos/borg::silesia1 test_data/silesia.tar
-
-real    0m4.805s
-user    0m2.240s
-sys     0m1.156s
-++ borg create -C none repos/borg::silesia2 test_data/silesia.tar
-
-real    0m1.475s
-user    0m1.260s
-sys     0m0.164s
-++ borg create -C zlib repos/borg-zlib::silesia1 test_data/silesia.tar
-
-real    0m10.093s
-user    0m9.184s
-sys     0m0.428s
-++ borg create -C zlib repos/borg-zlib::silesia2 test_data/silesia.tar
-
-real    0m1.534s
-user    0m1.280s
-sys     0m0.192s
-++ zbackup backup --non-encrypted repos/zbackup/backups/silesia1
-Loading index...
-Index loaded.
-Using up to 4 thread(s) for compression
-
-real    0m24.362s
-user    1m32.292s
-sys     0m0.776s
-++ zbackup backup --non-encrypted repos/zbackup/backups/silesia2
-Loading index...
-Loading index file 90cd1b771e3c068c6617b0089f4fe5fde4f654cb0473b7d7...
-Index loaded.
-Using up to 4 thread(s) for compression
-
-real    0m1.281s
-user    0m1.248s
-sys     0m0.032s
-++ du -h test_data/silesia.tar
-203M    test_data/silesia.tar
-++ du -sh repos/zbackup/bundles repos/zvault_brotli3/bundles repos/zvault_brotli6/bundles repos/zvault_lzma2/bundles repos/attic repos/borg repos/borg-zlib repos/zbackup
-51M     repos/zbackup/bundles
-65M     repos/zvault_brotli3/bundles
-58M     repos/zvault_brotli6/bundles
-55M     repos/zvault_lzma2/bundles
-68M     repos/attic
-203M    repos/borg
-66M     repos/borg-zlib
-164K    repos/zbackup
-++ rm -rf repos
-++ mkdir repos
-++ target/release/zvault init --compression brotli/3 repos/zvault_brotli3
-
-real    0m0.005s
-user    0m0.000s
-sys     0m0.004s
-++ target/release/zvault init --compression brotli/6 repos/zvault_brotli6
-
-real    0m0.005s
-user    0m0.004s
-sys     0m0.000s
-++ target/release/zvault init --compression lzma2/2 repos/zvault_lzma2
-
-real    0m0.005s
-user    0m0.004s
-sys     0m0.000s
-++ attic init repos/attic
-Initializing repository at "repos/attic"
-Encryption NOT enabled.
-Use the "--encryption=passphrase|keyfile" to enable encryption.
-Initializing cache...
-
-real    0m0.095s
-user    0m0.060s
-sys     0m0.020s
-++ borg init -e none repos/borg
-
-real    0m0.235s
-user    0m0.184s
-sys     0m0.016s
-++ borg init -e none repos/borg-zlib
-
-real    0m0.262s
-user    0m0.200s
-sys     0m0.016s
-++ zbackup init --non-encrypted repos/zbackup
-
-real    0m0.004s
-user    0m0.000s
-sys     0m0.000s
-++ cat
-++ target/release/zvault put repos/zvault_brotli3::ubuntu1 test_data/ubuntu.tar
-
-real    0m3.008s
-user    0m2.748s
-sys     0m0.260s
-++ target/release/zvault put repos/zvault_brotli3::ubuntu2 test_data/ubuntu.tar
-
-real    0m0.621s
-user    0m0.580s
-sys     0m0.040s
-++ target/release/zvault put repos/zvault_brotli6::ubuntu1 test_data/ubuntu.tar
-
-real    0m10.916s
-user    0m10.680s
-sys     0m0.232s
-++ target/release/zvault put repos/zvault_brotli6::ubuntu2 test_data/ubuntu.tar
-
-real    0m0.619s
-user    0m0.596s
-sys     0m0.020s
-++ target/release/zvault put repos/zvault_lzma2::ubuntu1 test_data/ubuntu.tar
-
-real    0m37.039s
-user    0m36.792s
-sys     0m0.244s
-++ target/release/zvault put repos/zvault_lzma2::ubuntu2 test_data/ubuntu.tar
-
-real    0m0.640s
-user    0m0.624s
-sys     0m0.012s
+real    0m0.995s
+user    0m0.968s
+sys     0m0.024s
 ++ attic create repos/attic::ubuntu1 test_data/ubuntu.tar
 
-real    0m9.309s
-user    0m8.316s
-sys     0m0.368s
+real    0m13.093s
+user    0m11.880s
+sys     0m0.512s
 ++ attic create repos/attic::ubuntu2 test_data/ubuntu.tar
 
-real    0m1.093s
-user    0m1.008s
-sys     0m0.044s
+real    0m1.722s
+user    0m1.620s
+sys     0m0.072s
 ++ borg create -C none repos/borg::ubuntu1 test_data/ubuntu.tar
 
-real    0m4.317s
-user    0m1.988s
-sys     0m1.032s
+real    0m4.551s
+user    0m2.120s
+sys     0m1.012s
 ++ borg create -C none repos/borg::ubuntu2 test_data/ubuntu.tar
 
-real    0m1.402s
-user    0m1.160s
-sys     0m0.188s
+real    0m2.403s
+user    0m1.996s
+sys     0m0.308s
 ++ borg create -C zlib repos/borg-zlib::ubuntu1 test_data/ubuntu.tar
 
-real    0m10.049s
-user    0m8.788s
-sys     0m0.532s
+real    0m14.114s
+user    0m12.768s
+sys     0m0.648s
 ++ borg create -C zlib repos/borg-zlib::ubuntu2 test_data/ubuntu.tar
 
-real    0m1.291s
-user    0m1.088s
-sys     0m0.168s
+real    0m2.091s
+user    0m1.780s
+sys     0m0.280s
 ++ zbackup backup --non-encrypted repos/zbackup/backups/ubuntu1
 Loading index...
 Index loaded.
 Using up to 4 thread(s) for compression
 
-real    0m17.972s
-user    1m7.956s
-sys     0m0.644s
+real    0m38.218s
+user    2m21.564s
+sys     0m3.832s
 ++ zbackup backup --non-encrypted repos/zbackup/backups/ubuntu2
 Loading index...
-Loading index file 3fea916708827f3f5cdfc18fca024ef9cf00aa92a0c8d676...
+Loading index file 4f106a9d29c26e4132ae67e9528e1ed6f8579fe6ee6fd671...
 Index loaded.
 Using up to 4 thread(s) for compression
 
-real    0m1.158s
-user    0m1.132s
+real    0m1.755s
+user    0m1.728s
 sys     0m0.024s
 ++ du -h test_data/ubuntu.tar
 176M    test_data/ubuntu.tar
-++ du -sh repos/zbackup/bundles repos/zvault_brotli3/bundles repos/zvault_brotli6/bundles repos/zvault_lzma2/bundles repos/attic repos/borg repos/borg-zlib repos/zbackup
-64M     repos/zbackup/bundles
+++ du -sh repos/zvault_brotli3/bundles repos/zvault_brotli6/bundles repos/zvault_lzma2/bundles repos/attic repos/borg repos/borg-zlib repos/zbackup
 77M     repos/zvault_brotli3/bundles
 68M     repos/zvault_brotli6/bundles
 63M     repos/zvault_lzma2/bundles
 84M     repos/attic
 176M    repos/borg
 83M     repos/borg-zlib
-148K    repos/zbackup
+64M     repos/zbackup
