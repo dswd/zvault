@@ -340,7 +340,7 @@ pub fn parse() -> Result<(LogLevel, Arguments), ErrorCode> {
                 .validator(|val| validate_repo_path(val, true, Some(false), Some(false)))))
         .subcommand(SubCommand::with_name("check").about("Check the repository, a backup or a backup subtree")
             .arg(Arg::from_usage("-b --bundles 'Check the bundles'"))
-            .arg(Arg::from_usage("[bundle_data] --bundle-data 'Check bundle contents (slow)'").requires("bundles").alias("--data"))
+            .arg(Arg::from_usage("[bundle_data] --bundle-data 'Check bundle contents (slow)'").requires("bundles").alias("data"))
             .arg(Arg::from_usage("-i --index 'Check the chunk index'"))
             .arg(Arg::from_usage("<PATH> 'Path of the repository/backup/subtree, [repository][::backup[::subtree]]'")
                 .validator(|val| validate_repo_path(val, true, None, None))))

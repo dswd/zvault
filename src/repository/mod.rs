@@ -111,15 +111,15 @@ impl Repository {
         };
         if !new.is_empty() {
             info!("Adding {} new bundles to index", new.len());
-        }
-        for bundle in new {
-            try!(repo.add_new_remote_bundle(bundle))
+            for bundle in ProgressIter::new("adding bundles to index", new.len(), new.into_iter()) {
+                try!(repo.add_new_remote_bundle(bundle))
+            }
         }
         if !gone.is_empty() {
             info!("Removig {} old bundles from index", gone.len());
-        }
-        for bundle in gone {
-            try!(repo.remove_gone_remote_bundle(bundle))
+            for bundle in gone {
+                try!(repo.remove_gone_remote_bundle(bundle))
+            }
         }
         try!(repo.save_bundle_map());
         repo.next_meta_bundle = repo.next_free_bundle_id();
@@ -227,10 +227,10 @@ impl Repository {
     }
 
     fn add_new_remote_bundle(&mut self, bundle: BundleInfo) -> Result<(), RepositoryError> {
-        debug!("Adding new bundle to index: {}", bundle.id);
         if self.bundle_map.find(&bundle.id).is_some() {
             return Ok(())
         }
+        debug!("Adding new bundle to index: {}", bundle.id);
         let bundle_id = match bundle.mode {
             BundleMode::Data => self.next_data_bundle,
             BundleMode::Meta => self.next_meta_bundle

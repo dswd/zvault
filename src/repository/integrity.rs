@@ -2,6 +2,9 @@ use ::prelude::*;
 
 use std::collections::VecDeque;
 use std::path::{Path, PathBuf};
+use std::time::Duration;
+
+use pbr::ProgressBar;
 
 
 quick_error!{
@@ -47,7 +50,11 @@ quick_error!{
 
 impl Repository {
     fn check_index_chunks(&self) -> Result<(), RepositoryError> {
-        self.index.walk(|_hash, location| {
+        let mut count = 0;
+        let mut progress = ProgressBar::new(self.index.len() as u64);
+        progress.message("checking index: ");
+        progress.set_max_refresh_rate(Some(Duration::from_millis(100)));
+        let res = self.index.walk(|_hash, location| {
             // Lookup bundle id from map
             let bundle_id = try!(self.get_bundle_id(location.bundle));
             // Get bundle object from bundledb
@@ -60,8 +67,14 @@ impl Repository {
             if bundle.info.chunk_count <= location.chunk as usize {
                 return Err(IntegrityError::NoSuchChunk(bundle_id.clone(), location.chunk).into())
             }
+            count += 1;
+            if count % 1000 == 0 {
+                progress.set(count);
+            }
             Ok(())
-        })
+        });
+        progress.finish_print("checking index: done.");
+        res
     }
 
     fn check_chunks(&self, checked: &mut Bitmap, chunks: &[Chunk]) -> Result<bool, RepositoryError> {
@@ -148,7 +161,7 @@ impl Repository {
             },
             Err(err) => return Err(err)
         };
-        for (name, backup) in backup_map {
+        for (name, backup) in ProgressIter::new("ckecking backups", backup_map.len(), backup_map.into_iter()) {
             let path = name+"::";
             try!(self.check_subtree(Path::new(&path).to_path_buf(), &backup.root, &mut checked));
         }

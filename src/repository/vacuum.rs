@@ -43,7 +43,7 @@ impl Repository {
             self.dirty = false;
             return Ok(())
         }
-        for id in &rewrite_bundles {
+        for id in ProgressIter::new("rewriting bundles", rewrite_bundles.len(), rewrite_bundles.iter()) {
             let bundle = &usage[id];
             let bundle_id = self.bundle_map.get(*id).unwrap();
             let chunks = try!(self.bundles.get_chunk_list(&bundle_id));

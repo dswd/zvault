@@ -8,7 +8,6 @@ use std::sync::{Arc, Mutex};
 use std::io;
 use std::mem;
 
-
 quick_error!{
     #[derive(Debug)]
     pub enum BundleDbError {
@@ -78,10 +77,15 @@ pub fn load_bundles(path: &Path, base: &Path, bundles: &mut HashMap<BundleId, St
     }
     let mut new = vec![];
     for path in bundle_paths {
-        let bundle = StoredBundle {
-            info: try!(BundleReader::load_info(base.join(&path), crypto.clone())),
-            path: path
+        let info = match BundleReader::load_info(base.join(&path), crypto.clone()) {
+            Ok(info) => info,
+            Err(BundleReaderError::TruncatedBundle(path)) => {
+                warn!("Ignoring truncated bundle {:?}", path);
+                continue
+            },
+            Err(err) => return Err(err.into())
         };
+        let bundle = StoredBundle { info: info, path: path };
         let id = bundle.info.id.clone();
         if !bundles.contains_key(&id) {
             new.push(bundle.clone());
@@ -304,7 +308,7 @@ impl BundleDb {
     }
 
     pub fn check(&mut self, full: bool) -> Result<(), BundleDbError> {
-        for stored in self.remote_bundles.values() {
+        for stored in ProgressIter::new("checking bundles", self.remote_bundles.len(), self.remote_bundles.values()) {
             let mut bundle = try!(self.get_bundle(stored));
             try!(bundle.check(full))
         }
