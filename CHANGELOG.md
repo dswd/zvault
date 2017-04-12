@@ -4,8 +4,11 @@ This project follows [semantic versioning](http://semver.org).
 
 
 ### UNRELEASED
-- Calling sodiumoxide::init for faster algorithms and thread safety (not needed)
-- Locking local repository to avoid index corruption
+- [added] Added CHANGELOG
+- [added] Locking local repository to avoid index corruption
+- [fixed] Creating empty bundle cache on init to avoid warninigs
+- [fixed] Calling sodiumoxide::init for faster algorithms and thread safety (not needed)
+
 
 ### v0.1.0 (2017-04-11)
 First working alpha release

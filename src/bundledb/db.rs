@@ -200,6 +200,8 @@ impl BundleDb {
         try!(fs::create_dir_all(layout.remote_bundles_path()).context(&layout.remote_bundles_path() as &Path));
         try!(fs::create_dir_all(layout.local_bundles_path()).context(&layout.local_bundles_path() as &Path));
         try!(fs::create_dir_all(layout.temp_bundles_path()).context(&layout.temp_bundles_path() as &Path));
+        try!(StoredBundle::save_list_to(&[], layout.local_bundle_cache_path()));
+        try!(StoredBundle::save_list_to(&[], layout.remote_bundle_cache_path()));
         Ok(())
     }
 
