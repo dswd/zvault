@@ -259,7 +259,7 @@ impl BundleDb {
         }
         let (folder, filename) = self.layout.remote_bundle_path(self.remote_bundles.len());
         let dst_path = folder.join(filename);
-        let src_path = bundle.path;
+        let src_path = self.layout.base_path().join(bundle.path);
         bundle.path = dst_path.clone();
         if self.uploader.is_none() {
             self.uploader = Some(BundleUploader::new(5));

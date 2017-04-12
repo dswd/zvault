@@ -101,7 +101,7 @@ impl BundleWriter {
         if let Some(ref encryption) = self.encryption {
             chunk_data = try!(self.crypto.lock().unwrap().encrypt(&encryption, &chunk_data));
         }
-        let path = db.layout.temp_bundle_path();
+        let mut path = db.layout.temp_bundle_path();
         let mut file = BufWriter::new(try!(File::create(&path).context(&path as &Path)));
         try!(file.write_all(&HEADER_STRING).context(&path as &Path));
         try!(file.write_all(&[HEADER_VERSION]).context(&path as &Path));
@@ -128,6 +128,7 @@ impl BundleWriter {
         try!(file.write_all(&info_data).context(&path as &Path));
         try!(file.write_all(&chunk_data).context(&path as &Path));
         try!(file.write_all(&self.data).context(&path as &Path));
+        path = path.strip_prefix(db.layout.base_path()).unwrap().to_path_buf();
         Ok(StoredBundle { path: path, info: info })
     }
 
