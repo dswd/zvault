@@ -7,6 +7,7 @@ use std::os::linux::fs::MetadataExt;
 
 use chrono::prelude::*;
 use regex::RegexSet;
+use users::{self, Users, Groups};
 
 
 quick_error!{
@@ -135,11 +136,22 @@ impl Repository {
         Ok(())
     }
 
-    pub fn restore_inode_tree<P: AsRef<Path>>(&mut self, inode: Inode, path: P) -> Result<(), RepositoryError> {
+    pub fn restore_inode_tree<P: AsRef<Path>>(&mut self, backup: &Backup, inode: Inode, path: P) -> Result<(), RepositoryError> {
         let _lock = try!(self.lock(false));
         let mut queue = VecDeque::new();
         queue.push_back((path.as_ref().to_owned(), inode));
-        while let Some((path, inode)) = queue.pop_front() {
+        let cache = users::UsersCache::new();
+        while let Some((path, mut inode)) = queue.pop_front() {
+            if let Some(name) = backup.user_names.get(&inode.user) {
+                if let Some(user) = cache.get_user_by_name(name) {
+                    inode.user = user.uid();
+                }
+            }
+            if let Some(name) = backup.group_names.get(&inode.group) {
+                if let Some(group) = cache.get_group_by_name(name) {
+                    inode.group = group.gid();
+                }
+            }
             try!(self.save_inode_at(&inode, &path));
             if inode.file_type == FileType::Directory {
                 let path = path.join(inode.name);
@@ -162,6 +174,20 @@ impl Repository {
     ) -> Result<Inode, RepositoryError> {
         let path = path.as_ref();
         let mut inode = try!(self.create_inode(path, reference));
+        if !backup.user_names.contains_key(&inode.user) {
+            if let Some(user) = users::get_user_by_uid(inode.user) {
+                backup.user_names.insert(inode.user, user.name().to_string());
+            } else {
+                warn!("Failed to retrieve name of user {}", inode.user);
+            }
+        }
+        if !backup.group_names.contains_key(&inode.group) {
+            if let Some(group) = users::get_group_by_gid(inode.group) {
+                backup.group_names.insert(inode.group, group.name().to_string());
+            } else {
+                warn!("Failed to retrieve name of group {}", inode.group);
+            }
+        }
         let mut meta_size = 0;
         inode.cum_size = inode.size;
         if inode.file_type == FileType::Directory {

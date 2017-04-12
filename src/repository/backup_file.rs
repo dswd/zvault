@@ -88,7 +88,9 @@ pub struct Backup {
     pub host: String,
     pub path: String,
     pub config: Config,
-    pub modified: bool
+    pub modified: bool,
+    pub user_names: HashMap<u32, String>,
+    pub group_names: HashMap<u32, String>
 }
 serde_impl!(Backup(u8?) {
     root: ChunkList => 0,
@@ -106,7 +108,9 @@ serde_impl!(Backup(u8?) {
     host: String => 12,
     path: String => 13,
     config: Config => 14,
-    modified: bool => 15
+    modified: bool => 15,
+    user_names: HashMap<u32, String> => 16,
+    group_names: HashMap<u32, String> => 17
 });
 
 impl Backup {

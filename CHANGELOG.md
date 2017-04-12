@@ -12,6 +12,8 @@ This project follows [semantic versioning](http://semver.org).
 - [fixed] Fixed a deadlock in the bundle upload code
 - [fixed] Also setting repository dirty on crash
 - [fixed] Ignoring missing backups folder
+- [fixed] Fixed problems with uploads from relative repository paths
+- [fixed] Fixed finished messages
 
 
 ### v0.1.0 (2017-04-11)

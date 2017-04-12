@@ -30,6 +30,7 @@ tar = "0.4"
 xattr = "0.1"
 crossbeam = "0.2"
 pbr = "1.0.0-alpha.3"
+users = "0.5"
 time = "*"
 libc = "*"
 

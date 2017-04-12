@@ -25,6 +25,7 @@ extern crate time;
 extern crate xattr;
 extern crate crossbeam;
 extern crate pbr;
+extern crate users;
 extern crate libc;
 extern crate tar;
 

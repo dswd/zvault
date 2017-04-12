@@ -382,7 +382,7 @@ pub fn run() -> Result<(), ErrorCode> {
             if tar {
                 checked!(repo.export_tarfile(inode, &dst_path), "restore backup", ErrorCode::RestoreRun);
             } else {
-                checked!(repo.restore_inode_tree(inode, &dst_path), "restore backup", ErrorCode::RestoreRun);
+                checked!(repo.restore_inode_tree(&backup, inode, &dst_path), "restore backup", ErrorCode::RestoreRun);
             }
             info!("Restore finished");
         },
