@@ -52,7 +52,7 @@ impl RepositoryLayout {
 
     #[inline]
     pub fn backup_path(&self, name: &str) -> PathBuf {
-        self.backups_path().join(name)
+        self.backups_path().join(format!("{}.backup", name))
     }
 
     #[inline]

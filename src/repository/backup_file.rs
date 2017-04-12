@@ -168,7 +168,10 @@ impl Backup {
                     paths.push(path);
                 } else {
                     let relpath = path.strip_prefix(&base_path).unwrap();
-                    let name = relpath.to_string_lossy().to_string();
+                    if relpath.extension() != Some(".backup".as_ref()) {
+                        continue
+                    }
+                    let name = relpath.file_stem().unwrap().to_string_lossy().to_string();
                     if let Ok(backup) = Backup::read_from(crypto, &path) {
                         backups.insert(name, backup);
                     } else {
