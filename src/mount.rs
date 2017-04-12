@@ -9,6 +9,7 @@ use std::mem;
 use std::cmp::min;
 
 use fuse;
+use users::{self, Users, Groups};
 use time::Timespec;
 use libc;
 
@@ -78,11 +79,26 @@ pub struct FuseInode {
     inode: Inode,
     parent: Option<FuseInodeRef>,
     children: HashMap<String, FuseInodeRef>,
-    chunks: Option<ChunkList>
+    chunks: Option<ChunkList>,
+    name_cache: Rc<users::UsersCache>,
+    user_names: Rc<HashMap<u32, String>>,
+    group_names: Rc<HashMap<u32, String>>
 }
 
 impl FuseInode {
     pub fn to_attrs(&self) -> fuse::FileAttr {
+        let mut uid = self.inode.user;
+        if let Some(name) = self.user_names.get(&self.inode.user) {
+            if let Some(user) = self.name_cache.get_user_by_name(name) {
+                uid = user.uid();
+            }
+        }
+        let mut gid = self.inode.group;
+        if let Some(name) = self.group_names.get(&self.inode.group) {
+            if let Some(group) = self.name_cache.get_group_by_name(name) {
+                gid = group.gid();
+            }
+        }
         fuse::FileAttr {
             ino: self.num,
             size: self.inode.size,
@@ -94,8 +110,8 @@ impl FuseInode {
             kind: convert_file_type(self.inode.file_type),
             perm: self.inode.mode as u16,
             nlink: 1,
-            uid: self.inode.user,
-            gid: self.inode.group,
+            uid: uid,
+            gid: gid,
             rdev: 0,
             flags: 0
         }
@@ -160,16 +176,16 @@ impl<'a> FuseFilesystem<'a> {
         Ok(fs)
     }
 
-    pub fn from_backup(repository: &'a mut Repository, backup: &Backup) -> Result<Self, RepositoryError> {
+    pub fn from_backup(repository: &'a mut Repository, backup: Backup) -> Result<Self, RepositoryError> {
         let inode = try!(repository.get_inode(&backup.root));
         let mut fs = try!(FuseFilesystem::new(repository));
-        fs.add_inode(inode, None);
+        fs.add_inode(inode, None, backup.user_names, backup.group_names);
         Ok(fs)
     }
 
-    pub fn from_inode(repository: &'a mut Repository, inode: Inode) -> Result<Self, RepositoryError> {
+    pub fn from_inode(repository: &'a mut Repository, backup: Backup, inode: Inode) -> Result<Self, RepositoryError> {
         let mut fs = try!(FuseFilesystem::new(repository));
-        fs.add_inode(inode, None);
+        fs.add_inode(inode, None, backup.user_names, backup.group_names);
         Ok(fs)
     }
 
@@ -178,16 +194,19 @@ impl<'a> FuseFilesystem<'a> {
             name: name,
             file_type: FileType::Directory,
             ..Default::default()
-        }, parent)
+        }, parent, HashMap::default(), HashMap::default())
     }
 
-    pub fn add_inode(&mut self, inode: Inode, parent: Option<FuseInodeRef>) -> FuseInodeRef {
+    pub fn add_inode(&mut self, inode: Inode, parent: Option<FuseInodeRef>, user_names: HashMap<u32, String>, group_names: HashMap<u32, String>) -> FuseInodeRef {
         let inode = FuseInode {
             inode: inode,
             num: self.next_id,
             parent: parent.clone(),
             chunks: None,
-            children: HashMap::new()
+            children: HashMap::new(),
+            user_names: Rc::new(user_names),
+            group_names: Rc::new(group_names),
+            name_cache: Rc::new(users::UsersCache::new())
         };
         let name = inode.inode.name.clone();
         let inode = Rc::new(RefCell::new(inode));
@@ -224,7 +243,10 @@ impl<'a> FuseFilesystem<'a> {
                 inode: try!(self.repository.get_inode(chunks)),
                 parent: Some(parent.clone()),
                 children: HashMap::new(),
-                chunks: None
+                chunks: None,
+                user_names: parent_mut.user_names.clone(),
+                group_names: parent_mut.group_names.clone(),
+                name_cache: parent_mut.name_cache.clone()
             }));
             self.inodes.insert(self.next_id, child.clone());
             self.next_id +=1;
@@ -247,7 +269,10 @@ impl<'a> FuseFilesystem<'a> {
                         inode: try!(self.repository.get_inode(chunks)),
                         parent: Some(parent.clone()),
                         children: HashMap::new(),
-                        chunks: None
+                        chunks: None,
+                        user_names: parent_mut.user_names.clone(),
+                        group_names: parent_mut.group_names.clone(),
+                        name_cache: parent_mut.name_cache.clone()
                     }));
                     self.inodes.insert(self.next_id, child.clone());
                     self.next_id +=1;

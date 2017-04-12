@@ -6,7 +6,7 @@ This project follows [semantic versioning](http://semver.org).
 ### UNRELEASED
 - [added] Added CHANGELOG
 - [added] Locking local repository to avoid index corruption
-- [added] Storing user/group names in backup
+- [added] Storing user/group names in backups
 - [modified] No longer trying to upload by rename
 - [modified] No longer failing restore if setting file attributes fails
 - [fixed] Creating empty bundle cache on init to avoid warnings

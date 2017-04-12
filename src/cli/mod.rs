@@ -490,9 +490,9 @@ pub fn run() -> Result<(), ErrorCode> {
                 let backup = try!(get_backup(&repo, &backup_name));
                 if let Some(inode) = inode {
                     let inode = checked!(repo.get_backup_inode(&backup, inode), "load subpath inode", ErrorCode::LoadInode);
-                    checked!(FuseFilesystem::from_inode(&mut repo, inode), "create fuse filesystem", ErrorCode::FuseMount)
+                    checked!(FuseFilesystem::from_inode(&mut repo, backup, inode), "create fuse filesystem", ErrorCode::FuseMount)
                 } else {
-                    checked!(FuseFilesystem::from_backup(&mut repo, &backup), "create fuse filesystem", ErrorCode::FuseMount)
+                    checked!(FuseFilesystem::from_backup(&mut repo, backup), "create fuse filesystem", ErrorCode::FuseMount)
                 }
             } else {
                 checked!(FuseFilesystem::from_repository(&mut repo), "create fuse filesystem", ErrorCode::FuseMount)
