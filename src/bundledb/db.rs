@@ -34,6 +34,9 @@ quick_error!{
             description("Failed to read/write bundle cache")
             display("Bundle db error: failed to read/write bundle cache\n\tcaused by: {}", err)
         }
+        UploadFailed {
+            description("Uploading a bundle failed")
+        }
         Io(err: io::Error, path: PathBuf) {
             cause(err)
             context(path: &'a Path, err: io::Error) -> (err, path.to_path_buf())

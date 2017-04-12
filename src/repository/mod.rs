@@ -341,6 +341,8 @@ impl Repository {
 
 impl Drop for Repository {
     fn drop(&mut self) {
-        self.flush().expect("Failed to write last bundles")
+        if let Err(err) = self.flush() {
+            error!("Failed to flush repository: {}", err);
+        }
     }
 }

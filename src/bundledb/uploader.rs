@@ -36,7 +36,11 @@ impl BundleUploader {
         if self.error_present.load(Ordering::SeqCst) {
             let mut error = None;
             mem::swap(&mut error, &mut self.error.lock().unwrap());
-            Err(error.unwrap())
+            if let Some(err) = error {
+                Err(err)
+            } else {
+                Err(BundleDbError::UploadFailed)
+            }
         } else {
             Ok(())
         }
@@ -82,10 +86,11 @@ impl BundleUploader {
 
     fn worker_thread(&self) {
         if let Err(err) = self.worker_thread_inner() {
+            debug!("Upload thread failed with error: {}", err);
             *self.error.lock().unwrap() = Some(err);
             self.error_present.store(true, Ordering::SeqCst);
         }
-        self.waiting.swap(0, Ordering::SeqCst);
+        self.waiting.store(0, Ordering::SeqCst);
         self.wait.0.notify_all();
     }
 }
