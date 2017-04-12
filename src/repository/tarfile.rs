@@ -36,8 +36,6 @@ fn inode_from_entry<R: Read>(entry: &mut tar::Entry<R>) -> Result<Inode, Reposit
     Ok(inode)
 }
 
-
-
 impl Repository {
     fn import_tar_entry<R: Read>(&mut self, entry: &mut tar::Entry<R>) -> Result<Inode, RepositoryError> {
         let mut inode = try!(inode_from_entry(entry));
@@ -59,7 +57,7 @@ impl Repository {
         Ok(inode)
     }
 
-    fn import_tarfile_as_inode<P: AsRef<Path>>(&mut self, tarfile: P, failed_paths: &mut Vec<PathBuf>) -> Result<(Inode, ChunkList), RepositoryError> {
+    fn import_tarfile_as_inode<P: AsRef<Path>>(&mut self, backup: &mut Backup, tarfile: P, failed_paths: &mut Vec<PathBuf>) -> Result<(Inode, ChunkList), RepositoryError> {
         let mut tarfile = tar::Archive::new(try!(File::open(tarfile)));
         // Step 1: create inodes for all entries
         let mut inodes = HashMap::<PathBuf, (Inode, HashSet<String>)>::new();
@@ -83,6 +81,12 @@ impl Repository {
                         if let Some(&mut (_, ref mut children)) = inodes.get_mut(parent_path) {
                             children.insert(inode.name.clone());
                         }
+                    }
+                    if let Ok(Some(name)) = entry.header().username() {
+                        backup.user_names.insert(inode.user, name.to_string());
+                    }
+                    if let Ok(Some(name)) = entry.header().groupname() {
+                        backup.group_names.insert(inode.group, name.to_string());
                     }
                     inodes.insert(path, (inode, HashSet::new()));
                 },
@@ -167,7 +171,7 @@ impl Repository {
         let info_before = self.info();
         let start = Local::now();
         let mut failed_paths = vec![];
-        let (root_inode, chunks) = try!(self.import_tarfile_as_inode(tarfile, &mut failed_paths));
+        let (root_inode, chunks) = try!(self.import_tarfile_as_inode(&mut backup, tarfile, &mut failed_paths));
         backup.root = chunks;
         try!(self.flush());
         let elapsed = Local::now().signed_duration_since(start);
