@@ -51,12 +51,14 @@ impl Repository {
     }
 
     pub fn save_backup(&mut self, backup: &Backup, name: &str) -> Result<(), RepositoryError> {
+        try!(self.write_mode());
         let path = self.layout.backup_path(name);
         try!(fs::create_dir_all(path.parent().unwrap()));
         Ok(try!(backup.save_to(&self.crypto.lock().unwrap(), self.config.encryption.clone(), path)))
     }
 
-    pub fn delete_backup(&self, name: &str) -> Result<(), RepositoryError> {
+    pub fn delete_backup(&mut self, name: &str) -> Result<(), RepositoryError> {
+        try!(self.write_mode());
         let mut path = self.layout.backup_path(name);
         try!(fs::remove_file(&path));
         loop {
@@ -69,7 +71,8 @@ impl Repository {
     }
 
 
-    pub fn prune_backups(&self, prefix: &str, daily: usize, weekly: usize, monthly: usize, yearly: usize, force: bool) -> Result<(), RepositoryError> {
+    pub fn prune_backups(&mut self, prefix: &str, daily: usize, weekly: usize, monthly: usize, yearly: usize, force: bool) -> Result<(), RepositoryError> {
+        try!(self.write_mode());
         let mut backups = Vec::new();
         let backup_map = match self.get_backups() {
             Ok(backup_map) => backup_map,
@@ -224,6 +227,7 @@ impl Repository {
     }
 
     pub fn create_backup_recursively<P: AsRef<Path>>(&mut self, path: P, reference: Option<&Backup>, options: &BackupOptions) -> Result<Backup, RepositoryError> {
+        try!(self.write_mode());
         let _lock = try!(self.lock(false));
         if self.dirty {
             return Err(RepositoryError::Dirty)
@@ -264,6 +268,7 @@ impl Repository {
     }
 
     pub fn remove_backup_path<P: AsRef<Path>>(&mut self, backup: &mut Backup, path: P) -> Result<(), RepositoryError> {
+        try!(self.write_mode());
         let _lock = try!(self.lock(false));
         let mut inodes = try!(self.get_backup_path(backup, path));
         let to_remove = inodes.pop().unwrap();

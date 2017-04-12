@@ -48,7 +48,9 @@ pub struct Repository {
     data_bundle: Option<BundleWriter>,
     meta_bundle: Option<BundleWriter>,
     chunker: Chunker,
-    locks: LockFolder,
+    remote_locks: LockFolder,
+    local_locks: LockFolder,
+    lock: LockHandle,
     dirty: bool
 }
 
@@ -59,6 +61,7 @@ impl Repository {
         try!(fs::create_dir(layout.base_path()));
         try!(File::create(layout.excludes_path()).and_then(|mut f| f.write_all(DEFAULT_EXCLUDES)));
         try!(fs::create_dir(layout.keys_path()));
+        try!(fs::create_dir(layout.local_locks_path()));
         try!(symlink(remote, layout.remote_path()));
         try!(File::create(layout.remote_readme_path()).and_then(|mut f| f.write_all(REPOSITORY_README)));
         try!(fs::create_dir_all(layout.remote_locks_path()));
@@ -70,13 +73,17 @@ impl Repository {
         Self::open(path)
     }
 
+    #[allow(unknown_lints,useless_let_if_seq)]
     pub fn open<P: AsRef<Path>>(path: P) -> Result<Self, RepositoryError> {
         let layout = RepositoryLayout::new(path.as_ref().to_path_buf());
         if !layout.remote_exists() {
             return Err(RepositoryError::NoRemote)
         }
         let config = try!(Config::load(layout.config_path()));
-        let locks = LockFolder::new(layout.remote_locks_path());
+        let remote_locks = LockFolder::new(layout.remote_locks_path());
+        try!(fs::create_dir_all(layout.local_locks_path())); // Added after v0.1.0
+        let local_locks = LockFolder::new(layout.local_locks_path());
+        let lock = try!(local_locks.lock(false));
         let crypto = Arc::new(Mutex::new(try!(Crypto::open(layout.keys_path()))));
         let (bundles, new, gone) = try!(BundleDb::open(layout.clone(), crypto.clone()));
         let (index, mut rebuild_index) = match Index::open(layout.index_path()) {
@@ -107,28 +114,42 @@ impl Repository {
             bundles: bundles,
             data_bundle: None,
             meta_bundle: None,
-            locks: locks
+            lock: lock,
+            remote_locks: remote_locks,
+            local_locks: local_locks
         };
-        if !new.is_empty() {
-            info!("Adding {} new bundles to index", new.len());
-            for bundle in ProgressIter::new("adding bundles to index", new.len(), new.into_iter()) {
-                try!(repo.add_new_remote_bundle(bundle))
+        if !rebuild_bundle_map {
+            let mut save_bundle_map = false;
+            if !new.is_empty() {
+                info!("Adding {} new bundles to index", new.len());
+                try!(repo.write_mode());
+                for bundle in ProgressIter::new("adding bundles to index", new.len(), new.into_iter()) {
+                    try!(repo.add_new_remote_bundle(bundle))
+                }
+                save_bundle_map = true;
+            }
+            if !gone.is_empty() {
+                info!("Removig {} old bundles from index", gone.len());
+                try!(repo.write_mode());
+                for bundle in gone {
+                    try!(repo.remove_gone_remote_bundle(bundle))
+                }
+                save_bundle_map = true;
+            }
+            if save_bundle_map {
+                try!(repo.write_mode());
+                try!(repo.save_bundle_map());
             }
         }
-        if !gone.is_empty() {
-            info!("Removig {} old bundles from index", gone.len());
-            for bundle in gone {
-                try!(repo.remove_gone_remote_bundle(bundle))
-            }
-        }
-        try!(repo.save_bundle_map());
         repo.next_meta_bundle = repo.next_free_bundle_id();
         repo.next_data_bundle = repo.next_free_bundle_id();
         if rebuild_bundle_map {
+            try!(repo.write_mode());
             try!(repo.rebuild_bundle_map());
             rebuild_index = true;
         }
         if rebuild_index {
+            try!(repo.write_mode());
             try!(repo.rebuild_index());
         }
         repo.dirty = dirty;
@@ -156,11 +177,13 @@ impl Repository {
 
     #[inline]
     pub fn register_key(&mut self, public: PublicKey, secret: SecretKey) -> Result<(), RepositoryError> {
+        try!(self.write_mode());
         Ok(try!(self.crypto.lock().unwrap().register_secret_key(public, secret)))
     }
 
     #[inline]
     pub fn save_config(&mut self) -> Result<(), RepositoryError> {
+        try!(self.write_mode());
         try!(self.config.save(self.layout.config_path()));
         Ok(())
     }
@@ -291,8 +314,13 @@ impl Repository {
     }
 
     #[inline]
+    fn write_mode(&mut self) -> Result<(), RepositoryError> {
+        Ok(try!(self.local_locks.upgrade(&mut self.lock)))
+    }
+
+    #[inline]
     fn lock(&self, exclusive: bool) -> Result<LockHandle, RepositoryError> {
-        Ok(try!(self.locks.lock(exclusive)))
+        Ok(try!(self.remote_locks.lock(exclusive)))
     }
 
     #[inline]

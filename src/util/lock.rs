@@ -71,6 +71,7 @@ pub enum LockLevel {
 
 
 pub struct LockHandle {
+    lock: LockFile,
     path: PathBuf
 }
 
@@ -146,11 +147,41 @@ impl LockFolder {
         };
         let path = self.path.join(format!("{}-{}.lock", &lockfile.hostname, lockfile.processid));
         try!(lockfile.save(&path));
-        let handle = LockHandle{path: path};
+        let handle = LockHandle{lock: lockfile, path: path};
         if self.get_lock_level().is_err() {
             try!(handle.release());
             return Err(LockError::Locked)
         }
         Ok(handle)
+    }
+
+    pub fn upgrade(&self, lock: &mut LockHandle) -> Result<(), LockError> {
+        let lockfile = &mut lock.lock;
+        if lockfile.exclusive {
+            return Ok(())
+        }
+        let level = try!(self.get_lock_level());
+        if level == LockLevel::Exclusive {
+            return Err(LockError::Locked)
+        }
+        lockfile.exclusive = true;
+        let path = self.path.join(format!("{}-{}.lock", &lockfile.hostname, lockfile.processid));
+        try!(lockfile.save(&path));
+        if self.get_lock_level().is_err() {
+            lockfile.exclusive = false;
+            try!(lockfile.save(&path));
+            return Err(LockError::Locked)
+        }
+        Ok(())
+    }
+
+    pub fn downgrade(&self, lock: &mut LockHandle) -> Result<(), LockError> {
+        let lockfile = &mut lock.lock;
+        if !lockfile.exclusive {
+            return Ok(())
+        }
+        lockfile.exclusive = false;
+        let path = self.path.join(format!("{}-{}.lock", &lockfile.hostname, lockfile.processid));
+        lockfile.save(&path)
     }
 }

@@ -16,6 +16,7 @@ impl Repository {
     pub fn vacuum(&mut self, ratio: f32, force: bool) -> Result<(), RepositoryError> {
         try!(self.flush());
         info!("Locking repository");
+        try!(self.write_mode());
         let _lock = try!(self.lock(true));
         if self.dirty {
             return Err(RepositoryError::Dirty)

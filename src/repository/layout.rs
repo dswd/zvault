@@ -41,6 +41,11 @@ impl RepositoryLayout {
     }
 
     #[inline]
+    pub fn local_locks_path(&self) -> PathBuf {
+        self.0.join("locks")
+    }
+
+    #[inline]
     pub fn backups_path(&self) -> PathBuf {
         self.0.join("remote/backups")
     }

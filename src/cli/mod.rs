@@ -397,7 +397,7 @@ pub fn run() -> Result<(), ErrorCode> {
             }
         },
         Arguments::Prune{repo_path, prefix, daily, weekly, monthly, yearly, force} => {
-            let repo = try!(open_repository(&repo_path));
+            let mut repo = try!(open_repository(&repo_path));
             if daily + weekly + monthly + yearly == 0 {
                 error!("This would remove all those backups");
                 return Err(ErrorCode::UnsafeArgs)

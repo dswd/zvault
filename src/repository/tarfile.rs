@@ -154,6 +154,7 @@ impl Repository {
     }
 
     pub fn import_tarfile<P: AsRef<Path>>(&mut self, tarfile: P) -> Result<Backup, RepositoryError> {
+        try!(self.write_mode());
         let _lock = try!(self.lock(false));
         if self.dirty {
             return Err(RepositoryError::Dirty)
