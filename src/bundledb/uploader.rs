@@ -44,8 +44,10 @@ impl BundleUploader {
 
     pub fn queue(&self, local_path: PathBuf, remote_path: PathBuf) -> Result<(), BundleDbError> {
         while self.waiting.load(Ordering::SeqCst) >= self.capacity {
+            debug!("Upload queue is full, waiting for slots");
             let _ = self.wait.0.wait(self.wait.1.lock().unwrap()).unwrap();
         }
+        trace!("Adding to upload queue: {:?}", local_path);
         if !self.error_present.load(Ordering::SeqCst) {
             self.waiting.fetch_add(1, Ordering::SeqCst);
             self.queue.push(Some((local_path, remote_path)));
@@ -66,12 +68,14 @@ impl BundleUploader {
 
     fn worker_thread_inner(&self) -> Result<(), BundleDbError> {
         while let Some((src_path, dst_path)) = self.queue.pop() {
+            trace!("Uploading {:?} to {:?}", src_path, dst_path);
+            self.waiting.fetch_sub(1, Ordering::SeqCst);
+            self.wait.0.notify_all();
             let folder = dst_path.parent().unwrap();
             try!(fs::create_dir_all(&folder).context(&folder as &Path));
-            if fs::rename(&src_path, &dst_path).is_err() {
-                try!(fs::copy(&src_path, &dst_path).context(&dst_path as &Path));
-                try!(fs::remove_file(&src_path).context(&src_path as &Path));
-            }
+            try!(fs::copy(&src_path, &dst_path).context(&dst_path as &Path));
+            try!(fs::remove_file(&src_path).context(&src_path as &Path));
+            debug!("Uploaded {:?} to {:?}", src_path, dst_path);
         }
         Ok(())
     }
