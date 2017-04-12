@@ -149,7 +149,12 @@ impl Backup {
     pub fn get_all_from<P: AsRef<Path>>(crypto: &Crypto, path: P) -> Result<HashMap<String, Backup>, BackupFileError> {
         let mut backups = HashMap::new();
         let base_path = path.as_ref();
-        let mut paths = vec![path.as_ref().to_path_buf()];
+        let path = path.as_ref();
+        if !path.exists() {
+            debug!("Backup root folder does not exist");
+            return Ok(backups);
+        }
+        let mut paths = vec![path.to_path_buf()];
         let mut failed_paths = vec![];
         while let Some(path) = paths.pop() {
             for entry in try!(fs::read_dir(&path).map_err(|e| BackupFileError::Read(e, path.clone()))) {
