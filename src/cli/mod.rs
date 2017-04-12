@@ -281,7 +281,7 @@ pub fn run() -> Result<(), ErrorCode> {
                 hash: hash
             }, remote_path), "create repository", ErrorCode::CreateRepository);
             if encryption {
-                let (public, secret) = gen_keypair();
+                let (public, secret) = Crypto::gen_keypair();
                 info!("Created the following key pair");
                 println!("public: {}", to_hex(&public[..]));
                 println!("secret: {}", to_hex(&secret[..]));
@@ -589,7 +589,7 @@ pub fn run() -> Result<(), ErrorCode> {
             }
         },
         Arguments::GenKey{file} => {
-            let (public, secret) = gen_keypair();
+            let (public, secret) = Crypto::gen_keypair();
             info!("Created the following key pair");
             println!("public: {}", to_hex(&public[..]));
             println!("secret: {}", to_hex(&secret[..]));
@@ -603,7 +603,7 @@ pub fn run() -> Result<(), ErrorCode> {
                 checked!(Crypto::load_keypair_from_file(file), "load key pair", ErrorCode::LoadKey)
             } else {
                 info!("Created the following key pair");
-                let (public, secret) = gen_keypair();
+                let (public, secret) = Crypto::gen_keypair();
                 println!("public: {}", to_hex(&public[..]));
                 println!("secret: {}", to_hex(&secret[..]));
                 (public, secret)

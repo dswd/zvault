@@ -143,7 +143,7 @@ pub fn run(path: &str, bundle_size: usize, chunker: ChunkerType, compression: Op
     if encrypt {
         println!();
 
-        let (public, secret) = gen_keypair();
+        let (public, secret) = Crypto::gen_keypair();
         let mut crypto = Crypto::dummy();
         crypto.add_secret_key(public, secret);
         let encryption = (EncryptionMethod::Sodium, public[..].to_vec().into());

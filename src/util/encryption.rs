@@ -2,15 +2,28 @@ use std::collections::HashMap;
 use std::path::{Path, PathBuf};
 use std::io;
 use std::fs::{self, File};
+use std::sync::{Once, ONCE_INIT};
 
 use serde_yaml;
 use serde::bytes::ByteBuf;
 
+use sodiumoxide;
 use sodiumoxide::crypto::sealedbox;
-pub use sodiumoxide::crypto::box_::{SecretKey, PublicKey, gen_keypair};
+use sodiumoxide::crypto::box_;
+pub use sodiumoxide::crypto::box_::{SecretKey, PublicKey};
 
 use ::util::*;
 
+
+static INIT: Once = ONCE_INIT;
+
+fn sodium_init() {
+    INIT.call_once(|| {
+        if !sodiumoxide::init() {
+            panic!("Failed to initialize sodiumoxide");
+        }
+    });
+}
 
 quick_error!{
     #[derive(Debug)]
@@ -108,10 +121,12 @@ pub struct Crypto {
 impl Crypto {
     #[inline]
     pub fn dummy() -> Self {
+        sodium_init();
         Crypto { path: PathBuf::new(), keys: HashMap::new() }
     }
 
     pub fn open<P: AsRef<Path>>(path: P) -> Result<Self, EncryptionError> {
+        sodium_init();
         let path = path.as_ref().to_owned();
         let mut keys: HashMap<PublicKey, SecretKey> = HashMap::default();
         for entry in try!(fs::read_dir(&path)) {
@@ -189,5 +204,11 @@ impl Crypto {
                 sealedbox::open(data, &public, secret).map_err(|_| EncryptionError::Operation("Decryption failed"))
             }
         }
+    }
+
+    #[inline]
+    pub fn gen_keypair() -> (PublicKey, SecretKey) {
+        sodium_init();
+        box_::gen_keypair()
     }
 }
