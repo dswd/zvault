@@ -354,9 +354,11 @@ pub fn run() -> Result<(), ErrorCode> {
             } else {
                 repo.create_backup_recursively(&src_path, reference_backup.as_ref(), &options)
             };
-            info!("Backup finished");
             let backup = match result {
-                Ok(backup) => backup,
+                Ok(backup) => {
+                    info!("Backup finished");
+                    backup
+                },
                 Err(RepositoryError::Backup(BackupError::FailedPaths(backup, _failed_paths))) => {
                     warn!("Some files are missing from the backup");
                     backup
@@ -382,7 +384,7 @@ pub fn run() -> Result<(), ErrorCode> {
             } else {
                 checked!(repo.restore_inode_tree(inode, &dst_path), "restore backup", ErrorCode::RestoreRun);
             }
-            info!("Backup finished");
+            info!("Restore finished");
         },
         Arguments::Remove{repo_path, backup_name, inode} => {
             let mut repo = try!(open_repository(&repo_path));
