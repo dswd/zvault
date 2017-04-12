@@ -232,7 +232,7 @@ impl Repository {
         if self.dirty {
             return Err(RepositoryError::Dirty)
         }
-        self.dirty = true;
+        try!(self.set_dirty());
         let reference_inode = reference.and_then(|b| self.get_inode(&b.root).ok());
         let mut backup = Backup::default();
         backup.config = self.config.clone();

@@ -217,6 +217,15 @@ impl Repository {
         id
     }
 
+    pub fn set_dirty(&mut self) -> Result<(), RepositoryError> {
+        self.dirty = true;
+        let dirtyfile = self.layout.dirtyfile_path();
+        if !dirtyfile.exists() {
+            try!(File::create(&dirtyfile));
+        }
+        Ok(())
+    }
+
     pub fn flush(&mut self) -> Result<(), RepositoryError> {
         let dirtyfile = self.layout.dirtyfile_path();
         if self.dirty && !dirtyfile.exists() {

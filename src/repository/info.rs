@@ -64,7 +64,7 @@ impl Repository {
         if self.dirty {
             return Err(RepositoryError::Dirty)
         }
-        self.dirty = true;
+        try!(self.set_dirty());
         let mut usage = HashMap::new();
         for (id, bundle) in self.bundle_map.bundles() {
             let bundle = try!(self.bundles.get_bundle_info(&bundle).ok_or_else(|| IntegrityError::MissingBundle(bundle)));

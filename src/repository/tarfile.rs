@@ -159,7 +159,7 @@ impl Repository {
         if self.dirty {
             return Err(RepositoryError::Dirty)
         }
-        self.dirty = true;
+        try!(self.set_dirty());
         let mut backup = Backup::default();
         backup.config = self.config.clone();
         backup.host = get_hostname().unwrap_or_else(|_| "".to_string());

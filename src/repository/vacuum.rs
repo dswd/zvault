@@ -21,7 +21,7 @@ impl Repository {
         if self.dirty {
             return Err(RepositoryError::Dirty)
         }
-        self.dirty = true;
+        try!(self.set_dirty());
         info!("Analyzing chunk usage");
         let usage = try!(self.analyze_usage());
         let mut data_total = 0;
