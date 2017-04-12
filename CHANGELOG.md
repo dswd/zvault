@@ -6,8 +6,12 @@ This project follows [semantic versioning](http://semver.org).
 ### UNRELEASED
 - [added] Added CHANGELOG
 - [added] Locking local repository to avoid index corruption
-- [fixed] Creating empty bundle cache on init to avoid warninigs
+- [modified] No longer trying to upload by rename
+- [fixed] Creating empty bundle cache on init to avoid warnings
 - [fixed] Calling sodiumoxide::init for faster algorithms and thread safety (not needed)
+- [fixed] Fixed a deadlock in the bundle upload code
+- [fixed] Also setting repository dirty on crash
+- [fixed] Ignoring missing backups folder
 
 
 ### v0.1.0 (2017-04-11)
