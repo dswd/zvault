@@ -157,11 +157,11 @@ impl<'a> FuseFilesystem<'a> {
         let mut backups = vec![];
         for (name, backup) in try!(repository.get_backups()) {
             let inode = try!(repository.get_inode(&backup.root));
-            backups.push((name, inode));
+            backups.push((name, backup, inode));
         }
         let mut fs = try!(FuseFilesystem::new(repository));
         let root = fs.add_virtual_directory("".to_string(), None);
-        for (name, mut backup) in backups {
+        for (name, backup, mut inode) in backups {
             let mut parent = root.clone();
             for part in name.split('/') {
                 parent = match fs.get_child(&parent, part).unwrap() {
@@ -170,8 +170,10 @@ impl<'a> FuseFilesystem<'a> {
                 };
             }
             let mut parent_mut = parent.borrow_mut();
-            backup.name = parent_mut.inode.name.clone();
-            parent_mut.inode = backup;
+            inode.name = parent_mut.inode.name.clone();
+            parent_mut.inode = inode;
+            parent_mut.user_names = Rc::new(backup.user_names);
+            parent_mut.group_names = Rc::new(backup.group_names);
         }
         Ok(fs)
     }
