@@ -190,7 +190,7 @@ impl Repository {
         }
     }
 
-    fn export_tarfile_recurse(&mut self, path: &Path, inode: Inode, tarfile: &mut tar::Builder<File>) -> Result<(), RepositoryError> {
+    fn export_tarfile_recurse(&mut self, backup: &Backup, path: &Path, inode: Inode, tarfile: &mut tar::Builder<File>) -> Result<(), RepositoryError> {
         let mut header = tar::Header::new_gnu();
         header.set_size(inode.size);
         let path = path.join(inode.name);
@@ -200,7 +200,13 @@ impl Repository {
         }
         header.set_mode(inode.mode);
         header.set_uid(inode.user);
+        if let Some(name) = backup.user_names.get(&inode.user) {
+            header.set_username(name).ok();
+        }
         header.set_gid(inode.group);
+        if let Some(name) = backup.group_names.get(&inode.group) {
+            header.set_groupname(name).ok();
+        }
         header.set_mtime(inode.timestamp as u64);
         header.set_entry_type(match inode.file_type {
             FileType::File => tar::EntryType::Regular,
@@ -220,15 +226,15 @@ impl Repository {
         if let Some(children) = inode.children {
             for chunks in children.values() {
                 let inode = try!(self.get_inode(chunks));
-                try!(self.export_tarfile_recurse(&path, inode, tarfile));
+                try!(self.export_tarfile_recurse(backup, &path, inode, tarfile));
             }
         }
         Ok(())
     }
 
-    pub fn export_tarfile<P: AsRef<Path>>(&mut self, inode: Inode, tarfile: P) -> Result<(), RepositoryError> {
+    pub fn export_tarfile<P: AsRef<Path>>(&mut self, backup: &Backup, inode: Inode, tarfile: P) -> Result<(), RepositoryError> {
         let mut tarfile = tar::Builder::new(try!(File::create(tarfile)));
-        try!(self.export_tarfile_recurse(Path::new(""), inode, &mut tarfile));
+        try!(self.export_tarfile_recurse(backup, Path::new(""), inode, &mut tarfile));
         try!(tarfile.finish());
         Ok(())
     }

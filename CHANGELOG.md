@@ -8,6 +8,7 @@ This project follows [semantic versioning](http://semver.org).
 - [added] Locking local repository to avoid index corruption
 - [added] Storing user/group names in backup
 - [modified] No longer trying to upload by rename
+- [modified] No longer failing restore if setting file attributes fails
 - [fixed] Creating empty bundle cache on init to avoid warnings
 - [fixed] Calling sodiumoxide::init for faster algorithms and thread safety (not needed)
 - [fixed] Fixed a deadlock in the bundle upload code

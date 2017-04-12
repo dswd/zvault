@@ -380,7 +380,7 @@ pub fn run() -> Result<(), ErrorCode> {
                 checked!(repo.get_inode(&backup.root), "load root inode", ErrorCode::LoadInode)
             };
             if tar {
-                checked!(repo.export_tarfile(inode, &dst_path), "restore backup", ErrorCode::RestoreRun);
+                checked!(repo.export_tarfile(&backup, inode, &dst_path), "restore backup", ErrorCode::RestoreRun);
             } else {
                 checked!(repo.restore_inode_tree(&backup, inode, &dst_path), "restore backup", ErrorCode::RestoreRun);
             }
