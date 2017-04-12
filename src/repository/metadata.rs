@@ -39,26 +39,6 @@ quick_error!{
             description("Failed to create entity")
             display("Inode error: failed to create entity {:?}\n\tcaused by: {}", path, err)
         }
-        SetPermissions(err: io::Error, path: PathBuf, mode: u32) {
-            cause(err)
-            description("Failed to set permissions")
-            display("Inode error: failed to set permissions to {:3o} on {:?}\n\tcaused by: {}", mode, path, err)
-        }
-        SetTimes(err: io::Error, path: PathBuf) {
-            cause(err)
-            description("Failed to set file times")
-            display("Inode error: failed to set file times on {:?}\n\tcaused by: {}", path, err)
-        }
-        SetOwnership(err: io::Error, path: PathBuf) {
-            cause(err)
-            description("Failed to set file ownership")
-            display("Inode error: failed to set file ownership on {:?}\n\tcaused by: {}", path, err)
-        }
-        SetXattr(err: io::Error, path: PathBuf) {
-            cause(err)
-            description("Failed to set xattr")
-            display("Inode error: failed to set xattr on {:?}\n\tcaused by: {}", path, err)
-        }
         Integrity(reason: &'static str) {
             description("Integrity error")
             display("Inode error: inode integrity error: {}", reason)
@@ -225,21 +205,26 @@ impl Inode {
             }
         }
         let time = FileTime::from_seconds_since_1970(self.timestamp as u64, 0);
-        try!(filetime::set_file_times(&full_path, time, time).map_err(|e| InodeError::SetTimes(e, full_path.clone())));
+        if let Err(err) = filetime::set_file_times(&full_path, time, time) {
+            warn!("Failed to set file time on {:?}: {}", full_path, err);
+        }
         if !self.xattrs.is_empty() {
             if xattr::SUPPORTED_PLATFORM {
                 for (name, data) in &self.xattrs {
-                    try!(xattr::set(&full_path, name, data).map_err(|e| InodeError::SetXattr(e, full_path.clone())))
+                    if let Err(err) = xattr::set(&full_path, name, data) {
+                        warn!("Failed to set xattr {} on {:?}: {}", name, full_path, err);
+                    }
                 }
             } else {
                 warn!("Not setting xattr on {:?}", full_path);
             }
         }
-        try!(fs::set_permissions(
-            &full_path,
-            Permissions::from_mode(self.mode)
-        ).map_err(|e| InodeError::SetPermissions(e, full_path.clone(), self.mode)));
-        try!(chown(&full_path, self.user, self.group).map_err(|e| InodeError::SetOwnership(e, full_path.clone())));
+        if let Err(err) = fs::set_permissions(&full_path, Permissions::from_mode(self.mode)) {
+            warn!("Failed to set permissions {:o} on {:?}: {}", self.mode, full_path, err);
+        }
+        if let Err(err) = chown(&full_path, self.user, self.group) {
+            warn!("Failed to set user {} and group {} on {:?}: {}", self.user, self.group, full_path, err);
+        }
         Ok(file)
     }
 

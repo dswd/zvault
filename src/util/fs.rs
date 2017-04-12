@@ -12,7 +12,8 @@ mod linux {
         let result = unsafe { libc::lchown((&path).as_ptr(), uid, gid) };
         match result {
             0 => Ok(()),
-            err => Err(io::Error::from_raw_os_error(err))
+            -1 => Err(io::Error::last_os_error()),
+            _ => unreachable!()
         }
     }
 }
