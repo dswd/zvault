@@ -59,7 +59,8 @@ pub enum Arguments {
         inode: Option<String>,
         bundles: bool,
         bundle_data: bool,
-        index: bool
+        index: bool,
+        repair: bool
     },
     List {
         repo_path: String,
@@ -342,6 +343,7 @@ pub fn parse() -> Result<(LogLevel, Arguments), ErrorCode> {
             .arg(Arg::from_usage("-b --bundles 'Check the bundles'"))
             .arg(Arg::from_usage("[bundle_data] --bundle-data 'Check bundle contents (slow)'").requires("bundles").alias("data"))
             .arg(Arg::from_usage("-i --index 'Check the chunk index'"))
+            .arg(Arg::from_usage("-r --repair 'Try to repair errors'"))
             .arg(Arg::from_usage("<PATH> 'Path of the repository/backup/subtree, [repository][::backup[::subtree]]'")
                 .validator(|val| validate_repo_path(val, true, None, None))))
         .subcommand(SubCommand::with_name("list").alias("ls").about("List backups or backup contents")
@@ -497,7 +499,8 @@ pub fn parse() -> Result<(LogLevel, Arguments), ErrorCode> {
                 inode: inode.map(|v| v.to_string()),
                 bundles: args.is_present("bundles"),
                 bundle_data: args.is_present("bundle_data"),
-                index: args.is_present("index")
+                index: args.is_present("index"),
+                repair: args.is_present("repair")
             }
         },
         ("list", Some(args)) => {

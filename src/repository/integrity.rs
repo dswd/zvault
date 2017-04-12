@@ -1,5 +1,7 @@
 use ::prelude::*;
 
+use super::*;
+
 use std::collections::VecDeque;
 use std::path::{Path, PathBuf};
 use std::time::Duration;
@@ -31,9 +33,6 @@ quick_error!{
         }
         MapContainsDuplicates {
             description("Map contains duplicates")
-        }
-        InvalidNextBundleId {
-            description("Invalid next bundle id")
         }
         BrokenInode(path: PathBuf, err: Box<RepositoryError>) {
             cause(err)
@@ -170,15 +169,6 @@ impl Repository {
 
     pub fn check_repository(&mut self) -> Result<(), RepositoryError> {
         info!("Checking repository integrity...");
-        if self.next_data_bundle == self.next_meta_bundle {
-            return Err(IntegrityError::InvalidNextBundleId.into())
-        }
-        if self.bundle_map.get(self.next_data_bundle).is_some() {
-            return Err(IntegrityError::InvalidNextBundleId.into())
-        }
-        if self.bundle_map.get(self.next_meta_bundle).is_some() {
-            return Err(IntegrityError::InvalidNextBundleId.into())
-        }
         for (_id, bundle_id) in self.bundle_map.bundles() {
             if self.bundles.get_bundle_info(&bundle_id).is_none() {
                 return Err(IntegrityError::MissingBundle(bundle_id).into())
@@ -193,17 +183,75 @@ impl Repository {
         Ok(())
     }
 
-    #[inline]
-    pub fn check_index(&mut self) -> Result<(), RepositoryError> {
-        info!("Checking index integrity...");
-        try!(self.index.check());
-        info!("Checking index entries...");
-        self.check_index_chunks()
+    pub fn rebuild_bundle_map(&mut self) -> Result<(), RepositoryError> {
+        info!("Rebuilding bundle map from bundles");
+        self.bundle_map = BundleMap::create();
+        for bundle in self.bundles.list_bundles() {
+            let bundle_id = match bundle.mode {
+                BundleMode::Data => self.next_data_bundle,
+                BundleMode::Meta => self.next_meta_bundle
+            };
+            self.bundle_map.set(bundle_id, bundle.id.clone());
+            if self.next_meta_bundle == bundle_id {
+                self.next_meta_bundle = self.next_free_bundle_id()
+            }
+            if self.next_data_bundle == bundle_id {
+                self.next_data_bundle = self.next_free_bundle_id()
+            }
+        }
+        self.save_bundle_map()
+    }
+
+    pub fn rebuild_index(&mut self) -> Result<(), RepositoryError> {
+        info!("Rebuilding index from bundles");
+        self.index.clear();
+        for (num, id) in self.bundle_map.bundles() {
+            let chunks = try!(self.bundles.get_chunk_list(&id));
+            for (i, (hash, _len)) in chunks.into_inner().into_iter().enumerate() {
+                try!(self.index.set(&hash, &Location{bundle: num as u32, chunk: i as u32}));
+            }
+        }
+        Ok(())
     }
 
     #[inline]
-    pub fn check_bundles(&mut self, full: bool) -> Result<(), RepositoryError> {
+    pub fn check_index(&mut self, repair: bool) -> Result<(), RepositoryError> {
+        if repair {
+            try!(self.write_mode());
+        }
+        info!("Checking index integrity...");
+        if let Err(err) = self.index.check() {
+            if repair {
+                warn!("Problem detected: index was corrupted\n\tcaused by: {}", err);
+                return self.rebuild_index();
+            } else {
+                return Err(err.into())
+            }
+        }
+        info!("Checking index entries...");
+        if let Err(err) = self.check_index_chunks() {
+            if repair {
+                warn!("Problem detected: index entries were inconsistent\n\tcaused by: {}", err);
+                return self.rebuild_index();
+            } else {
+                return Err(err.into())
+            }
+        }
+        Ok(())
+    }
+
+    #[inline]
+    pub fn check_bundles(&mut self, full: bool, repair: bool) -> Result<(), RepositoryError> {
+        if repair {
+            try!(self.write_mode());
+        }
         info!("Checking bundle integrity...");
-        Ok(try!(self.bundles.check(full)))
+        if try!(self.bundles.check(full, repair)) {
+            // Some bundles got repaired
+            try!(self.bundles.finish_uploads());
+            try!(self.rebuild_bundle_map());
+            try!(self.rebuild_index());
+        }
+        Ok(())
     }
 }

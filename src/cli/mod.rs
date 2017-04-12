@@ -420,14 +420,14 @@ pub fn run() -> Result<(), ErrorCode> {
                 info!("Reclaimed {}", to_file_size(info_before.encoded_data_size - info_after.encoded_data_size));
             }
         },
-        Arguments::Check{repo_path, backup_name, inode, bundles, index, bundle_data} => {
+        Arguments::Check{repo_path, backup_name, inode, bundles, index, bundle_data, repair} => {
             let mut repo = try!(open_repository(&repo_path));
             checked!(repo.check_repository(), "check repository", ErrorCode::CheckRun);
             if bundles {
-                checked!(repo.check_bundles(bundle_data), "check bundles", ErrorCode::CheckRun);
+                checked!(repo.check_bundles(bundle_data, repair), "check bundles", ErrorCode::CheckRun);
             }
             if index {
-                checked!(repo.check_index(), "check index", ErrorCode::CheckRun);
+                checked!(repo.check_index(repair), "check index", ErrorCode::CheckRun);
             }
             if let Some(backup_name) = backup_name {
                 let backup = try!(get_backup(&repo, &backup_name));

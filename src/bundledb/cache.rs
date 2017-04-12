@@ -71,6 +71,17 @@ impl StoredBundle {
         Ok(bundle)
     }
 
+    pub fn move_to<P: AsRef<Path>>(&mut self, base_path: &Path, path: P) -> Result<(), BundleDbError> {
+        let src_path = base_path.join(&self.path);
+        let dst_path = path.as_ref();
+        if fs::rename(&src_path, dst_path).is_err() {
+            try!(fs::copy(&src_path, dst_path).context(dst_path));
+            try!(fs::remove_file(&src_path).context(&src_path as &Path));
+        }
+        self.path = dst_path.strip_prefix(base_path).unwrap().to_path_buf();
+        Ok(())
+    }
+
     pub fn read_list_from<P: AsRef<Path>>(path: P) -> Result<Vec<Self>, BundleCacheError> {
         let path = path.as_ref();
         let mut file = BufReader::new(try!(File::open(path).map_err(BundleCacheError::Read)));

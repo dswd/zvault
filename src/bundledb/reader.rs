@@ -12,10 +12,6 @@ use std::sync::{Arc, Mutex};
 quick_error!{
     #[derive(Debug)]
     pub enum BundleReaderError {
-        TruncatedBundle(path: PathBuf) {
-            description("Bundle file is truncated")
-            display("Bundle reader error: bundle file is truncated {:?}", path)
-        }
         Read(err: io::Error, path: PathBuf) {
             cause(err)
             context(path: &'a Path, err: io::Error) -> (err, path.to_path_buf())
@@ -111,10 +107,6 @@ impl BundleReader {
         info.encryption = header.encryption;
         debug!("Load bundle {}", info.id);
         let content_start = file.seek(SeekFrom::Current(0)).unwrap() as usize + info.chunk_list_size;
-        let actual_size = try!(fs::metadata(path).context(path)).len();
-        if content_start + info.encoded_size != actual_size as usize {
-            return Err(BundleReaderError::TruncatedBundle(path.to_path_buf()));
-        }
         Ok((info, version, content_start))
     }
 

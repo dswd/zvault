@@ -168,7 +168,7 @@ impl Backup {
                     paths.push(path);
                 } else {
                     let relpath = path.strip_prefix(&base_path).unwrap();
-                    if relpath.extension() != Some(".backup".as_ref()) {
+                    if relpath.extension() != Some("backup".as_ref()) {
                         continue
                     }
                     let name = relpath.file_stem().unwrap().to_string_lossy().to_string();

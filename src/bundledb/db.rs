@@ -7,6 +7,7 @@ use std::fs;
 use std::sync::{Arc, Mutex};
 use std::io;
 use std::mem;
+use std::cmp::min;
 
 quick_error!{
     #[derive(Debug)]
@@ -66,6 +67,9 @@ pub fn load_bundles(path: &Path, base: &Path, bundles: &mut HashMap<BundleId, St
             if path.is_dir() {
                 paths.push(path);
             } else {
+                if path.extension() != Some("bundle".as_ref()) {
+                    continue
+                }
                 bundle_paths.insert(path.strip_prefix(base).unwrap().to_path_buf());
             }
         }
@@ -82,11 +86,11 @@ pub fn load_bundles(path: &Path, base: &Path, bundles: &mut HashMap<BundleId, St
     for path in bundle_paths {
         let info = match BundleReader::load_info(base.join(&path), crypto.clone()) {
             Ok(info) => info,
-            Err(BundleReaderError::TruncatedBundle(path)) => {
-                warn!("Ignoring truncated bundle {:?}", path);
+            Err(err) => {
+                warn!("Failed to read bundle {:?}\n\tcaused by: {}", path, err);
+                info!("Ignoring unreadable bundle");
                 continue
-            },
-            Err(err) => return Err(err.into())
+            }
         };
         let bundle = StoredBundle { info: info, path: path };
         let id = bundle.info.id.clone();
@@ -260,7 +264,7 @@ impl BundleDb {
         let (folder, filename) = self.layout.remote_bundle_path(self.remote_bundles.len());
         let dst_path = folder.join(filename);
         let src_path = self.layout.base_path().join(bundle.path);
-        bundle.path = dst_path.clone();
+        bundle.path = dst_path.strip_prefix(self.layout.base_path()).unwrap().to_path_buf();
         if self.uploader.is_none() {
             self.uploader = Some(BundleUploader::new(5));
         }
@@ -312,12 +316,81 @@ impl BundleDb {
         }
     }
 
-    pub fn check(&mut self, full: bool) -> Result<(), BundleDbError> {
-        for stored in ProgressIter::new("checking bundles", self.remote_bundles.len(), self.remote_bundles.values()) {
-            let mut bundle = try!(self.get_bundle(stored));
-            try!(bundle.check(full))
+    pub fn check(&mut self, full: bool, repair: bool) -> Result<bool, BundleDbError> {
+        let mut to_repair = vec![];
+        for (id, stored) in ProgressIter::new("checking bundles", self.remote_bundles.len(), self.remote_bundles.iter()) {
+            let mut bundle = match self.get_bundle(stored) {
+                Ok(bundle) => bundle,
+                Err(err) => {
+                    if repair {
+                        to_repair.push(id.clone());
+                        continue
+                    } else {
+                        return Err(err)
+                    }
+                }
+            };
+            if let Err(err) = bundle.check(full) {
+                if repair {
+                    to_repair.push(id.clone());
+                    continue
+                } else {
+                    return Err(err.into())
+                }
+            }
         }
+        for id in ProgressIter::new("repairing bundles", to_repair.len(), to_repair.iter()) {
+            try!(self.repair_bundle(id.clone()));
+        }
+        Ok(!to_repair.is_empty())
+    }
+
+    fn evacuate_broken_bundle(&mut self, mut bundle: StoredBundle) -> Result<(), BundleDbError> {
+        let new_path = self.layout.base_path().join(bundle.path.with_extension("bundle.broken"));
+        warn!("Moving bundle to {:?}", new_path);
+        try!(bundle.move_to(self.layout.base_path(), new_path));
+        self.remote_bundles.remove(&bundle.info.id);
         Ok(())
+    }
+
+    fn repair_bundle(&mut self, id: BundleId) -> Result<(), BundleDbError> {
+        let stored = self.remote_bundles[&id].clone();
+        let mut bundle = match self.get_bundle(&stored) {
+            Ok(bundle) => bundle,
+            Err(err) => {
+                warn!("Problem detected: failed to read bundle header: {}\n\tcaused by: {}", id, err);
+                return self.evacuate_broken_bundle(stored);
+            }
+        };
+        let chunks = match bundle.get_chunk_list() {
+            Ok(chunks) => chunks.clone(),
+            Err(err) => {
+                warn!("Problem detected: failed to read bundle chunks: {}\n\tcaused by: {}", id, err);
+                return self.evacuate_broken_bundle(stored);
+            }
+        };
+        let data = match bundle.load_contents() {
+            Ok(data) => data,
+            Err(err) => {
+                warn!("Problem detected: failed to read bundle data: {}\n\tcaused by: {}", id, err);
+                return self.evacuate_broken_bundle(stored);
+            }
+        };
+        info!("Copying readable data into new bundle");
+        let info = stored.info.clone();
+        let mut new_bundle = try!(self.create_bundle(info.mode, info.hash_method, info.compression, info.encryption));
+        let mut pos = 0;
+        for (hash, mut len) in chunks.into_inner() {
+            if pos >= data.len() {
+                break
+            }
+            len = min(len, (data.len() - pos) as u32);
+            try!(new_bundle.add(&data[pos..pos+len as usize], hash));
+            pos += len as usize;
+        }
+        let bundle = try!(self.add_bundle(new_bundle));
+        info!("New bundle id is {}", bundle.id);
+        self.evacuate_broken_bundle(stored)
     }
 
     #[inline]

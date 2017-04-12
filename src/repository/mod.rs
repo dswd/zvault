@@ -281,37 +281,6 @@ impl Repository {
         Ok(())
     }
 
-    fn rebuild_bundle_map(&mut self) -> Result<(), RepositoryError> {
-        info!("Rebuilding bundle map from bundles");
-        self.bundle_map = BundleMap::create();
-        for bundle in self.bundles.list_bundles() {
-            let bundle_id = match bundle.mode {
-                BundleMode::Data => self.next_data_bundle,
-                BundleMode::Meta => self.next_meta_bundle
-            };
-            self.bundle_map.set(bundle_id, bundle.id.clone());
-            if self.next_meta_bundle == bundle_id {
-                self.next_meta_bundle = self.next_free_bundle_id()
-            }
-            if self.next_data_bundle == bundle_id {
-                self.next_data_bundle = self.next_free_bundle_id()
-            }
-        }
-        self.save_bundle_map()
-    }
-
-    fn rebuild_index(&mut self) -> Result<(), RepositoryError> {
-        info!("Rebuilding index from bundles");
-        self.index.clear();
-        for (num, id) in self.bundle_map.bundles() {
-            let chunks = try!(self.bundles.get_chunk_list(&id));
-            for (i, (hash, _len)) in chunks.into_inner().into_iter().enumerate() {
-                try!(self.index.set(&hash, &Location{bundle: num as u32, chunk: i as u32}));
-            }
-        }
-        Ok(())
-    }
-
     fn remove_gone_remote_bundle(&mut self, bundle: BundleInfo) -> Result<(), RepositoryError> {
         if let Some(id) = self.bundle_map.find(&bundle.id) {
             debug!("Removing bundle from index: {}", bundle.id);
