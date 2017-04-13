@@ -11,25 +11,36 @@ use tar;
 
 
 fn inode_from_entry<R: Read>(entry: &mut tar::Entry<R>) -> Result<Inode, RepositoryError> {
-    let path = try!(entry.path());
-    let header = entry.header();
-    let file_type = match header.entry_type() {
-        tar::EntryType::Regular | tar::EntryType::Link | tar::EntryType::Continuous => FileType::File,
-        tar::EntryType::Symlink => FileType::Symlink,
-        tar::EntryType::Directory => FileType::Directory,
-        _ => return Err(InodeError::UnsupportedFiletype(path.to_path_buf()).into())
+    let mut inode = {
+        let path = try!(entry.path());
+        let header = entry.header();
+        let file_type = match header.entry_type() {
+            tar::EntryType::Regular | tar::EntryType::Link | tar::EntryType::Continuous => FileType::File,
+            tar::EntryType::Symlink => FileType::Symlink,
+            tar::EntryType::Directory => FileType::Directory,
+            _ => return Err(InodeError::UnsupportedFiletype(path.to_path_buf()).into())
+        };
+        Inode {
+            file_type: file_type,
+            name: path.file_name().map(|s| s.to_string_lossy().to_string()).unwrap_or_else(|| "/".to_string()),
+            symlink_target: try!(entry.link_name()).map(|s| s.to_string_lossy().to_string()),
+            size: try!(header.size()),
+            mode: try!(header.mode()),
+            user: try!(header.uid()),
+            group: try!(header.gid()),
+            timestamp: try!(header.mtime()) as i64,
+            ..Default::default()
+        }
     };
-    let mut inode = Inode {
-        file_type: file_type,
-        name: path.file_name().map(|s| s.to_string_lossy().to_string()).unwrap_or_else(|| "/".to_string()),
-        symlink_target: try!(entry.link_name()).map(|s| s.to_string_lossy().to_string()),
-        size: try!(header.size()),
-        mode: try!(header.mode()),
-        user: try!(header.uid()),
-        group: try!(header.gid()),
-        timestamp: try!(header.mtime()) as i64,
-        ..Default::default()
-    };
+    if let Some(exts) = try!(entry.pax_extensions()) {
+        for ext in exts {
+            let ext = try!(ext);
+            let key = ext.key().unwrap_or("");
+            if key.starts_with("SCHILY.xattr.") {
+                inode.xattrs.insert(key[13..].to_string(), ext.value_bytes().to_vec().into());
+            }
+        }
+    }
     if inode.file_type == FileType::Directory {
         inode.children = Some(BTreeMap::new());
     }
