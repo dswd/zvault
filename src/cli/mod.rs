@@ -386,13 +386,25 @@ pub fn run() -> Result<(), ErrorCode> {
             }
             info!("Restore finished");
         },
-        Arguments::Remove{repo_path, backup_name, inode} => {
+        Arguments::Remove{repo_path, backup_name, inode, force} => {
             let mut repo = try!(open_repository(&repo_path));
             if let Some(inode) = inode {
                 let mut backup = try!(get_backup(&repo, &backup_name));
                 checked!(repo.remove_backup_path(&mut backup, inode), "remove backup subpath", ErrorCode::RemoveRun);
                 checked!(repo.save_backup(&backup, &backup_name), "save backup file", ErrorCode::SaveBackup);
                 info!("The backup subpath has been deleted, run vacuum to reclaim space");
+            } else if repo.layout.backups_path().join(&backup_name).is_dir() {
+                let backups = checked!(repo.get_backups(&backup_name), "retrieve backups", ErrorCode::RemoveRun);
+                if force {
+                    for name in backups.keys() {
+                        checked!(repo.delete_backup(&format!("{}/{}", &backup_name, name)), "delete backup", ErrorCode::RemoveRun);
+                    }
+                } else {
+                    error!("Denying to remove multiple backups (use --force):");
+                    for name in backups.keys() {
+                        println!("  - {}/{}", backup_name, name);
+                    }
+                }
             } else {
                 checked!(repo.delete_backup(&backup_name), "delete backup", ErrorCode::RemoveRun);
                 info!("The backup has been deleted, run vacuum to reclaim space");

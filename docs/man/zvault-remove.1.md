@@ -3,7 +3,7 @@ zvault-remove(1) -- Remove a backup or a subtree
 
 ## SYNOPSIS
 
-`zvault remove <BACKUP>`
+`zvault remove [OPTIONS] <BACKUP>`
 
 
 ## DESCRIPTION
@@ -16,6 +16,9 @@ If `repository` is omitted, the default repository location is used instead.
 
 If a backup is referenced, this backup will be deleted. If a subtree is given,
 the backup is instead rewritten to not include that subtree anymore.
+
+If a folder of backups is referenced by `BACKUP` the flag `--force` must be set
+in order to remove all backups in that folder (also recursively).
 
 Note: When removing backup subtrees, the meta information of that backup is left
 unchanged and still contains the data (e.g. duration and size) of the original
@@ -31,6 +34,11 @@ data of the deleted backups becomes inaccessible and can not be restored.**
 
 
 ## OPTIONS
+
+  * `-f`, `--force`:
+
+    Remove multiple backups in a backup folder
+
 
   * `-h`, `--help`:
 

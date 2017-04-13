@@ -37,7 +37,8 @@ pub enum Arguments {
     Remove {
         repo_path: String,
         backup_name: String,
-        inode: Option<String>
+        inode: Option<String>,
+        force: bool
     },
     Prune {
         repo_path: String,
@@ -318,6 +319,7 @@ pub fn parse() -> Result<(LogLevel, Arguments), ErrorCode> {
             .arg(Arg::from_usage("<DST> 'Destination path for backup'")
                 .validator(validate_existing_path)))
         .subcommand(SubCommand::with_name("remove").aliases(&["rm", "delete", "del"]).about("Remove a backup or a subtree")
+            .arg(Arg::from_usage("-f --force 'Remove multiple backups in a backup folder'"))
             .arg(Arg::from_usage("<BACKUP> 'The backup/subtree path, [repository]::backup[::subtree]'")
                 .validator(|val| validate_repo_path(val, true, Some(true), None))))
         .subcommand(SubCommand::with_name("prune").about("Remove backups based on age")
@@ -468,7 +470,8 @@ pub fn parse() -> Result<(LogLevel, Arguments), ErrorCode> {
             Arguments::Remove {
                 repo_path: repository.to_string(),
                 backup_name: backup.unwrap().to_string(),
-                inode: inode.map(|v| v.to_string())
+                inode: inode.map(|v| v.to_string()),
+                force: args.is_present("force")
             }
         },
         ("prune", Some(args)) => {
