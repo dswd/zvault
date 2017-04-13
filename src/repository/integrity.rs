@@ -276,18 +276,38 @@ impl Repository {
         Ok(())
     }
 
-    pub fn check_repository(&mut self) -> Result<(), RepositoryError> {
+    pub fn check_repository(&mut self, repair: bool) -> Result<(), RepositoryError> {
         info!("Checking repository integrity...");
+        let mut rebuild = false;
         for (_id, bundle_id) in self.bundle_map.bundles() {
             if self.bundles.get_bundle_info(&bundle_id).is_none() {
-                return Err(IntegrityError::MissingBundle(bundle_id).into())
+                if repair {
+                    warn!("Problem detected: bundle map contains unknown bundle {}", bundle_id);
+                    rebuild = true;
+                } else {
+                    return Err(IntegrityError::MissingBundle(bundle_id).into())
+                }
             }
         }
         if self.bundle_map.len() < self.bundles.len() {
-            return Err(IntegrityError::RemoteBundlesNotInMap.into())
+            if repair {
+                warn!("Problem detected: bundle map does not contain all remote bundles");
+                rebuild = true;
+            } else {
+                return Err(IntegrityError::RemoteBundlesNotInMap.into())
+            }
         }
         if self.bundle_map.len() > self.bundles.len() {
-            return Err(IntegrityError::MapContainsDuplicates.into())
+            if repair {
+                warn!("Problem detected: bundle map contains bundles multiple times");
+                rebuild = true;
+            } else {
+                return Err(IntegrityError::MapContainsDuplicates.into())
+            }
+        }
+        if rebuild {
+            try!(self.rebuild_bundle_map());
+            try!(self.rebuild_index());
         }
         Ok(())
     }

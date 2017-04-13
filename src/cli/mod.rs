@@ -422,7 +422,7 @@ pub fn run() -> Result<(), ErrorCode> {
         },
         Arguments::Check{repo_path, backup_name, inode, bundles, index, bundle_data, repair} => {
             let mut repo = try!(open_repository(&repo_path));
-            checked!(repo.check_repository(), "check repository", ErrorCode::CheckRun);
+            checked!(repo.check_repository(repair), "check repository", ErrorCode::CheckRun);
             if bundles {
                 checked!(repo.check_bundles(bundle_data, repair), "check bundles", ErrorCode::CheckRun);
             }
