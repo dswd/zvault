@@ -2,7 +2,6 @@ use ::prelude::*;
 
 use super::*;
 
-use std::collections::VecDeque;
 use std::path::{Path, PathBuf};
 use std::time::Duration;
 
@@ -106,50 +105,154 @@ impl Repository {
         Ok(())
     }
 
-    fn check_subtree(&mut self, path: PathBuf, chunks: &[Chunk], checked: &mut Bitmap) -> Result<(), RepositoryError> {
-        let mut todo = VecDeque::new();
-        todo.push_back((path, ChunkList::from(chunks.to_vec())));
-        while let Some((path, chunks)) = todo.pop_front() {
-            match self.check_chunks(checked, &chunks) {
-                Ok(false) => continue, // checked this chunk list before
-                Ok(true) => (),
-                Err(err) => return Err(IntegrityError::BrokenInode(path, Box::new(err)).into())
-            }
-            let inode = try!(self.get_inode(&chunks));
-            // Mark the content chunks as used
-            if let Err(err) = self.check_inode_contents(&inode, checked) {
+    fn check_subtree(&mut self, path: PathBuf, chunks: &[Chunk], checked: &mut Bitmap, repair: bool) -> Result<Option<ChunkList>, RepositoryError> {
+        let mut modified = false;
+        match self.check_chunks(checked, chunks) {
+            Ok(false) => return Ok(None),
+            Ok(true) => (),
+            Err(err) => return Err(IntegrityError::BrokenInode(path, Box::new(err)).into())
+        }
+        let mut inode = try!(self.get_inode(chunks));
+        // Mark the content chunks as used
+        if let Err(err) = self.check_inode_contents(&inode, checked) {
+            if repair {
+                warn!("Problem detected: data of {:?} is corrupt\n\tcaused by: {}", path, err);
+                info!("Removing inode data");
+                inode.data = Some(FileData::Inline(vec![].into()));
+                inode.size = 0;
+                modified = true;
+            } else {
                 return Err(IntegrityError::MissingInodeData(path, Box::new(err)).into())
             }
-            // Put children in todo
-            if let Some(children) = inode.children {
-                for (name, chunks) in children {
-                    todo.push_back((path.join(name), chunks));
+        }
+        // Put children in todo
+        if let Some(ref mut children) = inode.children {
+            let mut removed = vec![];
+            for (name, chunks) in children.iter_mut() {
+                match self.check_subtree(path.join(name), chunks, checked, repair) {
+                    Ok(None) => (),
+                    Ok(Some(c)) => {
+                        *chunks = c;
+                        modified = true;
+                    },
+                    Err(err) => {
+                        warn!("Problem detected: inode {:?} is corrupt\n\tcaused by: {}", path.join(name), err);
+                        info!("Removing broken inode from backup");
+                        removed.push(name.to_string());
+                        modified = true;
+                    }
                 }
             }
+            for name in removed {
+                children.remove(&name);
+            }
         }
+        if modified {
+            Ok(Some(try!(self.put_inode(&inode))))
+        } else {
+            Ok(None)
+        }
+    }
+
+    fn evacuate_broken_backup(&self, name: &str) -> Result<(), RepositoryError> {
+        warn!("The backup {} was corrupted and needed to be modified.", name);
+        let src = self.layout.backup_path(name);
+        let dst = src.with_extension("backup.broken");
+        if fs::rename(&src, &dst).is_err() {
+            try!(fs::copy(&src, &dst));
+            try!(fs::remove_file(&src));
+        }
+        info!("The original backup was renamed to {:?}", dst);
         Ok(())
     }
 
     #[inline]
-    pub fn check_backup(&mut self, backup: &Backup) -> Result<(), RepositoryError> {
+    pub fn check_backup(&mut self, name: &str, backup: &mut Backup, repair: bool) -> Result<(), RepositoryError> {
+        let _lock = if repair {
+            try!(self.write_mode());
+            Some(self.lock(false))
+        } else {
+            None
+        };
         info!("Checking backup...");
         let mut checked = Bitmap::new(self.index.capacity());
-        self.check_subtree(Path::new("").to_path_buf(), &backup.root, &mut checked)
-    }
-
-    pub fn check_inode(&mut self, inode: &Inode, path: &Path) -> Result<(), RepositoryError> {
-        info!("Checking inode...");
-        let mut checked = Bitmap::new(self.index.capacity());
-        try!(self.check_inode_contents(inode, &mut checked));
-        if let Some(ref children) = inode.children {
-            for chunks in children.values() {
-                try!(self.check_subtree(path.to_path_buf(), chunks, &mut checked))
-            }
+        if let Some(chunks) = try!(self.check_subtree(Path::new("").to_path_buf(), &backup.root, &mut checked, repair)) {
+            try!(self.flush());
+            backup.root = chunks;
+            backup.modified = true;
+            try!(self.evacuate_broken_backup(&name));
+            try!(self.save_backup(&backup, &name));
         }
         Ok(())
     }
 
-    pub fn check_backups(&mut self) -> Result<(), RepositoryError> {
+    pub fn check_backup_inode(&mut self, name: &str, backup: &mut Backup, path: &Path, repair: bool) -> Result<(), RepositoryError> {
+        let _lock = if repair {
+            try!(self.write_mode());
+            Some(self.lock(false))
+        } else {
+            None
+        };
+        info!("Checking inode...");
+        let mut checked = Bitmap::new(self.index.capacity());
+        let mut inodes = try!(self.get_backup_path(&backup, path));
+        let mut inode = inodes.pop().unwrap();
+        let mut modified = false;
+        if let Err(err) = self.check_inode_contents(&inode, &mut checked) {
+            if repair {
+                warn!("Problem detected: data of {:?} is corrupt\n\tcaused by: {}", path, err);
+                info!("Removing inode data");
+                inode.data = Some(FileData::Inline(vec![].into()));
+                inode.size = 0;
+                modified = true;
+            } else {
+                return Err(IntegrityError::MissingInodeData(path.to_path_buf(), Box::new(err)).into())
+            }
+        }
+        if let Some(ref mut children) = inode.children {
+            let mut removed = vec![];
+            for (name, chunks) in children.iter_mut() {
+                match self.check_subtree(path.join(name), chunks, &mut checked, repair) {
+                    Ok(None) => (),
+                    Ok(Some(c)) => {
+                        *chunks = c;
+                        modified = true;
+                    },
+                    Err(err) => {
+                        warn!("Problem detected: inode {:?} is corrupt\n\tcaused by: {}", path.join(name), err);
+                        info!("Removing broken inode from backup");
+                        removed.push(name.to_string());
+                        modified = true;
+                    }
+                }
+            }
+            for name in removed {
+                children.remove(&name);
+            }
+        }
+        let mut chunks = try!(self.put_inode(&inode));
+        while let Some(mut parent) = inodes.pop() {
+            parent.children.as_mut().unwrap().insert(inode.name, chunks);
+            inode = parent;
+            chunks = try!(self.put_inode(&inode));
+        }
+        if modified {
+            try!(self.flush());
+            backup.root = chunks;
+            backup.modified = true;
+            try!(self.evacuate_broken_backup(&name));
+            try!(self.save_backup(&backup, &name));
+        }
+        Ok(())
+    }
+
+    pub fn check_backups(&mut self, repair: bool) -> Result<(), RepositoryError> {
+        let _lock = if repair {
+            try!(self.write_mode());
+            Some(self.lock(false))
+        } else {
+            None
+        };
         info!("Checking backups...");
         let mut checked = Bitmap::new(self.index.capacity());
         let backup_map = match self.get_backups() {
@@ -160,9 +263,15 @@ impl Repository {
             },
             Err(err) => return Err(err)
         };
-        for (name, backup) in ProgressIter::new("ckecking backups", backup_map.len(), backup_map.into_iter()) {
-            let path = name+"::";
-            try!(self.check_subtree(Path::new(&path).to_path_buf(), &backup.root, &mut checked));
+        for (name, mut backup) in ProgressIter::new("ckecking backups", backup_map.len(), backup_map.into_iter()) {
+            let path = format!("{}::", name);
+            if let Some(chunks) = try!(self.check_subtree(Path::new(&path).to_path_buf(), &backup.root, &mut checked, repair)) {
+                try!(self.flush());
+                backup.root = chunks;
+                backup.modified = true;
+                try!(self.evacuate_broken_backup(&name));
+                try!(self.save_backup(&backup, &name));
+            }
         }
         Ok(())
     }
@@ -248,6 +357,7 @@ impl Repository {
         info!("Checking bundle integrity...");
         if try!(self.bundles.check(full, repair)) {
             // Some bundles got repaired
+            warn!("Some bundles have been rewritten, please remove the broken bundles manually.");
             try!(self.bundles.finish_uploads());
             try!(self.rebuild_bundle_map());
             try!(self.rebuild_index());

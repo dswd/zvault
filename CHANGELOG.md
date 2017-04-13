@@ -10,6 +10,8 @@ This project follows [semantic versioning](http://semver.org).
 - [modified] No longer trying to upload by rename
 - [modified] No longer failing restore if setting file attributes fails
 - [modified] Backup files must end with `.backup` (**conversion needed**)
+- [modified] Bundle files must end with `.bundle`
+- [modified] Ingnoring corrupt bundles instead of failing
 - [fixed] Creating empty bundle cache on init to avoid warnings
 - [fixed] Calling sodiumoxide::init for faster algorithms and thread safety (not needed)
 - [fixed] Fixed a deadlock in the bundle upload code

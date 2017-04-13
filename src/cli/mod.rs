@@ -430,15 +430,14 @@ pub fn run() -> Result<(), ErrorCode> {
                 checked!(repo.check_index(repair), "check index", ErrorCode::CheckRun);
             }
             if let Some(backup_name) = backup_name {
-                let backup = try!(get_backup(&repo, &backup_name));
+                let mut backup = try!(get_backup(&repo, &backup_name));
                 if let Some(path) = inode {
-                    let inode = checked!(repo.get_backup_inode(&backup, &path), "load subpath inode", ErrorCode::LoadInode);
-                    checked!(repo.check_inode(&inode, Path::new(&path)), "check inode", ErrorCode::CheckRun)
+                    checked!(repo.check_backup_inode(&backup_name, &mut backup, Path::new(&path), repair), "check inode", ErrorCode::CheckRun)
                 } else {
-                    checked!(repo.check_backup(&backup), "check backup", ErrorCode::CheckRun)
+                    checked!(repo.check_backup(&backup_name, &mut backup, repair), "check backup", ErrorCode::CheckRun)
                 }
             } else {
-                checked!(repo.check_backups(), "check repository", ErrorCode::CheckRun)
+                checked!(repo.check_backups(repair), "check repository", ErrorCode::CheckRun)
             }
             repo.set_clean();
             info!("Integrity verified")

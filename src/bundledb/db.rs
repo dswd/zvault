@@ -376,6 +376,7 @@ impl BundleDb {
                 return self.evacuate_broken_bundle(stored);
             }
         };
+        warn!("Problem detected: bundle data was truncated: {}", id);
         info!("Copying readable data into new bundle");
         let info = stored.info.clone();
         let mut new_bundle = try!(self.create_bundle(info.mode, info.hash_method, info.compression, info.encryption));
