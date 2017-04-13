@@ -176,12 +176,19 @@ impl Repository {
         };
         info!("Checking backup...");
         let mut checked = Bitmap::new(self.index.capacity());
-        if let Some(chunks) = try!(self.check_subtree(Path::new("").to_path_buf(), &backup.root, &mut checked, repair)) {
-            try!(self.flush());
-            backup.root = chunks;
-            backup.modified = true;
-            try!(self.evacuate_broken_backup(&name));
-            try!(self.save_backup(&backup, &name));
+        match self.check_subtree(Path::new("").to_path_buf(), &backup.root, &mut checked, repair) {
+            Ok(None) => (),
+            Ok(Some(chunks)) => {
+                try!(self.flush());
+                backup.root = chunks;
+                backup.modified = true;
+                try!(self.evacuate_broken_backup(&name));
+                try!(self.save_backup(&backup, &name));
+            },
+            Err(err) => {
+                warn!("The root of the backup {} has been corrupted\n\tcaused by: {}", name, err);
+                try!(self.evacuate_broken_backup(&name));
+            }
         }
         Ok(())
     }
@@ -265,12 +272,19 @@ impl Repository {
         };
         for (name, mut backup) in ProgressIter::new("ckecking backups", backup_map.len(), backup_map.into_iter()) {
             let path = format!("{}::", name);
-            if let Some(chunks) = try!(self.check_subtree(Path::new(&path).to_path_buf(), &backup.root, &mut checked, repair)) {
-                try!(self.flush());
-                backup.root = chunks;
-                backup.modified = true;
-                try!(self.evacuate_broken_backup(&name));
-                try!(self.save_backup(&backup, &name));
+            match self.check_subtree(Path::new(&path).to_path_buf(), &backup.root, &mut checked, repair) {
+                Ok(None) => (),
+                Ok(Some(chunks)) => {
+                    try!(self.flush());
+                    backup.root = chunks;
+                    backup.modified = true;
+                    try!(self.evacuate_broken_backup(&name));
+                    try!(self.save_backup(&backup, &name));
+                },
+                Err(err) => {
+                    warn!("The root of the backup {} has been corrupted\n\tcaused by: {}", name, err);
+                    try!(self.evacuate_broken_backup(&name));
+                }
             }
         }
         Ok(())
