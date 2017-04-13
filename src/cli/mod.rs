@@ -11,6 +11,7 @@ use std::collections::HashMap;
 use std::io::{BufReader, BufRead};
 use std::fs::File;
 use std::env;
+use std::str;
 use std::path::Path;
 
 use self::args::Arguments;
@@ -173,6 +174,16 @@ fn print_inode(inode: &Inode) {
         println!("Children:");
         for name in children.keys() {
             println!("  - {}", name);
+        }
+    }
+    if !inode.xattrs.is_empty() {
+        println!("Extended attributes:");
+        for (key, value) in &inode.xattrs {
+            if let Ok(value) = str::from_utf8(value) {
+                println!("  - {} = '{}'", key, value);
+            } else {
+                println!("  - {} = 0x{}", key, to_hex(value));
+            }
         }
     }
 }
