@@ -325,6 +325,9 @@ impl Repository {
         for c in path.as_ref().components() {
             if let path::Component::Normal(name) = c {
                 let name = name.to_string_lossy();
+                if inodes.is_empty() && inode.file_type != FileType::Directory && inode.name == name {
+                    return Ok(vec![inode]);
+                }
                 if let Some(chunks) = inode.children.as_mut().and_then(|c| c.remove(&name as &str)) {
                     inodes.push(inode);
                     inode = try!(self.get_inode(&chunks));

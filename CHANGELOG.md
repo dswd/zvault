@@ -22,6 +22,7 @@ This project follows [semantic versioning](http://semver.org).
 - [fixed] Ignoring missing backups folder
 - [fixed] Fixed problems with uploads from relative repository paths
 - [fixed] Fixed finished messages
+- [fixed] Fixed inode retrieval for single-file backups
 
 
 ### v0.1.0 (2017-04-11)
