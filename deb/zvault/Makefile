@@ -1,7 +1,11 @@
 build: man/zvault.1 man/zvault-backup.1 man/zvault-check.1 man/zvault-config.1 \
 	   man/zvault-import.1 man/zvault-info.1 man/zvault-init.1 man/zvault-list.1 \
 	   man/zvault-mount.1 man/zvault-prune.1 man/zvault-remove.1 \
-	   man/zvault-restore.1 man/zvault-vacuum.1
+	   man/zvault-restore.1 man/zvault-vacuum.1 man/zvault-addkey.1 \
+	   man/zvault-algotest.1 man/zvault-analyze.1 man/zvault-bundleinfo.1 \
+	   man/zvault-bundlelist.1 man/zvault-diff.1 man/zvault-genkey.1 \
+	   man/zvault-versions.1
+
 
 %.1: %.1.md
 	ronn -r $<

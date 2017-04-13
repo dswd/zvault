@@ -8,6 +8,7 @@ This project follows [semantic versioning](http://semver.org).
 - [added] Locking local repository to avoid index corruption
 - [added] Storing user/group names in backups
 - [added] Ability to repair bundles, backups, index, bundle map and bundle cache
+- [added] Manpages for all subcommands
 - [modified] No longer trying to upload by rename
 - [modified] No longer failing restore if setting file attributes fails
 - [modified] Backup files must end with `.backup` (**conversion needed**)
