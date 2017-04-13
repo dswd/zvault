@@ -9,6 +9,7 @@ This project follows [semantic versioning](http://semver.org).
 - [added] Storing user/group names in backups
 - [added] Ability to repair bundles, backups, index, bundle map and bundle cache
 - [added] Manpages for all subcommands
+- [added] Folders of backups can be listed, removed and mounted
 - [modified] No longer trying to upload by rename
 - [modified] No longer failing restore if setting file attributes fails
 - [modified] Backup files must end with `.backup` (**conversion needed**)
