@@ -38,8 +38,12 @@ pub enum DiffType {
 
 
 impl Repository {
-    pub fn get_backups(&self) -> Result<HashMap<String, Backup>, RepositoryError> {
+    pub fn get_all_backups(&self) -> Result<HashMap<String, Backup>, RepositoryError> {
         Ok(try!(Backup::get_all_from(&self.crypto.lock().unwrap(), self.layout.backups_path())))
+    }
+
+    pub fn get_backups<P: AsRef<Path>>(&self, path: P) -> Result<HashMap<String, Backup>, RepositoryError> {
+        Ok(try!(Backup::get_all_from(&self.crypto.lock().unwrap(), self.layout.backups_path().join(path))))
     }
 
     #[inline]
@@ -75,7 +79,7 @@ impl Repository {
     pub fn prune_backups(&mut self, prefix: &str, daily: usize, weekly: usize, monthly: usize, yearly: usize, force: bool) -> Result<(), RepositoryError> {
         try!(self.write_mode());
         let mut backups = Vec::new();
-        let backup_map = match self.get_backups() {
+        let backup_map = match self.get_all_backups() {
             Ok(backup_map) => backup_map,
             Err(RepositoryError::BackupFile(BackupFileError::PartialBackupsList(backup_map, _failed))) => {
                 warn!("Some backups could not be read, ignoring them");
@@ -341,7 +345,7 @@ impl Repository {
     pub fn find_versions<P: AsRef<Path>>(&mut self, path: P) -> Result<Vec<(String, Inode)>, RepositoryError> {
         let path = path.as_ref();
         let mut versions = HashMap::new();
-        for (name, backup) in try!(self.get_backups()) {
+        for (name, backup) in try!(self.get_all_backups()) {
             match self.get_backup_inode(&backup, path) {
                 Ok(inode) => {
                     versions.insert((inode.file_type, inode.timestamp, inode.size), (name, inode));

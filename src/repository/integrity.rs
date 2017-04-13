@@ -262,7 +262,7 @@ impl Repository {
         };
         info!("Checking backups...");
         let mut checked = Bitmap::new(self.index.capacity());
-        let backup_map = match self.get_backups() {
+        let backup_map = match self.get_all_backups() {
             Ok(backup_map) => backup_map,
             Err(RepositoryError::BackupFile(BackupFileError::PartialBackupsList(backup_map, _failed))) => {
                 warn!("Some backups could not be read, ignoring them");

@@ -74,7 +74,7 @@ impl Repository {
                 used_raw_size: 0
             });
         }
-        let backups = try!(self.get_backups());
+        let backups = try!(self.get_all_backups());
         let mut todo = VecDeque::new();
         for (_name, backup) in backups {
             todo.push_back(backup.root);

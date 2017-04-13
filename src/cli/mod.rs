@@ -110,7 +110,7 @@ fn find_reference_backup(repo: &Repository, path: &str) -> Result<Option<(String
         Ok(hostname) => hostname,
         Err(_) => return Ok(None)
     };
-    let backup_map = match repo.get_backups() {
+    let backup_map = match repo.get_all_backups() {
         Ok(backup_map) => backup_map,
         Err(RepositoryError::BackupFile(BackupFileError::PartialBackupsList(backup_map, _failed))) => {
             warn!("Some backups could not be read, ignoring them");
@@ -444,30 +444,36 @@ pub fn run() -> Result<(), ErrorCode> {
         },
         Arguments::List{repo_path, backup_name, inode} => {
             let mut repo = try!(open_repository(&repo_path));
-            if let Some(backup_name) = backup_name {
-                let backup = try!(get_backup(&repo, &backup_name));
-                let inode = checked!(repo.get_backup_inode(&backup, inode.as_ref().map(|v| v as &str).unwrap_or("/")), "load subpath inode", ErrorCode::LoadInode);
-                println!("{}", format_inode_one_line(&inode));
-                if let Some(children) = inode.children {
-                    for chunks in children.values() {
-                        let inode = checked!(repo.get_inode(chunks), "load child inode", ErrorCode::LoadInode);
-                        println!("- {}", format_inode_one_line(&inode));
+            let backup_map = if let Some(backup_name) = backup_name {
+                if repo.layout.backups_path().join(&backup_name).is_dir() {
+                    repo.get_backups(&backup_name)
+                } else {
+                    let backup = try!(get_backup(&repo, &backup_name));
+                    let inode = checked!(repo.get_backup_inode(&backup, inode.as_ref().map(|v| v as &str).unwrap_or("/")), "load subpath inode", ErrorCode::LoadInode);
+                    println!("{}", format_inode_one_line(&inode));
+                    if let Some(children) = inode.children {
+                        for chunks in children.values() {
+                            let inode = checked!(repo.get_inode(chunks), "load child inode", ErrorCode::LoadInode);
+                            println!("- {}", format_inode_one_line(&inode));
+                        }
                     }
+                    return Ok(())
                 }
             } else {
-                let backup_map = match repo.get_backups() {
-                    Ok(backup_map) => backup_map,
-                    Err(RepositoryError::BackupFile(BackupFileError::PartialBackupsList(backup_map, _failed))) => {
-                        warn!("Some backups could not be read, ignoring them");
-                        backup_map
-                    },
-                    Err(err) => {
-                        error!("Failed to load backup files: {}", err);
-                        return Err(ErrorCode::LoadBackup)
-                    }
-                };
-                print_backups(&backup_map);
-            }
+                repo.get_all_backups()
+            };
+            let backup_map = match backup_map {
+                Ok(backup_map) => backup_map,
+                Err(RepositoryError::BackupFile(BackupFileError::PartialBackupsList(backup_map, _failed))) => {
+                    warn!("Some backups could not be read, ignoring them");
+                    backup_map
+                },
+                Err(err) => {
+                    error!("Failed to load backup files: {}", err);
+                    return Err(ErrorCode::LoadBackup)
+                }
+            };
+            print_backups(&backup_map);
         },
         Arguments::Info{repo_path, backup_name, inode} => {
             let mut repo = try!(open_repository(&repo_path));
