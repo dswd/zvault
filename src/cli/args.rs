@@ -404,7 +404,7 @@ pub fn parse() -> Result<(LogLevel, Arguments), ErrorCode> {
             .arg(Arg::from_usage("<REPO> 'Path of the repository'")
                 .validator(|val| validate_repo_path(val, true, Some(false), Some(false))))
             .arg(Arg::from_usage("[FILE] 'File containing the keypair'")
-                .required_unless("generate").validator(validate_existing_path)))
+                .validator(validate_existing_path)))
         .subcommand(SubCommand::with_name("algotest").about("Test a specific algorithm combination")
             .arg(Arg::from_usage("[bundle_size] --bundle-size [SIZE] 'Set the target bundle size in MiB'")
                 .default_value(DEFAULT_BUNDLE_SIZE_STR).validator(validate_num))
