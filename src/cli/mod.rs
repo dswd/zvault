@@ -504,15 +504,19 @@ pub fn run() -> Result<(), ErrorCode> {
         Arguments::Mount{repo_path, backup_name, inode, mount_point} => {
             let mut repo = try!(open_repository(&repo_path));
             let fs = if let Some(backup_name) = backup_name {
-                let backup = try!(get_backup(&repo, &backup_name));
-                if let Some(inode) = inode {
-                    let inode = checked!(repo.get_backup_inode(&backup, inode), "load subpath inode", ErrorCode::LoadInode);
-                    checked!(FuseFilesystem::from_inode(&mut repo, backup, inode), "create fuse filesystem", ErrorCode::FuseMount)
+                if repo.layout.backups_path().join(&backup_name).is_dir() {
+                    checked!(FuseFilesystem::from_repository(&mut repo, Some(&backup_name)), "create fuse filesystem", ErrorCode::FuseMount)
                 } else {
-                    checked!(FuseFilesystem::from_backup(&mut repo, backup), "create fuse filesystem", ErrorCode::FuseMount)
+                    let backup = try!(get_backup(&repo, &backup_name));
+                    if let Some(inode) = inode {
+                        let inode = checked!(repo.get_backup_inode(&backup, inode), "load subpath inode", ErrorCode::LoadInode);
+                        checked!(FuseFilesystem::from_inode(&mut repo, backup, inode), "create fuse filesystem", ErrorCode::FuseMount)
+                    } else {
+                        checked!(FuseFilesystem::from_backup(&mut repo, backup), "create fuse filesystem", ErrorCode::FuseMount)
+                    }
                 }
             } else {
-                checked!(FuseFilesystem::from_repository(&mut repo), "create fuse filesystem", ErrorCode::FuseMount)
+                checked!(FuseFilesystem::from_repository(&mut repo, None), "create fuse filesystem", ErrorCode::FuseMount)
             };
             info!("Mounting the filesystem...");
             info!("Please unmount the filesystem via 'fusermount -u {}' when done.", mount_point);

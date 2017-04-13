@@ -153,9 +153,13 @@ impl<'a> FuseFilesystem<'a> {
         })
     }
 
-    pub fn from_repository(repository: &'a mut Repository) -> Result<Self, RepositoryError> {
+    pub fn from_repository(repository: &'a mut Repository, path: Option<&str>) -> Result<Self, RepositoryError> {
         let mut backups = vec![];
-        for (name, backup) in try!(repository.get_all_backups()) {
+        let backup_map = match path {
+            Some(path) => try!(repository.get_backups(path)),
+            None => try!(repository.get_all_backups())
+        };
+        for (name, backup) in backup_map {
             let inode = try!(repository.get_inode(&backup.root));
             backups.push((name, backup, inode));
         }
