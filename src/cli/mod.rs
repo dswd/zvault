@@ -213,6 +213,7 @@ fn print_bundle(bundle: &StoredBundle) {
     println!("Bundle {}", bundle.info.id);
     println!("  - Mode: {:?}", bundle.info.mode);
     println!("  - Path: {:?}", bundle.path);
+    println!("  - Date: {}", Local.timestamp(bundle.info.timestamp, 0).to_rfc2822());
     println!("  - Hash method: {:?}", bundle.info.hash_method);
     let encryption = if let Some((_, ref key)) = bundle.info.encryption {
         to_hex(key)

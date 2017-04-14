@@ -97,7 +97,8 @@ pub struct BundleInfo {
     pub raw_size: usize,
     pub encoded_size: usize,
     pub chunk_count: usize,
-    pub chunk_list_size: usize
+    pub chunk_list_size: usize,
+    pub timestamp: i64
 }
 serde_impl!(BundleInfo(u64?) {
     id: BundleId => 0,
@@ -108,7 +109,8 @@ serde_impl!(BundleInfo(u64?) {
     raw_size: usize => 6,
     encoded_size: usize => 7,
     chunk_count: usize => 8,
-    chunk_list_size: usize => 9
+    chunk_list_size: usize => 9,
+    timestamp: i64 => 10
 });
 
 impl Default for BundleInfo {
@@ -122,7 +124,8 @@ impl Default for BundleInfo {
             encoded_size: 0,
             chunk_count: 0,
             mode: BundleMode::Data,
-            chunk_list_size: 0
+            chunk_list_size: 0,
+            timestamp: 0
         }
     }
 }

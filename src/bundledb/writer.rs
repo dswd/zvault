@@ -6,6 +6,8 @@ use std::fs::File;
 use std::io::{self, Write, BufWriter};
 use std::sync::{Arc, Mutex};
 
+use chrono::prelude::*;
+
 
 quick_error!{
     #[derive(Debug)]
@@ -114,7 +116,8 @@ impl BundleWriter {
             id: id.clone(),
             raw_size: self.raw_size,
             encoded_size: encoded_size,
-            chunk_list_size: chunk_data.len()
+            chunk_list_size: chunk_data.len(),
+            timestamp: Local::now().timestamp()
         };
         let mut info_data = try!(msgpack::encode(&info).context(&path as &Path));
         if let Some(ref encryption) = self.encryption {
