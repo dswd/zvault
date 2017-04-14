@@ -1,3 +1,29 @@
+zvault (0.2.0) stable; urgency=medium
+
+  * [added] Added CHANGELOG
+  * [added] Locking local repository to avoid index corruption
+  * [added] Storing user/group names in backups
+  * [added] Ability to repair bundles, backups, index, bundle map and bundle cache
+  * [added] Manpages for all subcommands
+  * [added] Folders of backups can be listed, removed and mounted
+  * [added] Supporting extended attributes in tar files
+  * [modified] No longer trying to upload by rename
+  * [modified] No longer failing restore if setting file attributes fails
+  * [modified] Backup files must end with `.backup` (**conversion needed**)
+  * [modified] Bundle files must end with `.bundle`
+  * [modified] Ingnoring corrupt bundles instead of failing
+  * [fixed] Creating empty bundle cache on init to avoid warnings
+  * [fixed] Calling sodiumoxide::init for faster algorithms and thread safety (not needed)
+  * [fixed] Fixed a deadlock in the bundle upload code
+  * [fixed] Also setting repository dirty on crash
+  * [fixed] Ignoring missing backups folder
+  * [fixed] Fixed problems with uploads from relative repository paths
+  * [fixed] Fixed finished messages
+  * [fixed] Fixed inode retrieval for single-file backups
+  * [fixed] Fixed tar import
+
+ -- Dennis Schwerdel <schwerdel@googlemail.com>  Fri, 14 Apr 2017 09:45:20 +0200
+
 zvault (0.1.0) stable; urgency=medium
 
   * Initial release
