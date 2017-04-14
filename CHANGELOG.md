@@ -5,6 +5,7 @@ This project follows [semantic versioning](http://semver.org).
 
 ### UNRELEASED
 * [added] Ability to read/write tar file from/to stdin/stdout
+* [added] Added date to bundles
 * [modified] Logging to stderr
 * [fixed] Only print "repairing bundles" if actually repairing bundles
 

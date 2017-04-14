@@ -164,7 +164,7 @@ impl Repository {
         }
         repo = try!(Repository::open(path));
         let mut backups: Vec<(String, Backup)> = try!(repo.get_all_backups()).into_iter().collect();
-        backups.sort_by_key(|&(_, ref b)| b.date);
+        backups.sort_by_key(|&(_, ref b)| b.timestamp);
         if let Some((name, backup)) = backups.pop() {
             info!("Taking configuration from the last backup '{}'", name);
             repo.config = backup.config;

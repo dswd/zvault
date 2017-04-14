@@ -127,7 +127,7 @@ fn find_reference_backup(repo: &Repository, path: &str) -> Result<Option<(String
             matching.push((name, backup));
         }
     }
-    matching.sort_by_key(|&(_, ref b)| b.date);
+    matching.sort_by_key(|&(_, ref b)| b.timestamp);
     Ok(matching.pop())
 }
 
@@ -135,7 +135,7 @@ fn print_backup(backup: &Backup) {
     if backup.modified {
         warn!("This backup has been modified");
     }
-    println!("Date: {}", Local.timestamp(backup.date, 0).to_rfc2822());
+    println!("Date: {}", Local.timestamp(backup.timestamp, 0).to_rfc2822());
     println!("Source: {}:{}", backup.host, backup.path);
     println!("Duration: {}", to_duration(backup.duration));
     println!("Entries: {} files, {} dirs", backup.file_count, backup.dir_count);
@@ -193,7 +193,7 @@ fn print_backups(backup_map: &HashMap<String, Backup>) {
     backups.sort_by_key(|b| b.0);
     for (name, backup) in backups {
         println!("{:40}  {:>32}  {:7} files, {:6} dirs, {:>10}",
-            name, Local.timestamp(backup.date, 0).to_rfc2822(), backup.file_count,
+            name, Local.timestamp(backup.timestamp, 0).to_rfc2822(), backup.file_count,
             backup.dir_count, to_file_size(backup.total_data_size));
     }
 }

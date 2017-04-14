@@ -89,11 +89,11 @@ impl Repository {
         };
         for (name, backup) in backup_map {
             if name.starts_with(prefix) {
-                let date = Local.timestamp(backup.date, 0);
+                let date = Local.timestamp(backup.timestamp, 0);
                 backups.push((name, date, backup));
             }
         }
-        backups.sort_by_key(|backup| -backup.2.date);
+        backups.sort_by_key(|backup| -backup.2.timestamp);
         let mut keep = Bitmap::new(backups.len());
 
         fn mark_needed<K: Eq, F: Fn(&DateTime<Local>) -> K>(backups: &[(String, DateTime<Local>, Backup)], keep: &mut Bitmap, max: usize, keyfn: F) {
@@ -275,7 +275,7 @@ impl Repository {
         backup.root = try!(self.put_inode(&root_inode));
         try!(self.flush());
         let elapsed = Local::now().signed_duration_since(start);
-        backup.date = start.timestamp();
+        backup.timestamp = start.timestamp();
         backup.total_data_size = root_inode.cum_size;
         for &(_, len) in backup.root.iter() {
             backup.total_data_size += len as u64;

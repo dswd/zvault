@@ -194,7 +194,7 @@ impl Repository {
         backup.root = chunks;
         try!(self.flush());
         let elapsed = Local::now().signed_duration_since(start);
-        backup.date = start.timestamp();
+        backup.timestamp = start.timestamp();
         backup.total_data_size = root_inode.cum_size;
         backup.file_count = root_inode.cum_files;
         backup.dir_count = root_inode.cum_dirs;
