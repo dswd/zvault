@@ -339,8 +339,10 @@ impl BundleDb {
                 }
             }
         }
-        for id in ProgressIter::new("repairing bundles", to_repair.len(), to_repair.iter()) {
-            try!(self.repair_bundle(id.clone()));
+        if !to_repair.is_empty() {
+            for id in ProgressIter::new("repairing bundles", to_repair.len(), to_repair.iter()) {
+                try!(self.repair_bundle(id.clone()));
+            }
         }
         Ok(!to_repair.is_empty())
     }
