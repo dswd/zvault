@@ -541,10 +541,20 @@ impl<'a> fuse::Filesystem for FuseFilesystem<'a> {
     }
 
     /// Get an extended attribute
-    fn getxattr (&mut self, _req: &fuse::Request, _ino: u64, _name: &OsStr, _size: u32, reply: fuse::ReplyXattr) {
-        // #FIXME:30 If arg.size is zero, the size of the value should be sent with fuse_getxattr_out
-        // #FIXME:0 If arg.size is non-zero, send the value if it fits, or ERANGE otherwise
-        reply.error(libc::ENOSYS);
+    fn getxattr (&mut self, _req: &fuse::Request, ino: u64, name: &OsStr, size: u32, reply: fuse::ReplyXattr) {
+        let inode = inode!(self, ino, reply);
+        let inode = inode.borrow();
+        if let Some(val) = inode.inode.xattrs.get(&name.to_string_lossy() as &str) {
+            if size == 0 {
+                reply.size(val.len() as u32);
+            } else if size >= val.len() as u32 {
+                reply.data(val);
+            } else {
+                reply.error(libc::ERANGE);
+            }
+        } else {
+            reply.error(libc::ENODATA);
+        }
     }
 
     /// List extended attribute names
