@@ -10,6 +10,7 @@ This project follows [semantic versioning](http://semver.org).
 - [added] Ability to repair bundles, backups, index, bundle map and bundle cache
 - [added] Manpages for all subcommands
 - [added] Folders of backups can be listed, removed and mounted
+- [added] Supporting extended attributes in tar files
 - [modified] No longer trying to upload by rename
 - [modified] No longer failing restore if setting file attributes fails
 - [modified] Backup files must end with `.backup` (**conversion needed**)
@@ -23,6 +24,7 @@ This project follows [semantic versioning](http://semver.org).
 - [fixed] Fixed problems with uploads from relative repository paths
 - [fixed] Fixed finished messages
 - [fixed] Fixed inode retrieval for single-file backups
+- [fixed] Fixed tar import
 
 
 ### v0.1.0 (2017-04-11)
