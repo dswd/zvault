@@ -3,7 +3,7 @@
 This project follows [semantic versioning](http://semver.org).
 
 
-### UNRELEASED
+### v0.2.0 (2017-04-14)
 * [added] Added CHANGELOG
 * [added] Locking local repository to avoid index corruption
 * [added] Storing user/group names in backups
