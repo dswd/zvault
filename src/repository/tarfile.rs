@@ -2,7 +2,7 @@ use ::prelude::*;
 
 use std::collections::{HashMap, HashSet, BTreeMap};
 use std::path::{Path, PathBuf};
-use std::io::{Read, Cursor};
+use std::io::{self, Read, Write, Cursor};
 use std::fs::File;
 use std::str;
 
@@ -71,8 +71,8 @@ impl Repository {
         Ok(inode)
     }
 
-    fn import_tarfile_as_inode<P: AsRef<Path>>(&mut self, backup: &mut Backup, tarfile: P, failed_paths: &mut Vec<PathBuf>) -> Result<(Inode, ChunkList), RepositoryError> {
-        let mut tarfile = tar::Archive::new(try!(File::open(tarfile)));
+    fn import_tarfile_as_inode<R: Read>(&mut self, backup: &mut Backup, input: R, failed_paths: &mut Vec<PathBuf>) -> Result<(Inode, ChunkList), RepositoryError> {
+        let mut tarfile = tar::Archive::new(input);
         // Step 1: create inodes for all entries
         let mut inodes = HashMap::<PathBuf, (Inode, HashSet<String>)>::new();
         for entry in try!(tarfile.entries()) {
@@ -185,7 +185,12 @@ impl Repository {
         let info_before = self.info();
         let start = Local::now();
         let mut failed_paths = vec![];
-        let (root_inode, chunks) = try!(self.import_tarfile_as_inode(&mut backup, tarfile, &mut failed_paths));
+        let tarfile = tarfile.as_ref();
+        let (root_inode, chunks) = if tarfile == Path::new("-") {
+            try!(self.import_tarfile_as_inode(&mut backup, try!(File::open(tarfile)), &mut failed_paths))
+        } else {
+            try!(self.import_tarfile_as_inode(&mut backup, io::stdin(), &mut failed_paths))
+        };
         backup.root = chunks;
         try!(self.flush());
         let elapsed = Local::now().signed_duration_since(start);
@@ -208,7 +213,7 @@ impl Repository {
         }
     }
 
-    fn export_xattrs(&mut self, inode: &Inode, tarfile: &mut tar::Builder<File>) -> Result<(), RepositoryError> {
+    fn export_xattrs<W: Write>(&mut self, inode: &Inode, tarfile: &mut tar::Builder<W>) -> Result<(), RepositoryError> {
         let mut data = Vec::new();
         for (key, value) in &inode.xattrs {
             let mut len_len = 1;
@@ -231,7 +236,7 @@ impl Repository {
         Ok(try!(tarfile.append(&header, Cursor::new(&data))))
     }
 
-    fn export_tarfile_recurse(&mut self, backup: &Backup, path: &Path, inode: Inode, tarfile: &mut tar::Builder<File>) -> Result<(), RepositoryError> {
+    fn export_tarfile_recurse<W: Write>(&mut self, backup: &Backup, path: &Path, inode: Inode, tarfile: &mut tar::Builder<W>) -> Result<(), RepositoryError> {
         if !inode.xattrs.is_empty() {
             try!(self.export_xattrs(&inode, tarfile));
         }
@@ -277,9 +282,16 @@ impl Repository {
     }
 
     pub fn export_tarfile<P: AsRef<Path>>(&mut self, backup: &Backup, inode: Inode, tarfile: P) -> Result<(), RepositoryError> {
-        let mut tarfile = tar::Builder::new(try!(File::create(tarfile)));
-        try!(self.export_tarfile_recurse(backup, Path::new(""), inode, &mut tarfile));
-        try!(tarfile.finish());
+        let tarfile = tarfile.as_ref();
+        if tarfile == Path::new("-") {
+            let mut tarfile = tar::Builder::new(io::stdout());
+            try!(self.export_tarfile_recurse(backup, Path::new(""), inode, &mut tarfile));
+            try!(tarfile.finish());
+        } else {
+            let mut tarfile = tar::Builder::new(try!(File::create(tarfile)));
+            try!(self.export_tarfile_recurse(backup, Path::new(""), inode, &mut tarfile));
+            try!(tarfile.finish());
+        }
         Ok(())
     }
 

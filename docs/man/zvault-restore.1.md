@@ -16,7 +16,7 @@ The backup or backup subtree given by `BACKUP` must be in the format
 If `repository` is omitted, the default repository location is used instead.
 
 If `--tar` is set, the data is written to a tar file named `DST`. In this case
-`DST` must not exist.
+`DST` must not exist. If `DST` is `-`, the data will be written to stdout.
 
 If `--tar` is not set, the data will be written into the existing folder `DST`.
 

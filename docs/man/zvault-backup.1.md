@@ -29,6 +29,8 @@ The patterns can be given directly via `--exclude` or be read from a file via
 exclude pattern is read from the file `excludes` in the repository folder.
 All exclude pattern given via any of these ways will be combined.
 
+If `--tar` is specified and `SRC` is `-`, the input is read from stdin.
+
 Unless `--xdev` is set, zVault will not traverse into subfolders that are on a
 different filesystem, i.e. mount points will not be included.
 
