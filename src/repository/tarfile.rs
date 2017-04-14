@@ -4,11 +4,14 @@ use std::collections::{HashMap, HashSet, BTreeMap};
 use std::path::{Path, PathBuf};
 use std::io::{Read, Cursor};
 use std::fs::File;
+use std::str;
 
 use chrono::prelude::*;
 
 use tar;
 
+
+static PAX_XATTR_PREFIX: &'static str = "SCHILY.xattr.";
 
 fn inode_from_entry<R: Read>(entry: &mut tar::Entry<R>) -> Result<Inode, RepositoryError> {
     let mut inode = {
@@ -36,8 +39,8 @@ fn inode_from_entry<R: Read>(entry: &mut tar::Entry<R>) -> Result<Inode, Reposit
         for ext in exts {
             let ext = try!(ext);
             let key = ext.key().unwrap_or("");
-            if key.starts_with("SCHILY.xattr.") {
-                inode.xattrs.insert(key[13..].to_string(), ext.value_bytes().to_vec().into());
+            if key.starts_with(PAX_XATTR_PREFIX) {
+                inode.xattrs.insert(key[PAX_XATTR_PREFIX.len()..].to_string(), ext.value_bytes().to_vec().into());
             }
         }
     }
@@ -205,7 +208,33 @@ impl Repository {
         }
     }
 
+    fn export_xattrs(&mut self, inode: &Inode, tarfile: &mut tar::Builder<File>) -> Result<(), RepositoryError> {
+        let mut data = Vec::new();
+        for (key, value) in &inode.xattrs {
+            let mut len_len = 1;
+            let mut max_len = 10;
+            let rest_len = 3 + key.len() + value.len() + PAX_XATTR_PREFIX.len();
+            while rest_len + len_len >= max_len {
+                len_len += 1;
+                max_len *= 10;
+            }
+            let len = rest_len + len_len;
+            let value = str::from_utf8(value).unwrap();
+            let line = format!("{} {}{}={}\n", len, PAX_XATTR_PREFIX, key, value);
+            assert_eq!(line.len(), len);
+            data.extend_from_slice(line.as_bytes());
+        }
+        let mut header = tar::Header::new_ustar();
+        header.set_size(data.len() as u64);
+        header.set_entry_type(tar::EntryType::XHeader);
+        header.set_cksum();
+        Ok(try!(tarfile.append(&header, Cursor::new(&data))))
+    }
+
     fn export_tarfile_recurse(&mut self, backup: &Backup, path: &Path, inode: Inode, tarfile: &mut tar::Builder<File>) -> Result<(), RepositoryError> {
+        if !inode.xattrs.is_empty() {
+            try!(self.export_xattrs(&inode, tarfile));
+        }
         let mut header = tar::Header::new_gnu();
         header.set_size(inode.size);
         let path = path.join(inode.name);
