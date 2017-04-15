@@ -171,7 +171,7 @@ impl Inode {
         if meta.file_type().is_symlink() {
             inode.symlink_target = Some(try!(fs::read_link(path).map_err(|e| InodeError::ReadLinkTarget(e, path.to_owned()))).to_string_lossy().to_string());
         }
-        inode.mode = meta.st_mode();
+        inode.mode = meta.st_mode() & 0o7777;
         inode.user = meta.st_uid();
         inode.group = meta.st_gid();
         inode.timestamp = meta.st_mtime();
