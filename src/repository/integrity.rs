@@ -226,10 +226,14 @@ impl Repository {
                         modified = true;
                     },
                     Err(err) => {
-                        warn!("Problem detected: inode {:?} is corrupt\n\tcaused by: {}", path.join(name), err);
-                        info!("Removing broken inode from backup");
-                        removed.push(name.to_string());
-                        modified = true;
+                        if repair {
+                            warn!("Problem detected: inode {:?} is corrupt\n\tcaused by: {}", path.join(name), err);
+                            info!("Removing broken inode from backup");
+                            removed.push(name.to_string());
+                            modified = true;
+                        } else {
+                            return Err(err)
+                        }
                     }
                 }
             }
