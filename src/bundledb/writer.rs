@@ -136,12 +136,12 @@ impl BundleWriter {
     }
 
     #[inline]
-    pub fn size(&self) -> usize {
-        self.data.len()
+    pub fn raw_size(&self) -> usize {
+        self.raw_size
     }
 
     #[inline]
-    pub fn raw_size(&self) -> usize {
-        self.raw_size
+    pub fn estimate_final_size(&self) -> usize {
+        self.data.len() + self.chunk_count * 20 + 500
     }
 }

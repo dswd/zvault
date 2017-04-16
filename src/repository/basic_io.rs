@@ -142,7 +142,7 @@ impl Repository {
                 BundleMode::Meta => &mut self.meta_bundle
             };
             if let Some(ref writer) = *writer {
-                (writer.size(), writer.raw_size())
+                (writer.estimate_final_size(), writer.raw_size())
             } else {
                 return Ok(())
             }
