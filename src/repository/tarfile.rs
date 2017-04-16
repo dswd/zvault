@@ -11,6 +11,46 @@ use chrono::prelude::*;
 use tar;
 
 
+struct PaxBuilder(Vec<u8>);
+
+impl PaxBuilder {
+    pub fn new() -> Self {
+        PaxBuilder(Vec::new())
+    }
+
+    pub fn add(&mut self, key: &str, value: &str) {
+        let mut len_len = 1;
+        let mut max_len = 10;
+        let rest_len = 3 + key.len() + value.len();
+        while rest_len + len_len >= max_len {
+            len_len += 1;
+            max_len *= 10;
+        }
+        let len = rest_len + len_len;
+        write!(&mut self.0, "{} {}={}\n", len, key, value).unwrap();
+    }
+
+    fn as_bytes(&self) -> &[u8] {
+        &self.0
+    }
+}
+
+
+trait BuilderExt {
+    fn append_pax_extensions(&mut self, headers: &PaxBuilder) -> Result<(), io::Error>;
+}
+
+impl<T: Write> BuilderExt for tar::Builder<T> {
+    fn append_pax_extensions(&mut self, headers: &PaxBuilder) -> Result<(), io::Error> {
+        let mut header = tar::Header::new_ustar();
+        header.set_size(headers.as_bytes().len() as u64);
+        header.set_entry_type(tar::EntryType::XHeader);
+        header.set_cksum();
+        self.append(&header, headers.as_bytes())
+    }
+}
+
+
 static PAX_XATTR_PREFIX: &'static str = "SCHILY.xattr.";
 
 fn inode_from_entry<R: Read>(entry: &mut tar::Entry<R>) -> Result<Inode, RepositoryError> {
@@ -214,26 +254,11 @@ impl Repository {
     }
 
     fn export_xattrs<W: Write>(&mut self, inode: &Inode, tarfile: &mut tar::Builder<W>) -> Result<(), RepositoryError> {
-        let mut data = Vec::new();
+        let mut pax = PaxBuilder::new();
         for (key, value) in &inode.xattrs {
-            let mut len_len = 1;
-            let mut max_len = 10;
-            let rest_len = 3 + key.len() + value.len() + PAX_XATTR_PREFIX.len();
-            while rest_len + len_len >= max_len {
-                len_len += 1;
-                max_len *= 10;
-            }
-            let len = rest_len + len_len;
-            let value = str::from_utf8(value).unwrap();
-            let line = format!("{} {}{}={}\n", len, PAX_XATTR_PREFIX, key, value);
-            assert_eq!(line.len(), len);
-            data.extend_from_slice(line.as_bytes());
+            pax.add(&format!("{}{}", PAX_XATTR_PREFIX,key), str::from_utf8(value).unwrap());
         }
-        let mut header = tar::Header::new_ustar();
-        header.set_size(data.len() as u64);
-        header.set_entry_type(tar::EntryType::XHeader);
-        header.set_cksum();
-        Ok(try!(tarfile.append(&header, Cursor::new(&data))))
+        Ok(try!(tarfile.append_pax_extensions(&pax)))
     }
 
     fn export_tarfile_recurse<W: Write>(&mut self, backup: &Backup, path: &Path, inode: Inode, tarfile: &mut tar::Builder<W>) -> Result<(), RepositoryError> {
