@@ -255,6 +255,7 @@ fn print_config(config: &Config) {
 
 fn print_analysis(analysis: &HashMap<u32, BundleAnalysis>) {
     let mut reclaim_space = [0; 11];
+    let mut rewrite_size = [0; 11];
     let mut data_total = 0;
     for bundle in analysis.values() {
         data_total += bundle.info.encoded_size;
@@ -262,6 +263,7 @@ fn print_analysis(analysis: &HashMap<u32, BundleAnalysis>) {
         for i in 0..11 {
             if bundle.get_usage_ratio() <= i as f32 * 0.1 {
                 reclaim_space[i] += bundle.get_unused_size();
+                rewrite_size[i] += bundle.get_used_size();
             }
         }
     }
@@ -271,7 +273,7 @@ fn print_analysis(analysis: &HashMap<u32, BundleAnalysis>) {
     println!("Reclaimable space (depending on vacuum ratio)");
     #[allow(unknown_lints,needless_range_loop)]
     for i in 0..11 {
-        println!("  - ratio={:3}: {:>10}, {:4.1} %", i*10, to_file_size(reclaim_space[i] as u64), reclaim_space[i] as f32 / data_total as f32 * 100.0);
+        println!("  - ratio={:3}: {:>10}, {:4.1} %, rewriting {:>10}", i*10, to_file_size(reclaim_space[i] as u64), reclaim_space[i] as f32 / data_total as f32 * 100.0, to_file_size(rewrite_size[i] as u64));
     }
 }
 

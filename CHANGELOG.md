@@ -7,6 +7,7 @@ This project follows [semantic versioning](http://semver.org).
 * [added] Ability to read/write tar file from/to stdin/stdout
 * [added] Added date to bundles
 * [modified] Logging to stderr
+* [modified] Enforce deterministic bundle ordering
 * [fixed] Only print "repairing bundles" if actually repairing bundles
 * [fixed] Only put mode bits of st_mode into metadata
 

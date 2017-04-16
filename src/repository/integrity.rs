@@ -348,7 +348,9 @@ impl Repository {
     pub fn rebuild_index(&mut self) -> Result<(), RepositoryError> {
         info!("Rebuilding index from bundles");
         self.index.clear();
-        for (num, id) in self.bundle_map.bundles() {
+        let mut bundles = self.bundle_map.bundles();
+        bundles.sort_by_key(|&(_, ref v)| v.clone());
+        for (num, id) in bundles {
             let chunks = try!(self.bundles.get_chunk_list(&id));
             for (i, (hash, _len)) in chunks.into_inner().into_iter().enumerate() {
                 try!(self.index.set(&hash, &Location{bundle: num as u32, chunk: i as u32}));
