@@ -13,7 +13,7 @@ use std::io::{self, Read, Write};
 
 
 #[repr(packed)]
-#[derive(Clone, Copy, PartialEq, Hash, Eq, Default)]
+#[derive(Clone, Copy, PartialEq, Hash, Eq, Default, Ord, PartialOrd)]
 pub struct Hash {
     pub high: u64,
     pub low: u64

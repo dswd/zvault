@@ -268,7 +268,7 @@ impl Repository {
             BundleMode::Meta => self.next_meta_bundle
         };
         let chunks = try!(self.bundles.get_chunk_list(&bundle.id));
-        self.bundle_map.set(bundle_id, bundle.id);
+        self.bundle_map.set(bundle_id, bundle.id.clone());
         if self.next_meta_bundle == bundle_id {
             self.next_meta_bundle = self.next_free_bundle_id()
         }
@@ -276,7 +276,13 @@ impl Repository {
             self.next_data_bundle = self.next_free_bundle_id()
         }
         for (i, (hash, _len)) in chunks.into_inner().into_iter().enumerate() {
-            try!(self.index.set(&hash, &Location{bundle: bundle_id as u32, chunk: i as u32}));
+            if let Some(old) = try!(self.index.set(&hash, &Location{bundle: bundle_id as u32, chunk: i as u32})) {
+                // Duplicate chunk, forced ordering: higher bundle id wins
+                let old_bundle_id = try!(self.get_bundle_id(old.bundle));
+                if old_bundle_id > bundle.id {
+                    try!(self.index.set(&hash, &old));
+                }
+            }
         }
         Ok(())
     }

@@ -21,7 +21,7 @@ pub static HEADER_STRING: [u8; 7] = *b"zvault\x01";
 pub static HEADER_VERSION: u8 = 1;
 
 
-#[derive(Hash, PartialEq, Eq, Clone, Default)]
+#[derive(Hash, PartialEq, Eq, Clone, Default, Ord, PartialOrd)]
 pub struct BundleId(pub Hash);
 
 impl Serialize for BundleId {

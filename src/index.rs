@@ -341,13 +341,13 @@ impl Index {
     }
 
     /// Adds the key, data pair into the table.
-    /// If the key existed in the table before, it is overwritten and false is returned.
-    /// Otherwise it will be added to the table and true is returned.
-    pub fn set(&mut self, key: &Hash, data: &Location) -> Result<bool, IndexError> {
+    /// If the key existed the old data is returned.
+    pub fn set(&mut self, key: &Hash, data: &Location) -> Result<Option<Location>, IndexError> {
         match self.locate(key) {
             LocateResult::Found(pos) => {
-                self.data[pos].data = *data;
-                Ok(false)
+                let mut old = *data;
+                mem::swap(&mut old, &mut self.data[pos].data);
+                Ok(Some(old))
             },
             LocateResult::Hole(pos) => {
                 {
@@ -356,7 +356,7 @@ impl Index {
                     entry.data = *data;
                 }
                 try!(self.increase_count());
-                Ok(true)
+                Ok(None)
             },
             LocateResult::Steal(pos) => {
                 let mut stolen_key;
@@ -382,7 +382,7 @@ impl Index {
                     }
                 }
                 try!(self.increase_count());
-                Ok(true)
+                Ok(None)
             }
         }
     }
