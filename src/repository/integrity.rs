@@ -135,11 +135,13 @@ impl Repository {
                         *chunks = c;
                         modified = true;
                     },
-                    Err(err) => {
+                    Err(err) => if repair {
                         warn!("Problem detected: inode {:?} is corrupt\n\tcaused by: {}", path.join(name), err);
                         info!("Removing broken inode from backup");
                         removed.push(name.to_string());
                         modified = true;
+                    } else {
+                        return Err(err)
                     }
                 }
             }
@@ -185,9 +187,11 @@ impl Repository {
                 try!(self.evacuate_broken_backup(&name));
                 try!(self.save_backup(&backup, &name));
             },
-            Err(err) => {
+            Err(err) => if repair {
                 warn!("The root of the backup {} has been corrupted\n\tcaused by: {}", name, err);
                 try!(self.evacuate_broken_backup(&name));
+            } else {
+                return Err(err)
             }
         }
         Ok(())
@@ -285,9 +289,11 @@ impl Repository {
                     try!(self.evacuate_broken_backup(&name));
                     try!(self.save_backup(&backup, &name));
                 },
-                Err(err) => {
+                Err(err) => if repair {
                     warn!("The root of the backup {} has been corrupted\n\tcaused by: {}", name, err);
                     try!(self.evacuate_broken_backup(&name));
+                } else {
+                    return Err(err)
                 }
             }
         }

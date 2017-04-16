@@ -8,8 +8,10 @@ This project follows [semantic versioning](http://semver.org).
 * [added] Added date to bundles
 * [modified] Logging to stderr
 * [modified] Enforce deterministic bundle ordering
+* [modified] More info in analyze subcommand
 * [fixed] Only print "repairing bundles" if actually repairing bundles
 * [fixed] Only put mode bits of st_mode into metadata
+* [fixed] Only repairing backups with --repair
 
 
 ### v0.2.0 (2017-04-14)
