@@ -120,19 +120,19 @@ impl Repository {
         };
         if !rebuild_bundle_map {
             let mut save_bundle_map = false;
-            if !new.is_empty() {
-                info!("Adding {} new bundles to index", new.len());
-                try!(repo.write_mode());
-                for bundle in ProgressIter::new("adding bundles to index", new.len(), new.into_iter()) {
-                    try!(repo.add_new_remote_bundle(bundle))
-                }
-                save_bundle_map = true;
-            }
             if !gone.is_empty() {
                 info!("Removig {} old bundles from index", gone.len());
                 try!(repo.write_mode());
                 for bundle in gone {
                     try!(repo.remove_gone_remote_bundle(bundle))
+                }
+                save_bundle_map = true;
+            }
+            if !new.is_empty() {
+                info!("Adding {} new bundles to index", new.len());
+                try!(repo.write_mode());
+                for bundle in ProgressIter::new("adding bundles to index", new.len(), new.into_iter()) {
+                    try!(repo.add_new_remote_bundle(bundle))
                 }
                 save_bundle_map = true;
             }
