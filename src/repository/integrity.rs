@@ -75,12 +75,14 @@ impl Repository {
         res
     }
 
-    fn check_chunks(&self, checked: &mut Bitmap, chunks: &[Chunk]) -> Result<bool, RepositoryError> {
+    fn check_chunks(&self, checked: &mut Bitmap, chunks: &[Chunk], mark: bool) -> Result<bool, RepositoryError> {
         let mut new = false;
         for &(hash, _len) in chunks {
             if let Some(pos) = self.index.pos(&hash) {
                 new |= !checked.get(pos);
-                checked.set(pos);
+                if mark {
+                    checked.set(pos);
+                }
             } else {
                 return Err(IntegrityError::MissingChunk(hash).into())
             }
@@ -92,13 +94,13 @@ impl Repository {
         match inode.data {
             None | Some(FileData::Inline(_)) => (),
             Some(FileData::ChunkedDirect(ref chunks)) => {
-                try!(self.check_chunks(checked, chunks));
+                try!(self.check_chunks(checked, chunks, true));
             },
             Some(FileData::ChunkedIndirect(ref chunks)) => {
-                if try!(self.check_chunks(checked, chunks)) {
+                if try!(self.check_chunks(checked, chunks, true)) {
                     let chunk_data = try!(self.get_data(&chunks));
                     let chunks = ChunkList::read_from(&chunk_data);
-                    try!(self.check_chunks(checked, &chunks));
+                    try!(self.check_chunks(checked, &chunks, true));
                 }
             }
         }
@@ -107,7 +109,7 @@ impl Repository {
 
     fn check_subtree(&mut self, path: PathBuf, chunks: &[Chunk], checked: &mut Bitmap, repair: bool) -> Result<Option<ChunkList>, RepositoryError> {
         let mut modified = false;
-        match self.check_chunks(checked, chunks) {
+        match self.check_chunks(checked, chunks, false) {
             Ok(false) => return Ok(None),
             Ok(true) => (),
             Err(err) => return Err(IntegrityError::BrokenInode(path, Box::new(err)).into())
@@ -152,6 +154,7 @@ impl Repository {
         if modified {
             Ok(Some(try!(self.put_inode(&inode))))
         } else {
+            try!(self.check_chunks(checked, chunks, true));
             Ok(None)
         }
     }
@@ -234,15 +237,13 @@ impl Repository {
                         *chunks = c;
                         modified = true;
                     },
-                    Err(err) => {
-                        if repair {
-                            warn!("Problem detected: inode {:?} is corrupt\n\tcaused by: {}", path.join(name), err);
-                            info!("Removing broken inode from backup");
-                            removed.push(name.to_string());
-                            modified = true;
-                        } else {
-                            return Err(err)
-                        }
+                    Err(err) => if repair {
+                        warn!("Problem detected: inode {:?} is corrupt\n\tcaused by: {}", path.join(name), err);
+                        info!("Removing broken inode from backup");
+                        removed.push(name.to_string());
+                        modified = true;
+                    } else {
+                        return Err(err)
                     }
                 }
             }
