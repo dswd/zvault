@@ -15,6 +15,7 @@ This project follows [semantic versioning](http://semver.org).
 * [fixed] Only repairing backups with --repair
 * [fixed] Fixed vacuum
 * [fixed] First removing bundles, then adding new ones
+* [fixed] No longer clobbering broken files
 
 
 ### v0.2.0 (2017-04-14)

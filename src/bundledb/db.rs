@@ -348,9 +348,15 @@ impl BundleDb {
     }
 
     fn evacuate_broken_bundle(&mut self, mut bundle: StoredBundle) -> Result<(), BundleDbError> {
-        let new_path = self.layout.base_path().join(bundle.path.with_extension("bundle.broken"));
-        warn!("Moving bundle to {:?}", new_path);
-        try!(bundle.move_to(self.layout.base_path(), new_path));
+        let src = self.layout.base_path().join(&bundle.path);
+        let mut dst = src.with_extension("bundle.broken");
+        let mut num = 1;
+        while dst.exists() {
+            dst = src.with_extension(&format!("bundle.{}.broken", num));
+            num += 1;
+        }
+        warn!("Moving bundle to {:?}", dst);
+        try!(bundle.move_to(self.layout.base_path(), dst));
         self.remote_bundles.remove(&bundle.info.id);
         Ok(())
     }

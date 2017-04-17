@@ -159,7 +159,12 @@ impl Repository {
     fn evacuate_broken_backup(&self, name: &str) -> Result<(), RepositoryError> {
         warn!("The backup {} was corrupted and needed to be modified.", name);
         let src = self.layout.backup_path(name);
-        let dst = src.with_extension("backup.broken");
+        let mut dst = src.with_extension("backup.broken");
+        let mut num = 1;
+        while dst.exists() {
+            dst = src.with_extension(&format!("backup.{}.broken", num));
+            num += 1;
+        }
         if fs::rename(&src, &dst).is_err() {
             try!(fs::copy(&src, &dst));
             try!(fs::remove_file(&src));
