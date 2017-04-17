@@ -284,7 +284,7 @@ impl Repository {
             },
             Err(err) => return Err(err)
         };
-        for (name, mut backup) in ProgressIter::new("ckecking backups", backup_map.len(), backup_map.into_iter()) {
+        for (name, mut backup) in ProgressIter::new("checking backups", backup_map.len(), backup_map.into_iter()) {
             let path = format!("{}::", name);
             match self.check_subtree(Path::new(&path).to_path_buf(), &backup.root, &mut checked, repair) {
                 Ok(None) => (),

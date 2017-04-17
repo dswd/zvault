@@ -13,7 +13,7 @@ impl Repository {
         }
     }
 
-    pub fn vacuum(&mut self, ratio: f32, force: bool) -> Result<(), RepositoryError> {
+    pub fn vacuum(&mut self, ratio: f32, combine: bool, force: bool) -> Result<(), RepositoryError> {
         try!(self.flush());
         info!("Locking repository");
         try!(self.write_mode());
@@ -34,6 +34,28 @@ impl Repository {
             if bundle.get_usage_ratio() <= ratio {
                 rewrite_bundles.insert(*id);
                 reclaim_space += bundle.get_unused_size();
+            }
+        }
+        if combine {
+            let mut small_meta = vec![];
+            let mut small_data = vec![];
+            for (id, bundle) in &usage {
+                if bundle.info.encoded_size * 4 < self.config.bundle_size {
+                    match bundle.info.mode {
+                        BundleMode::Meta => small_meta.push(*id),
+                        BundleMode::Data => small_data.push(*id),
+                    }
+                }
+            }
+            if small_meta.len() >= 2 {
+                for bundle in small_meta {
+                    rewrite_bundles.insert(bundle);
+                }
+            }
+            if small_data.len() >= 2 {
+                for bundle in small_data {
+                    rewrite_bundles.insert(bundle);
+                }
             }
         }
         info!("Reclaiming {} by rewriting {} bundles", to_file_size(reclaim_space as u64), rewrite_bundles.len());

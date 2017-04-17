@@ -52,7 +52,8 @@ pub enum Arguments {
     Vacuum {
         repo_path: String,
         ratio: f32,
-        force: bool
+        force: bool,
+        combine: bool
     },
     Check {
         repo_path: String,
@@ -337,6 +338,7 @@ pub fn parse() -> Result<(LogLevel, Arguments), ErrorCode> {
         .subcommand(SubCommand::with_name("vacuum").about("Reclaim space by rewriting bundles")
             .arg(Arg::from_usage("-r --ratio [NUM] 'Ratio in % of unused space in a bundle to rewrite that bundle'")
                 .default_value(DEFAULT_VACUUM_RATIO_STR).validator(validate_num))
+            .arg(Arg::from_usage("--combine 'Combine small bundles into larger ones'"))
             .arg(Arg::from_usage("-f --force 'Actually run the vacuum instead of simulating it'"))
             .arg(Arg::from_usage("<REPO> 'Path of the repository'")
                 .validator(|val| validate_repo_path(val, true, Some(false), Some(false)))))
@@ -490,6 +492,7 @@ pub fn parse() -> Result<(LogLevel, Arguments), ErrorCode> {
             Arguments::Vacuum {
                 repo_path: repository.to_string(),
                 force: args.is_present("force"),
+                combine: args.is_present("combine"),
                 ratio: parse_num(args.value_of("ratio").unwrap()).unwrap() as f32 / 100.0
             }
         },

@@ -43,6 +43,11 @@ should be avoided when the storage space permits it.
 
 ## OPTIONS
 
+  * `--combine`:
+
+    Also combine small bundles into larger ones.
+
+
   * `-r`, `--ratio <NUM>`:
 
     Do not rewrite bundles with more than `NUM`% of used chunks.

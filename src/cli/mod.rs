@@ -435,10 +435,10 @@ pub fn run() -> Result<(), ErrorCode> {
                 info!("Run with --force to actually execute this command");
             }
         },
-        Arguments::Vacuum{repo_path, ratio, force} => {
+        Arguments::Vacuum{repo_path, ratio, force, combine} => {
             let mut repo = try!(open_repository(&repo_path));
             let info_before = repo.info();
-            checked!(repo.vacuum(ratio, force), "vacuum", ErrorCode::VacuumRun);
+            checked!(repo.vacuum(ratio, combine, force), "vacuum", ErrorCode::VacuumRun);
             if !force {
                 info!("Run with --force to actually execute this command");
             } else {
