@@ -18,10 +18,7 @@ impl Repository {
         info!("Locking repository");
         try!(self.write_mode());
         let _lock = try!(self.lock(true));
-        if self.dirty {
-            return Err(RepositoryError::Dirty)
-        }
-        try!(self.set_dirty());
+        // analyze_usage will set the dirty flag
         info!("Analyzing chunk usage");
         let usage = try!(self.analyze_usage());
         let mut data_total = 0;
