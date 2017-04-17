@@ -14,6 +14,7 @@ This project follows [semantic versioning](http://semver.org).
 * [fixed] Only put mode bits of st_mode into metadata
 * [fixed] Only repairing backups with --repair
 * [fixed] Fixed vacuum
+* [fixed] First removing bundles, then adding new ones
 
 
 ### v0.2.0 (2017-04-14)
@@ -28,7 +29,7 @@ This project follows [semantic versioning](http://semver.org).
 * [modified] No longer failing restore if setting file attributes fails
 * [modified] Backup files must end with `.backup` (**conversion needed**)
 * [modified] Bundle files must end with `.bundle`
-* [modified] Ingnoring corrupt bundles instead of failing
+* [modified] Ignoring corrupt bundles instead of failing
 * [fixed] Creating empty bundle cache on init to avoid warnings
 * [fixed] Calling sodiumoxide::init for faster algorithms and thread safety (not needed)
 * [fixed] Fixed a deadlock in the bundle upload code
