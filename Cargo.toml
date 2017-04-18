@@ -10,7 +10,6 @@ rmp-serde = "0.12"
 serde_yaml = "0.6"
 serde_utils = "0.5.1"
 squash-sys = "0.9"
-mmap = "0.1"
 quick-error = "1.1"
 blake2-rfc = "0.2"
 murmurhash3 = "0.0.5"
@@ -33,6 +32,7 @@ pbr = "1.0"
 users = "0.5"
 time = "*"
 libc = "*"
+index = {path="index"}
 
 [build-dependencies]
 pkg-config = "0.3"

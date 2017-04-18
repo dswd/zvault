@@ -48,31 +48,30 @@ quick_error!{
 
 impl Repository {
     fn check_index_chunks(&self) -> Result<(), RepositoryError> {
-        let mut count = 0;
         let mut progress = ProgressBar::new(self.index.len() as u64);
         progress.message("checking index: ");
         progress.set_max_refresh_rate(Some(Duration::from_millis(100)));
-        let res = self.index.walk(|_hash, location| {
+        for (count,(_hash, location)) in self.index.iter().enumerate() {
             // Lookup bundle id from map
             let bundle_id = try!(self.get_bundle_id(location.bundle));
             // Get bundle object from bundledb
             let bundle = if let Some(bundle) = self.bundles.get_bundle_info(&bundle_id) {
                 bundle
             } else {
+                progress.finish_print("checking index: done.");
                 return Err(IntegrityError::MissingBundle(bundle_id.clone()).into())
             };
             // Get chunk from bundle
             if bundle.info.chunk_count <= location.chunk as usize {
+                progress.finish_print("checking index: done.");
                 return Err(IntegrityError::NoSuchChunk(bundle_id.clone(), location.chunk).into())
             }
-            count += 1;
             if count % 1000 == 0 {
-                progress.set(count);
+                progress.set(count as u64);
             }
-            Ok(())
-        });
+        }
         progress.finish_print("checking index: done.");
-        res
+        Ok(())
     }
 
     fn check_chunks(&self, checked: &mut Bitmap, chunks: &[Chunk], mark: bool) -> Result<bool, RepositoryError> {

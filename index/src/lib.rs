@@ -1,4 +1,5 @@
-use super::util::Hash;
+extern crate mmap;
+#[macro_use] extern crate quick_error;
 
 use std::path::Path;
 use std::fs::{File, OpenOptions};
@@ -10,8 +11,6 @@ use std::os::unix::io::AsRawFd;
 use mmap::{MemoryMap, MapOption, MapError};
 
 
-const MAGIC: [u8; 7] = *b"zvault\x02";
-const VERSION: u8 = 1;
 pub const MAX_USAGE: f64 = 0.9;
 pub const MIN_USAGE: f64 = 0.35;
 pub const INITIAL_SIZE: usize = 1024;
@@ -40,9 +39,9 @@ quick_error!{
             description("Unsupported version")
             display("Index error: index file has unsupported version: {}", version)
         }
-        WrongPosition(key: Hash, should: usize, is: LocateResult) {
+        WrongPosition(should: usize, is: LocateResult) {
             description("Key at wrong position")
-            display("Index error: key {} has wrong position, expected at: {}, but is at: {:?}", key, should, is)
+            display("Index error: key has wrong position, expected at: {}, but is at: {:?}", should, is)
         }
         WrongEntryCount(header: usize, actual: usize) {
             description("Wrong entry count")
@@ -60,48 +59,30 @@ pub struct Header {
     capacity: u64,
 }
 
-#[repr(packed)]
-#[derive(Clone, Copy, PartialEq, Debug)]
-pub struct Location {
-    pub bundle: u32,
-    pub chunk: u32
+pub trait Key: Clone + Eq + Copy {
+    fn hash(&self) -> u64;
+    fn is_used(&self) -> bool;
+    fn clear(&mut self);
 }
-impl Location {
-    pub fn new(bundle: u32, chunk: u32) -> Self {
-        Location{ bundle: bundle, chunk: chunk }
-    }
-}
-
 
 #[repr(packed)]
 #[derive(Clone)]
-pub struct Entry {
-    pub key: Hash,
-    pub data: Location
+pub struct Entry<K, V> {
+    pub key: K,
+    pub data: V
 }
 
-impl Entry {
+impl<K: Key, V> Entry<K, V> {
     #[inline]
     fn is_used(&self) -> bool {
-        self.key.low != 0 || self.key.high != 0
+        self.key.is_used()
     }
 
+    #[inline]
     fn clear(&mut self) {
-        self.key.low = 0;
-        self.key.high = 0;
+        self.key.clear()
     }
 }
-
-pub struct Index {
-    capacity: usize,
-    entries: usize,
-    max_entries: usize,
-    min_entries: usize,
-    fd: File,
-    mmap: MemoryMap,
-    data: &'static mut [Entry]
-}
-
 
 #[derive(Debug)]
 pub enum LocateResult {
@@ -110,55 +91,94 @@ pub enum LocateResult {
     Steal(usize) // Found a spot to steal at this position while searching for a key
 }
 
-impl Index {
-    pub fn new(path: &Path, create: bool) -> Result<Index, IndexError> {
+
+pub struct Iter<'a, K: 'static, V: 'static> {
+    items: &'a [Entry<K, V>],
+}
+
+impl<'a, K: Key, V> Iterator for Iter<'a, K, V> {
+    type Item = (&'a K, &'a V);
+    fn next(&mut self) -> Option<Self::Item> {
+        while let Some((first, rest)) = self.items.split_first() {
+            self.items = rest;
+            if first.is_used() {
+                return Some((&first.key, &first.data));
+            }
+        }
+        None
+    }
+}
+
+
+fn mmap_as_ref<K, V>(mmap: &MemoryMap, len: usize) -> (&'static mut Header, &'static mut [Entry<K, V>]) {
+    if mmap.len() < mem::size_of::<Header>() + len * mem::size_of::<Entry<K, V>>() {
+        panic!("Memory map too small");
+    }
+    let header = unsafe { &mut *(mmap.data() as *mut Header) };
+    let ptr = unsafe { mmap.data().offset(mem::size_of::<Header>() as isize) as *mut Entry<K, V> };
+    let data = unsafe { slice::from_raw_parts_mut(ptr, len) };
+    (header, data)
+}
+
+pub struct Index<K: 'static, V: 'static> {
+    capacity: usize,
+    mask: usize,
+    entries: usize,
+    max_entries: usize,
+    min_entries: usize,
+    fd: File,
+    mmap: MemoryMap,
+    header: &'static mut Header,
+    data: &'static mut [Entry<K, V>]
+}
+
+impl<K: Key, V: Clone + Copy> Index<K, V> {
+    pub fn new(path: &Path, create: bool, magic: &[u8; 7], version: u8) -> Result<Self, IndexError> {
         let fd = try!(OpenOptions::new().read(true).write(true).create(create).open(path));
         if create {
-            try!(Index::resize_fd(&fd, INITIAL_SIZE));
+            try!(Self::resize_fd(&fd, INITIAL_SIZE));
         }
-        let mmap = try!(Index::map_fd(&fd));
+        let mmap = try!(Self::map_fd(&fd));
         if mmap.len() < mem::size_of::<Header>() {
             return Err(IndexError::WrongMagic);
         }
-        let data = Index::mmap_as_slice(&mmap, INITIAL_SIZE as usize);
-        let mut index = Index{capacity: 0, max_entries: 0, min_entries: 0, entries: 0, fd: fd, mmap: mmap, data: data};
-        {
-            let capacity;
-            let entries;
-            {
-                let header = index.header();
-                if create {
-                    header.magic = MAGIC;
-                    header.version = VERSION;
-                    header.entries = 0;
-                    header.capacity = INITIAL_SIZE as u64;
-                } else {
-                    if header.magic != MAGIC {
-                        return Err(IndexError::WrongMagic);
-                    }
-                    if header.version != VERSION {
-                        return Err(IndexError::UnsupportedVersion(header.version));
-                    }
-                }
-                capacity = header.capacity;
-                entries = header.entries;
-            }
-            index.data = Index::mmap_as_slice(&index.mmap, capacity as usize);
-            index.set_capacity(capacity as usize);
-            index.entries = entries as usize;
+        let (header, _) = mmap_as_ref::<K, V>(&mmap, INITIAL_SIZE as usize);
+        if create {
+            header.magic = magic.to_owned();
+            header.version = version;
+            header.entries = 0;
+            header.capacity = INITIAL_SIZE as u64;
         }
+        if &header.magic != magic {
+            return Err(IndexError::WrongMagic);
+        }
+        if header.version != version {
+            return Err(IndexError::UnsupportedVersion(header.version));
+        }
+        let (header, data) = mmap_as_ref(&mmap, header.capacity as usize);
+        let index = Index{
+            capacity: header.capacity as usize,
+            mask: header.capacity as usize -1,
+            max_entries: (header.capacity as f64 * MAX_USAGE) as usize,
+            min_entries: (header.capacity as f64 * MIN_USAGE) as usize,
+            entries: header.entries as usize,
+            fd: fd,
+            mmap: mmap,
+            data: data,
+            header: header
+        };
         debug_assert!(index.check().is_ok(), "Inconsistent after creation");
         Ok(index)
     }
 
     #[inline]
-    pub fn open<P: AsRef<Path>>(path: P) -> Result<Index, IndexError> {
-        Index::new(path.as_ref(), false)
+    pub fn open<P: AsRef<Path>>(path: P, magic: &[u8; 7], version: u8) -> Result<Self, IndexError> {
+        Index::new(path.as_ref(), false, magic, version)
     }
 
     #[inline]
-    pub fn create<P: AsRef<Path>>(path: P) -> Result<Index, IndexError> {
-        Index::new(path.as_ref(), true)
+    pub fn create<P: AsRef<Path>>(path: P, magic: &[u8; 7], version: u8) -> Result<Self, IndexError> {
+        Index::new(path.as_ref(), true, magic, version)
     }
 
     #[inline]
@@ -174,29 +194,14 @@ impl Index {
 
     #[inline]
     fn resize_fd(fd: &File, capacity: usize) -> Result<(), IndexError> {
-        fd.set_len((mem::size_of::<Header>() + capacity * mem::size_of::<Entry>()) as u64).map_err(IndexError::Io)
-    }
-
-    #[inline]
-    fn mmap_as_slice(mmap: &MemoryMap, len: usize) -> &'static mut [Entry] {
-        if mmap.len() < mem::size_of::<Header>() + len * mem::size_of::<Entry>() {
-            panic!("Memory map too small");
-        }
-        let ptr = unsafe { mmap.data().offset(mem::size_of::<Header>() as isize) as *mut Entry };
-        unsafe { slice::from_raw_parts_mut(ptr, len) }
-    }
-
-    #[inline]
-    fn header(&mut self) -> &mut Header {
-        if self.mmap.len() < mem::size_of::<Header>() {
-            panic!("Failed to read beyond end");
-        }
-        unsafe { &mut *(self.mmap.data() as *mut Header) }
+        fd.set_len((mem::size_of::<Header>() + capacity * mem::size_of::<Entry<K, V>>()) as u64).map_err(IndexError::Io)
     }
 
     #[inline]
     fn set_capacity(&mut self, capacity: usize) {
         self.capacity = capacity;
+        debug_assert_eq!(capacity.count_ones(), 1);
+        self.mask = capacity -1;
         self.min_entries = (capacity as f64 * MIN_USAGE) as usize;
         self.max_entries = (capacity as f64 * MAX_USAGE) as usize;
     }
@@ -228,9 +233,11 @@ impl Index {
         let new_capacity = self.capacity / 2;
         self.set_capacity(new_capacity);
         try!(self.reinsert(new_capacity, old_capacity));
-        try!(Index::resize_fd(&self.fd, new_capacity));
-        self.mmap = try!(Index::map_fd(&self.fd));
-        self.data = Index::mmap_as_slice(&self.mmap, new_capacity);
+        try!(Self::resize_fd(&self.fd, new_capacity));
+        self.mmap = try!(Self::map_fd(&self.fd));
+        let (header, data) = mmap_as_ref(&self.mmap, new_capacity);
+        self.header = header;
+        self.data = data;
         assert_eq!(self.data.len(), self.capacity);
         Ok(true)
     }
@@ -240,9 +247,11 @@ impl Index {
             return Ok(false)
         }
         let new_capacity = 2 * self.capacity;
-        try!(Index::resize_fd(&self.fd, new_capacity));
-        self.mmap = try!(Index::map_fd(&self.fd));
-        self.data = Index::mmap_as_slice(&self.mmap, new_capacity);
+        try!(Self::resize_fd(&self.fd, new_capacity));
+        self.mmap = try!(Self::map_fd(&self.fd));
+        let (header, data) = mmap_as_ref(&self.mmap, new_capacity);
+        self.header = header;
+        self.data = data;
         self.set_capacity(new_capacity);
         assert_eq!(self.data.len(), self.capacity);
         try!(self.reinsert(0, new_capacity));
@@ -259,7 +268,7 @@ impl Index {
             entries += 1;
             match self.locate(&entry.key) {
                 LocateResult::Found(p) if p == pos => true,
-                found => return Err(IndexError::WrongPosition(entry.key, pos, found))
+                found => return Err(IndexError::WrongPosition(pos, found))
             };
         }
         if entries != self.entries {
@@ -286,18 +295,15 @@ impl Index {
 
     #[inline]
     fn write_header(&mut self) {
-        let entries = self.entries;
-        let capacity = self.capacity;
-        let header = self.header();
-        header.entries = entries as u64;
-        header.capacity = capacity as u64;
+        self.header.entries = self.entries as u64;
+        self.header.capacity = self.capacity as u64;
     }
 
     /// Finds the position for this key
     /// If the key is in the table, it will be the position of the key,
     /// otherwise it will be the position where this key should be inserted
-    fn locate(&self, key: &Hash) -> LocateResult {
-        let mut pos = key.hash() as usize % self.capacity;
+    fn locate(&self, key: &K) -> LocateResult {
+        let mut pos = key.hash() as usize & self.mask;
         let mut dist = 0;
         loop {
             let entry = &self.data[pos];
@@ -307,11 +313,11 @@ impl Index {
             if entry.key == *key {
                 return LocateResult::Found(pos);
             }
-            let odist = (pos + self.capacity - entry.key.hash() as usize % self.capacity) % self.capacity;
+            let odist = (pos + self.capacity - entry.key.hash() as usize & self.mask) & self.mask;
             if dist > odist {
                 return LocateResult::Steal(pos);
             }
-            pos = (pos + 1) % self.capacity ;
+            pos = (pos + 1) & self.mask;
             dist += 1;
         }
     }
@@ -323,14 +329,14 @@ impl Index {
         let mut last_pos;
         loop {
             last_pos = pos;
-            pos = (pos + 1) % self.capacity;
+            pos = (pos + 1) & self.mask;
             {
                 let entry = &self.data[pos];
                 if !entry.is_used() {
                     // we found a hole, stop shifting here
                     break;
                 }
-                if entry.key.hash() as usize % self.capacity == pos {
+                if entry.key.hash() as usize & self.mask == pos {
                     // we found an entry at the right position, stop shifting here
                     break;
                 }
@@ -342,7 +348,7 @@ impl Index {
 
     /// Adds the key, data pair into the table.
     /// If the key existed the old data is returned.
-    pub fn set(&mut self, key: &Hash, data: &Location) -> Result<Option<Location>, IndexError> {
+    pub fn set(&mut self, key: &K, data: &V) -> Result<Option<V>, IndexError> {
         match self.locate(key) {
             LocateResult::Found(pos) => {
                 let mut old = *data;
@@ -370,7 +376,7 @@ impl Index {
                     entry.data = *data;
                 }
                 loop {
-                    cur_pos = (cur_pos + 1) % self.capacity;
+                    cur_pos = (cur_pos + 1) & self.mask;
                     let entry = &mut self.data[cur_pos];
                     if entry.is_used() {
                         mem::swap(&mut stolen_key, &mut entry.key);
@@ -388,7 +394,7 @@ impl Index {
     }
 
     #[inline]
-    pub fn contains(&self, key: &Hash) -> bool {
+    pub fn contains(&self, key: &K) -> bool {
         debug_assert!(self.check().is_ok(), "Inconsistent before get");
         match self.locate(key) {
             LocateResult::Found(_) => true,
@@ -397,7 +403,7 @@ impl Index {
     }
 
     #[inline]
-    pub fn pos(&self, key: &Hash) -> Option<usize> {
+    pub fn pos(&self, key: &K) -> Option<usize> {
         debug_assert!(self.check().is_ok(), "Inconsistent before get");
         match self.locate(key) {
             LocateResult::Found(pos) => Some(pos),
@@ -406,7 +412,7 @@ impl Index {
     }
 
     #[inline]
-    pub fn get(&self, key: &Hash) -> Option<Location> {
+    pub fn get(&self, key: &K) -> Option<V> {
         debug_assert!(self.check().is_ok(), "Inconsistent before get");
         match self.locate(key) {
             LocateResult::Found(pos) => Some(self.data[pos].data),
@@ -415,7 +421,7 @@ impl Index {
     }
 
     #[inline]
-    pub fn modify<F>(&mut self, key: &Hash, mut f: F) -> bool where F: FnMut(&mut Location) {
+    pub fn modify<F>(&mut self, key: &K, mut f: F) -> bool where F: FnMut(&mut V) {
         debug_assert!(self.check().is_ok(), "Inconsistent before get");
         match self.locate(key) {
             LocateResult::Found(pos) => {
@@ -427,7 +433,7 @@ impl Index {
     }
 
     #[inline]
-    pub fn delete(&mut self, key: &Hash) -> Result<bool, IndexError> {
+    pub fn delete(&mut self, key: &K) -> Result<bool, IndexError> {
         match self.locate(key) {
             LocateResult::Found(pos) => {
                 self.backshift(pos);
@@ -438,7 +444,7 @@ impl Index {
         }
     }
 
-    pub fn filter<F>(&mut self, mut f: F) -> Result<usize, IndexError> where F: FnMut(&Hash, &Location) -> bool {
+    pub fn filter<F>(&mut self, mut f: F) -> Result<usize, IndexError> where F: FnMut(&K, &V) -> bool {
         //TODO: is it faster to walk in reverse direction?
         let mut deleted = 0;
         let mut pos = 0;
@@ -460,48 +466,8 @@ impl Index {
     }
 
     #[inline]
-    pub fn walk<F, E>(&self, mut f: F) -> Result<(), E> where F: FnMut(&Hash, &Location) -> Result<(), E> {
-        for pos in 0..self.capacity {
-            let entry = &self.data[pos];
-            if entry.is_used() {
-                try!(f(&entry.key, &entry.data));
-            }
-        }
-        Ok(())
-    }
-
-    #[inline]
-    pub fn walk_mut<F, E>(&mut self, mut f: F) -> Result<(), E> where F: FnMut(&Hash, &mut Location) -> Result<(), E> {
-        for pos in 0..self.capacity {
-            let entry = &mut self.data[pos];
-            if entry.is_used() {
-                try!(f(&entry.key, &mut entry.data));
-            }
-        }
-        Ok(())
-    }
-
-    #[inline]
-    pub fn next_entry(&self, index: usize) -> Option<usize> {
-        let mut i = index;
-        while i < self.capacity && !self.data[i].is_used() {
-            i += 1;
-        }
-        if i == self.capacity {
-            None
-        } else {
-            Some(i)
-        }
-    }
-
-    #[inline]
-    pub fn get_entry(&self, index: usize) -> Option<&Entry> {
-        let entry = &self.data[index];
-        if entry.is_used() {
-            Some(entry)
-        } else {
-            None
-        }
+    pub fn iter<'a>(&'a self) -> Iter<'a, K, V> {
+        Iter{items: &self.data}
     }
 
     #[inline]

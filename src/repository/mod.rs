@@ -35,11 +35,41 @@ use self::bundle_map::BundleMap;
 const REPOSITORY_README: &'static [u8] = include_bytes!("../../docs/repository_readme.md");
 const DEFAULT_EXCLUDES: &'static [u8] = include_bytes!("../../docs/excludes.default");
 
+const INDEX_MAGIC: [u8; 7] = *b"zvault\x02";
+const INDEX_VERSION: u8 = 1;
+
+
+#[repr(packed)]
+#[derive(Clone, Copy, PartialEq, Debug)]
+pub struct Location {
+    pub bundle: u32,
+    pub chunk: u32
+}
+impl Location {
+    pub fn new(bundle: u32, chunk: u32) -> Self {
+        Location{ bundle: bundle, chunk: chunk }
+    }
+}
+
+impl ::index::Key for Hash {
+    fn hash(&self) -> u64 {
+        self.low
+    }
+
+    fn is_used(&self) -> bool {
+        self.low != 0 || self.high != 0
+    }
+
+    fn clear(&mut self) {
+        self.low = 0;
+        self.high = 0;
+    }
+}
 
 pub struct Repository {
     pub layout: RepositoryLayout,
     pub config: Config,
-    index: Index,
+    index: Index<Hash, Location>,
     crypto: Arc<Mutex<Crypto>>,
     bundle_map: BundleMap,
     next_data_bundle: u32,
@@ -67,7 +97,7 @@ impl Repository {
         try!(fs::create_dir_all(layout.remote_locks_path()));
         try!(config.save(layout.config_path()));
         try!(BundleDb::create(layout.clone()));
-        try!(Index::create(layout.index_path()));
+        try!(Index::<Hash, Location>::create(layout.index_path(), &INDEX_MAGIC, INDEX_VERSION));
         try!(BundleMap::create().save(layout.bundle_map_path()));
         try!(fs::create_dir_all(layout.backups_path()));
         Self::open(path)
@@ -86,11 +116,11 @@ impl Repository {
         let lock = try!(local_locks.lock(false));
         let crypto = Arc::new(Mutex::new(try!(Crypto::open(layout.keys_path()))));
         let (bundles, new, gone) = try!(BundleDb::open(layout.clone(), crypto.clone()));
-        let (index, mut rebuild_index) = match Index::open(layout.index_path()) {
+        let (index, mut rebuild_index) = match Index::open(layout.index_path(), &INDEX_MAGIC, INDEX_VERSION) {
             Ok(index) => (index, false),
             Err(err) => {
                 error!("Failed to load local index:\n\tcaused by: {}", err);
-                (try!(Index::create(layout.index_path())), true)
+                (try!(Index::create(layout.index_path(), &INDEX_MAGIC, INDEX_VERSION)), true)
             }
         };
         let (bundle_map, rebuild_bundle_map) = match BundleMap::load(layout.bundle_map_path()) {

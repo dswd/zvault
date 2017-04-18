@@ -6,6 +6,7 @@ This project follows [semantic versioning](http://semver.org).
 ### UNRELEASED
 * [added] Ability to read/write tar file from/to stdin/stdout
 * [added] Added date to bundles
+* [added] Option to combine small bundles
 * [modified] Logging to stderr
 * [modified] Enforce deterministic bundle ordering
 * [modified] More info in analyze subcommand

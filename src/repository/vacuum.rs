@@ -79,12 +79,11 @@ impl Repository {
         }
         try!(self.flush());
         info!("Checking index");
-        self.index.walk::<_, ()>(|hash, location| {
+        for (hash, location) in self.index.iter() {
             if rewrite_bundles.contains(&location.bundle) {
                 panic!("Removed bundle is still referenced in index: hash:{}, bundle:{}, chunk:{}", hash, location.bundle, location.chunk);
             }
-            Ok(())
-        }).ok();
+        }
         info!("Deleting {} bundles", rewrite_bundles.len());
         for id in rewrite_bundles {
             try!(self.delete_bundle(id));
