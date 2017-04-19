@@ -409,7 +409,6 @@ impl Repository {
         if try!(self.bundles.check(full, repair)) {
             // Some bundles got repaired
             warn!("Some bundles have been rewritten, please remove the broken bundles manually.");
-            try!(self.bundles.finish_uploads());
             try!(self.rebuild_bundle_map());
             try!(self.rebuild_index());
         }

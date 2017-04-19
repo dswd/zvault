@@ -57,7 +57,7 @@ quick_error!{
 }
 
 
-pub fn load_bundles(path: &Path, base: &Path, bundles: &mut HashMap<BundleId, StoredBundle>, crypto: Arc<Mutex<Crypto>>) -> Result<(Vec<StoredBundle>, Vec<StoredBundle>), BundleDbError> {
+fn load_bundles(path: &Path, base: &Path, bundles: &mut HashMap<BundleId, StoredBundle>, crypto: Arc<Mutex<Crypto>>) -> Result<(Vec<StoredBundle>, Vec<StoredBundle>), BundleDbError> {
     let mut paths = vec![path.to_path_buf()];
     let mut bundle_paths = HashSet::new();
     while let Some(path) = paths.pop() {
@@ -158,14 +158,18 @@ impl BundleDb {
         Ok((new, gone))
     }
 
-    pub fn save_cache(&self) -> Result<(), BundleDbError> {
+    pub fn flush(&mut self) -> Result<(), BundleDbError> {
+        self.finish_uploads().and_then(|()| self.save_cache())
+    }
+
+    fn save_cache(&self) -> Result<(), BundleDbError> {
         let bundles: Vec<_> = self.local_bundles.values().cloned().collect();
         try!(StoredBundle::save_list_to(&bundles, &self.layout.local_bundle_cache_path()));
         let bundles: Vec<_> = self.remote_bundles.values().cloned().collect();
         Ok(try!(StoredBundle::save_list_to(&bundles, &self.layout.remote_bundle_cache_path())))
     }
 
-    pub fn update_cache(&mut self) -> Result<(), BundleDbError> {
+    fn update_cache(&mut self) -> Result<(), BundleDbError> {
         let mut meta_bundles = HashSet::new();
         for (id, bundle) in &self.remote_bundles {
             if bundle.info.mode == BundleMode::Meta {
@@ -273,7 +277,7 @@ impl BundleDb {
         Ok(bundle.info)
     }
 
-    pub fn finish_uploads(&mut self) -> Result<(), BundleDbError> {
+    fn finish_uploads(&mut self) -> Result<(), BundleDbError> {
         let mut uploader = None;
         mem::swap(&mut self.uploader, &mut uploader);
         if let Some(uploader) = uploader {
@@ -343,6 +347,7 @@ impl BundleDb {
             for id in ProgressIter::new("repairing bundles", to_repair.len(), to_repair.iter()) {
                 try!(self.repair_bundle(id.clone()));
             }
+            try!(self.flush());
         }
         Ok(!to_repair.is_empty())
     }

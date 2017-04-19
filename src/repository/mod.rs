@@ -279,9 +279,8 @@ impl Repository {
             }
             self.next_meta_bundle = self.next_free_bundle_id()
         }
-        try!(self.bundles.finish_uploads());
+        try!(self.bundles.flush());
         try!(self.save_bundle_map());
-        try!(self.bundles.save_cache());
         if !self.dirty && dirtyfile.exists() {
             try!(fs::remove_file(&dirtyfile));
         }

@@ -41,7 +41,7 @@ impl Deserialize for BundleId {
 
 impl BundleId {
     #[inline]
-    fn to_string(&self) -> String {
+    pub fn to_string(&self) -> String {
         self.0.to_string()
     }
 

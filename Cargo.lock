@@ -22,7 +22,6 @@ dependencies = [
  "rand 0.3.15 (registry+https://github.com/rust-lang/crates.io-index)",
  "regex 0.2.1 (registry+https://github.com/rust-lang/crates.io-index)",
  "rmp-serde 0.12.4 (registry+https://github.com/rust-lang/crates.io-index)",
- "rustc-serialize 0.3.23 (registry+https://github.com/rust-lang/crates.io-index)",
  "serde 0.9.13 (registry+https://github.com/rust-lang/crates.io-index)",
  "serde_utils 0.5.1 (registry+https://github.com/rust-lang/crates.io-index)",
  "serde_yaml 0.6.2 (registry+https://github.com/rust-lang/crates.io-index)",
@@ -317,11 +316,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "rustc-serialize"
-version = "0.3.23"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-
-[[package]]
 name = "serde"
 version = "0.9.13"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -535,7 +529,6 @@ dependencies = [
 "checksum regex-syntax 0.4.0 (registry+https://github.com/rust-lang/crates.io-index)" = "2f9191b1f57603095f105d317e375d19b1c9c5c3185ea9633a99a6dcbed04457"
 "checksum rmp 0.8.5 (registry+https://github.com/rust-lang/crates.io-index)" = "333f01365885cb192edaa22acb06d7e2f196bfd19d6969419e8b61307e0710ea"
 "checksum rmp-serde 0.12.4 (registry+https://github.com/rust-lang/crates.io-index)" = "f0b34c070f2a928d7786da44bfdb4372b547326bbc4757bd0696878558eac0bd"
-"checksum rustc-serialize 0.3.23 (registry+https://github.com/rust-lang/crates.io-index)" = "684ce48436d6465300c9ea783b6b14c4361d6b8dcbb1375b486a69cc19e2dfb0"
 "checksum serde 0.9.13 (registry+https://github.com/rust-lang/crates.io-index)" = "231dfd55909400769e437326cfb4af8bec97c3dd56ab3d02df8ef5c7e00f179b"
 "checksum serde_utils 0.5.1 (registry+https://github.com/rust-lang/crates.io-index)" = "b34a52969c7fc0254e214b82518c9a95dc88c84fc84cd847add314996a031be6"
 "checksum serde_yaml 0.6.2 (registry+https://github.com/rust-lang/crates.io-index)" = "f8bd3f24ad8c7bcd34a6d70ba676dc11302b96f4f166aa5f947762e01098844d"

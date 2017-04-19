@@ -8,7 +8,6 @@ extern crate blake2_rfc as blake2;
 extern crate murmurhash3;
 extern crate serde_yaml;
 #[macro_use] extern crate quick_error;
-extern crate rustc_serialize;
 extern crate chrono;
 #[macro_use] extern crate clap;
 #[macro_use] extern crate log;
