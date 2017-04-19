@@ -255,13 +255,13 @@ impl BundleDb {
         let id = bundle.id();
         let (folder, filename) = self.layout.local_bundle_path(&id, self.local_bundles.len());
         try!(fs::create_dir_all(&folder).context(&folder as &Path));
-        let bundle = try!(bundle.copy_to(&self.layout.base_path(), folder.join(filename)));
+        let bundle = try!(bundle.copy_to(self.layout.base_path(), folder.join(filename)));
         self.local_bundles.insert(id, bundle);
         Ok(())
     }
 
     pub fn add_bundle(&mut self, bundle: BundleWriter) -> Result<BundleInfo, BundleDbError> {
-        let mut bundle = try!(bundle.finish(&self));
+        let mut bundle = try!(bundle.finish(self));
         if bundle.info.mode == BundleMode::Meta {
             try!(self.copy_remote_bundle_to_cache(&bundle))
         }
@@ -288,7 +288,7 @@ impl BundleDb {
     }
 
     pub fn get_chunk_list(&self, bundle: &BundleId) -> Result<ChunkList, BundleDbError> {
-        let mut bundle = try!(self.get_stored_bundle(bundle).and_then(|stored| self.get_bundle(&stored)));
+        let mut bundle = try!(self.get_stored_bundle(bundle).and_then(|stored| self.get_bundle(stored)));
         Ok(try!(bundle.get_chunk_list()).clone())
     }
 

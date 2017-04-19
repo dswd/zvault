@@ -76,7 +76,7 @@ impl BundleUploader {
             self.waiting.fetch_sub(1, Ordering::SeqCst);
             self.wait.0.notify_all();
             let folder = dst_path.parent().unwrap();
-            try!(fs::create_dir_all(&folder).context(&folder as &Path));
+            try!(fs::create_dir_all(&folder).context(folder as &Path));
             try!(fs::copy(&src_path, &dst_path).context(&dst_path as &Path));
             try!(fs::remove_file(&src_path).context(&src_path as &Path));
             debug!("Uploaded {:?} to {:?}", src_path, dst_path);

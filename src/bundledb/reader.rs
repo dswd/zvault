@@ -101,7 +101,7 @@ impl BundleReader {
         info_data.resize(header.info_size, 0);
         try!(file.read_exact(&mut info_data).context(path));
         if let Some(ref encryption) = header.encryption {
-            info_data = try!(crypto.lock().unwrap().decrypt(&encryption, &info_data).context(path));
+            info_data = try!(crypto.lock().unwrap().decrypt(encryption, &info_data).context(path));
         }
         let mut info: BundleInfo = try!(msgpack::decode(&info_data).context(path));
         info.encryption = header.encryption;
@@ -131,7 +131,7 @@ impl BundleReader {
         chunk_data.resize(self.info.chunk_list_size, 0);
         try!(file.read_exact(&mut chunk_data).context(&self.path as &Path));
         if let Some(ref encryption) = self.info.encryption {
-            chunk_data = try!(self.crypto.lock().unwrap().decrypt(&encryption, &chunk_data).context(&self.path as &Path));
+            chunk_data = try!(self.crypto.lock().unwrap().decrypt(encryption, &chunk_data).context(&self.path as &Path));
         }
         let chunks = ChunkList::read_from(&chunk_data);
         let mut chunk_positions = Vec::with_capacity(chunks.len());
@@ -164,7 +164,7 @@ impl BundleReader {
 
     fn decode_contents(&self, mut data: Vec<u8>) -> Result<Vec<u8>, BundleReaderError> {
         if let Some(ref encryption) = self.info.encryption {
-            data = try!(self.crypto.lock().unwrap().decrypt(&encryption, &data).context(&self.path as &Path));
+            data = try!(self.crypto.lock().unwrap().decrypt(encryption, &data).context(&self.path as &Path));
         }
         if let Some(ref compression) = self.info.compression {
             let mut stream = try!(compression.decompress_stream().context(&self.path as &Path));

@@ -62,10 +62,9 @@ impl ChunkerType {
 
     pub fn avg_size(&self) -> usize {
         match *self {
-            ChunkerType::Ae(size) => size,
+            ChunkerType::Ae(size) | ChunkerType::Fixed(size) => size,
             ChunkerType::Rabin((size, _seed)) => size,
-            ChunkerType::FastCdc((size, _seed)) => size,
-            ChunkerType::Fixed(size) => size
+            ChunkerType::FastCdc((size, _seed)) => size
         }
     }
 
@@ -75,10 +74,9 @@ impl ChunkerType {
 
     pub fn seed(&self) -> u64 {
         match *self {
-            ChunkerType::Ae(_size) => 0,
+            ChunkerType::Ae(_size) | ChunkerType::Fixed(_size) => 0,
             ChunkerType::Rabin((_size, seed)) => seed as u64,
-            ChunkerType::FastCdc((_size, seed)) => seed,
-            ChunkerType::Fixed(_size) => 0,
+            ChunkerType::FastCdc((_size, seed)) => seed
         }
     }
 }

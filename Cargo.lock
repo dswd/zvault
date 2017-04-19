@@ -23,7 +23,7 @@ dependencies = [
  "regex 0.2.1 (registry+https://github.com/rust-lang/crates.io-index)",
  "rmp-serde 0.12.4 (registry+https://github.com/rust-lang/crates.io-index)",
  "serde 0.9.13 (registry+https://github.com/rust-lang/crates.io-index)",
- "serde_utils 0.5.1 (registry+https://github.com/rust-lang/crates.io-index)",
+ "serde_utils 0.5.2 (registry+https://github.com/rust-lang/crates.io-index)",
  "serde_yaml 0.6.2 (registry+https://github.com/rust-lang/crates.io-index)",
  "sodiumoxide 0.0.14 (registry+https://github.com/rust-lang/crates.io-index)",
  "squash-sys 0.9.0 (registry+https://github.com/rust-lang/crates.io-index)",
@@ -322,7 +322,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 
 [[package]]
 name = "serde_utils"
-version = "0.5.1"
+version = "0.5.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 dependencies = [
  "serde 0.9.13 (registry+https://github.com/rust-lang/crates.io-index)",
@@ -530,7 +530,7 @@ dependencies = [
 "checksum rmp 0.8.5 (registry+https://github.com/rust-lang/crates.io-index)" = "333f01365885cb192edaa22acb06d7e2f196bfd19d6969419e8b61307e0710ea"
 "checksum rmp-serde 0.12.4 (registry+https://github.com/rust-lang/crates.io-index)" = "f0b34c070f2a928d7786da44bfdb4372b547326bbc4757bd0696878558eac0bd"
 "checksum serde 0.9.13 (registry+https://github.com/rust-lang/crates.io-index)" = "231dfd55909400769e437326cfb4af8bec97c3dd56ab3d02df8ef5c7e00f179b"
-"checksum serde_utils 0.5.1 (registry+https://github.com/rust-lang/crates.io-index)" = "b34a52969c7fc0254e214b82518c9a95dc88c84fc84cd847add314996a031be6"
+"checksum serde_utils 0.5.2 (registry+https://github.com/rust-lang/crates.io-index)" = "c6fbfe71b80337654f81dfc667315ed6908e9303972bf719aacc919d491af0db"
 "checksum serde_yaml 0.6.2 (registry+https://github.com/rust-lang/crates.io-index)" = "f8bd3f24ad8c7bcd34a6d70ba676dc11302b96f4f166aa5f947762e01098844d"
 "checksum sodiumoxide 0.0.14 (registry+https://github.com/rust-lang/crates.io-index)" = "bc02c0bc77ffed8e8eaef004399b825cf4fd8aa02d0af6e473225affd583ff4d"
 "checksum squash-sys 0.9.0 (registry+https://github.com/rust-lang/crates.io-index)" = "db1f9dde91d819b7746e153bc32489fa19e6a106c3d7f2b92187a4efbdc88b40"
