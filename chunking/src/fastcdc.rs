@@ -53,7 +53,6 @@ pub struct FastCdcChunker {
     avg_size: usize,
     mask_long: u64,
     mask_short: u64,
-    seed: u64
 }
 
 
@@ -69,20 +68,13 @@ impl FastCdcChunker {
             avg_size: avg_size,
             mask_long: mask_long,
             mask_short: mask_short,
-            seed: seed
         }
     }
 }
 
-impl IChunker for FastCdcChunker {
-    #[inline]
-    fn get_type(&self) -> ChunkerType {
-        ChunkerType::FastCdc((self.avg_size, self.seed))
-    }
-
-
+impl Chunker for FastCdcChunker {
     #[allow(unknown_lints,explicit_counter_loop,needless_range_loop)]
-    fn chunk<R: Read, W: Write>(&mut self, r: &mut R, mut w: &mut W) -> Result<ChunkerStatus, ChunkerError> {
+    fn chunk(&mut self, r: &mut Read, mut w: &mut Write) -> Result<ChunkerStatus, ChunkerError> {
         let mut max;
         let mut hash = 0u64;
         let mut pos = 0;

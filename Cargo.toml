@@ -33,6 +33,7 @@ users = "0.5"
 time = "*"
 libc = "*"
 index = {path="index"}
+chunking = {path="chunking"}
 
 [build-dependencies]
 pkg-config = "0.3"

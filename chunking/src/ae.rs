@@ -10,7 +10,6 @@ use std::ptr;
 pub struct AeChunker {
     buffer: [u8; 4096],
     buffered: usize,
-    avg_size: usize,
     window_size: usize
 }
 
@@ -23,19 +22,13 @@ impl AeChunker {
             buffer: [0; 4096],
             buffered: 0,
             window_size: window_size,
-            avg_size: avg_size
         }
     }
 }
 
-impl IChunker for AeChunker {
-    #[inline]
-    fn get_type(&self) -> ChunkerType {
-        ChunkerType::Ae(self.avg_size)
-    }
-
+impl Chunker for AeChunker {
     #[allow(unknown_lints,explicit_counter_loop)]
-    fn chunk<R: Read, W: Write>(&mut self, r: &mut R, mut w: &mut W) -> Result<ChunkerStatus, ChunkerError> {
+    fn chunk(&mut self, r: &mut Read, mut w: &mut Write) -> Result<ChunkerStatus, ChunkerError> {
         let mut max;
         let mut pos = 0;
         let mut max_pos = 0;

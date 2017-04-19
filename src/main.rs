@@ -28,15 +28,15 @@ extern crate users;
 extern crate libc;
 extern crate tar;
 extern crate index;
+extern crate chunking;
 
 pub mod util;
 mod bundledb;
-//pub mod index;
-mod chunker;
 mod repository;
 mod cli;
 mod prelude;
 mod mount;
+mod chunker;
 
 use std::process::exit;
 

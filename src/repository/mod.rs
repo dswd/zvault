@@ -77,7 +77,7 @@ pub struct Repository {
     bundles: BundleDb,
     data_bundle: Option<BundleWriter>,
     meta_bundle: Option<BundleWriter>,
-    chunker: Chunker,
+    chunker: Box<Chunker>,
     remote_locks: LockFolder,
     local_locks: LockFolder,
     lock: LockHandle,

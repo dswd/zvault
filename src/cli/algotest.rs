@@ -32,7 +32,7 @@ impl Write for ChunkSink {
     }
 }
 
-fn chunk(data: &[u8], mut chunker: Chunker, sink: &mut ChunkSink) {
+fn chunk(data: &[u8], mut chunker: Box<Chunker>, sink: &mut ChunkSink) {
     let mut cursor = Cursor::new(data);
     while chunker.chunk(&mut cursor, sink).unwrap() == ChunkerStatus::Continue {
         sink.end_chunk();

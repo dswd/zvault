@@ -43,7 +43,6 @@ pub struct RabinChunker {
     max_size: usize,
     window_size: usize,
     chunk_mask: u32,
-    avg_size: usize
 }
 
 
@@ -62,19 +61,13 @@ impl RabinChunker {
             max_size: avg_size*4,
             window_size: window_size,
             chunk_mask: chunk_mask,
-            avg_size: avg_size
         }
     }
 }
 
-impl IChunker for RabinChunker {
-    #[inline]
-    fn get_type(&self) -> ChunkerType {
-        ChunkerType::Rabin((self.avg_size, self.seed))
-    }
-
+impl Chunker for RabinChunker {
     #[allow(unknown_lints,explicit_counter_loop)]
-    fn chunk<R: Read, W: Write>(&mut self, r: &mut R, mut w: &mut W) -> Result<ChunkerStatus, ChunkerError> {
+    fn chunk(&mut self, r: &mut Read, mut w: &mut Write) -> Result<ChunkerStatus, ChunkerError> {
         let mut max;
         let mut hash = 0u32;
         let mut pos = 0;
