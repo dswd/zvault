@@ -149,7 +149,7 @@ impl<K: Key, V: Clone + Copy> Index<K, V> {
             header.entries = 0;
             header.capacity = INITIAL_SIZE as u64;
         }
-        if &header.magic != magic {
+        if header.magic != *magic {
             return Err(IndexError::WrongMagic);
         }
         if header.version != version {
@@ -313,7 +313,7 @@ impl<K: Key, V: Clone + Copy> Index<K, V> {
             if entry.key == *key {
                 return LocateResult::Found(pos);
             }
-            let odist = (pos + self.capacity - entry.key.hash() as usize & self.mask) & self.mask;
+            let odist = (pos + self.capacity - (entry.key.hash() as usize & self.mask)) & self.mask;
             if dist > odist {
                 return LocateResult::Steal(pos);
             }
@@ -466,8 +466,8 @@ impl<K: Key, V: Clone + Copy> Index<K, V> {
     }
 
     #[inline]
-    pub fn iter<'a>(&'a self) -> Iter<'a, K, V> {
-        Iter{items: &self.data}
+    pub fn iter(&self) -> Iter<K, V> {
+        Iter{items: self.data}
     }
 
     #[inline]
