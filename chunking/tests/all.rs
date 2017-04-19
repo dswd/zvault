@@ -32,9 +32,11 @@ fn test_chunking(chunker: &mut Chunker, data: &[u8]) -> usize {
     chunks.push(chunk);
     let mut pos = 0;
     for chunk in &chunks {
+        assert!(pos+chunk.len() <= data.len());
         assert_eq!(&data[pos..pos+chunk.len()], chunk as &[u8]);
         pos += chunk.len();
     }
+    assert_eq!(pos, data.len());
     chunks.len()
 }
 

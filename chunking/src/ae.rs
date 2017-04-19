@@ -1,6 +1,5 @@
 use super::*;
 
-//use std::f64::consts;
 use std::ptr;
 
 // AE Chunker
