@@ -2,10 +2,12 @@
 
 use std::io::{self, Write, Read};
 
+mod fixed;
 mod ae;
 mod rabin;
 mod fastcdc;
 
+pub use self::fixed::FixedChunker;
 pub use self::ae::AeChunker;
 pub use self::rabin::RabinChunker;
 pub use self::fastcdc::FastCdcChunker;
