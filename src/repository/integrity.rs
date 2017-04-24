@@ -97,7 +97,7 @@ impl Repository {
             },
             Some(FileData::ChunkedIndirect(ref chunks)) => {
                 if try!(self.check_chunks(checked, chunks, true)) {
-                    let chunk_data = try!(self.get_data(chunks));
+                    let chunk_data = try!(self.get_data(&chunks));
                     let chunks = ChunkList::read_from(&chunk_data);
                     try!(self.check_chunks(checked, &chunks, true));
                 }
@@ -191,12 +191,12 @@ impl Repository {
                 try!(self.flush());
                 backup.root = chunks;
                 backup.modified = true;
-                try!(self.evacuate_broken_backup(name));
-                try!(self.save_backup(backup, name));
+                try!(self.evacuate_broken_backup(&name));
+                try!(self.save_backup(&backup, &name));
             },
             Err(err) => if repair {
                 warn!("The root of the backup {} has been corrupted\n\tcaused by: {}", name, err);
-                try!(self.evacuate_broken_backup(name));
+                try!(self.evacuate_broken_backup(&name));
             } else {
                 return Err(err)
             }
@@ -213,7 +213,7 @@ impl Repository {
         };
         info!("Checking inode...");
         let mut checked = Bitmap::new(self.index.capacity());
-        let mut inodes = try!(self.get_backup_path(backup, path));
+        let mut inodes = try!(self.get_backup_path(&backup, path));
         let mut inode = inodes.pop().unwrap();
         let mut modified = false;
         if let Err(err) = self.check_inode_contents(&inode, &mut checked) {
@@ -260,8 +260,8 @@ impl Repository {
             try!(self.flush());
             backup.root = chunks;
             backup.modified = true;
-            try!(self.evacuate_broken_backup(name));
-            try!(self.save_backup(backup, name));
+            try!(self.evacuate_broken_backup(&name));
+            try!(self.save_backup(&backup, &name));
         }
         Ok(())
     }

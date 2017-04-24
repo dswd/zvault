@@ -201,7 +201,7 @@ impl Repository {
 
     pub fn get_stream<W: Write>(&mut self, chunks: &[Chunk], w: &mut W) -> Result<(), RepositoryError> {
         for &(ref hash, len) in chunks {
-            let data = try!(try!(self.get_chunk(*hash)).ok_or_else(|| IntegrityError::MissingChunk(*hash)));
+            let data = try!(try!(self.get_chunk(*hash)).ok_or_else(|| IntegrityError::MissingChunk(hash.clone())));
             debug_assert_eq!(data.len() as u32, len);
             try!(w.write_all(&data));
         }
