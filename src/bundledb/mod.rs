@@ -31,9 +31,9 @@ impl Serialize for BundleId {
     }
 }
 
-impl Deserialize for BundleId {
+impl<'a> Deserialize<'a> for BundleId {
     #[inline]
-    fn deserialize<D: serde::Deserializer>(de: D) -> Result<Self, D::Error> {
+    fn deserialize<D: serde::Deserializer<'a>>(de: D) -> Result<Self, D::Error> {
         let hash = try!(Hash::deserialize(de));
         Ok(BundleId(hash))
     }

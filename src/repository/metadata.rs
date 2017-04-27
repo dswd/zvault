@@ -249,7 +249,7 @@ impl Inode {
 
     #[inline]
     pub fn decode(data: &[u8]) -> Result<Self, InodeError> {
-        Ok(try!(msgpack::decode(&data)))
+        Ok(try!(msgpack::decode(data)))
     }
 }
 
@@ -299,7 +299,7 @@ impl Repository {
             if let Some(ref contents) = inode.data {
                 match *contents {
                     FileData::Inline(ref data) => {
-                        try!(file.write_all(&data));
+                        try!(file.write_all(data));
                     },
                     FileData::ChunkedDirect(ref chunks) => {
                         try!(self.get_stream(chunks, &mut file));

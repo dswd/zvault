@@ -3,10 +3,11 @@
 This project follows [semantic versioning](http://semver.org).
 
 
-### UNRELEASED
+### v0.3.0 (2017-04-27)
 * [added] Ability to read/write tar file from/to stdin/stdout
 * [added] Added date to bundles
 * [added] Option to combine small bundles
+* [added] Fixed chunker
 * [modified] Logging to stderr
 * [modified] Enforce deterministic bundle ordering
 * [modified] More info in analyze subcommand

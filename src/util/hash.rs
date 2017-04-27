@@ -1,6 +1,6 @@
 use serde::{self, Serialize, Deserialize};
 use serde::de::Error;
-use serde::bytes::{ByteBuf, Bytes};
+use serde_bytes::{ByteBuf, Bytes};
 
 use murmurhash3::murmurhash3_x64_128;
 use blake2::blake2b::blake2b;
@@ -80,8 +80,8 @@ impl Serialize for Hash {
     }
 }
 
-impl Deserialize for Hash {
-    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error> where D: serde::Deserializer {
+impl<'a> Deserialize<'a> for Hash {
+    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error> where D: serde::Deserializer<'a> {
         let dat: Vec<u8> = try!(ByteBuf::deserialize(deserializer)).into();
         if dat.len() != 16 {
             return Err(D::Error::custom("Invalid key length"));

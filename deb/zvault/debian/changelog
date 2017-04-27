@@ -1,3 +1,22 @@
+zvault (0.3.0) stable; urgency=medium
+
+  * [added] Ability to read/write tar file from/to stdin/stdout
+  * [added] Added date to bundles
+  * [added] Option to combine small bundles
+  * [added] Fixed chunker
+  * [modified] Logging to stderr
+  * [modified] Enforce deterministic bundle ordering
+  * [modified] More info in analyze subcommand
+  * [modified] Estimating final bundle size in order to reach it
+  * [fixed] Only print "repairing bundles" if actually repairing bundles
+  * [fixed] Only put mode bits of st_mode into metadata
+  * [fixed] Only repairing backups with --repair
+  * [fixed] Fixed vacuum
+  * [fixed] First removing bundles, then adding new ones
+  * [fixed] No longer clobbering broken files
+
+ -- Dennis Schwerdel <schwerdel@informatik.uni-kl.de>  Thu, 27 Apr 2017 13:34:34 +0200
+
 zvault (0.2.0) stable; urgency=medium
 
   * [added] Added CHANGELOG

@@ -2,7 +2,7 @@ use std::io::{self, Write, Read, Cursor};
 use std::ops::{Deref, DerefMut};
 
 use serde::{self, Serialize, Deserialize};
-use serde::bytes::{Bytes, ByteBuf};
+use serde_bytes::{Bytes, ByteBuf};
 use serde::de::Error;
 
 use byteorder::{LittleEndian, ReadBytesExt, WriteBytesExt};
@@ -118,9 +118,9 @@ impl Serialize for ChunkList {
     }
 }
 
-impl Deserialize for ChunkList {
+impl<'a> Deserialize<'a> for ChunkList {
     #[inline]
-    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error> where D: serde::Deserializer {
+    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error> where D: serde::Deserializer<'a> {
         let data: Vec<u8> = try!(ByteBuf::deserialize(deserializer)).into();
         if data.len() % 20 != 0 {
             return Err(D::Error::custom("Invalid chunk list length"));

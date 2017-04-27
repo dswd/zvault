@@ -160,7 +160,7 @@ impl Repository {
             if inode.file_type == FileType::Directory {
                 let path = path.join(inode.name);
                 for chunks in inode.children.unwrap().values() {
-                    let inode = try!(self.get_inode(&chunks));
+                    let inode = try!(self.get_inode(chunks));
                     queue.push_back((path.clone(), inode));
                 }
             }

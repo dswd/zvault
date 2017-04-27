@@ -5,7 +5,7 @@ use std::fs::{self, File};
 use std::sync::{Once, ONCE_INIT};
 
 use serde_yaml;
-use serde::bytes::ByteBuf;
+use serde_bytes::ByteBuf;
 
 use sodiumoxide;
 use sodiumoxide::crypto::sealedbox;

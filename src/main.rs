@@ -1,6 +1,7 @@
 #![recursion_limit="128"]
 #![allow(unknown_lints, float_cmp)]
 extern crate serde;
+extern crate serde_bytes;
 extern crate rmp_serde;
 #[macro_use] extern crate serde_utils;
 extern crate squash_sys as squash;
