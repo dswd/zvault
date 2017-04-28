@@ -10,6 +10,8 @@ lost+found
 /media
 
 # Cache data that does not need to be backed up
+/root/.cache
+/root/.zvault
 /home/*/.cache
 /home/*/.zvault
 /var/cache
