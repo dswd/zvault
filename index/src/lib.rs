@@ -4,6 +4,7 @@ extern crate mmap;
 use std::path::Path;
 use std::fs::{File, OpenOptions};
 use std::mem;
+use std::ptr;
 use std::io;
 use std::slice;
 use std::os::unix::io::AsRawFd;
@@ -59,14 +60,19 @@ pub struct Header {
     capacity: u64,
 }
 
-pub trait Key: Clone + Eq + Copy {
+
+pub trait Key: Clone + Eq + Copy + Default {
     fn hash(&self) -> u64;
     fn is_used(&self) -> bool;
     fn clear(&mut self);
 }
 
+
+pub trait Value: Clone + Copy + Default {}
+
+
 #[repr(packed)]
-#[derive(Clone)]
+#[derive(Clone, Default)]
 pub struct Entry<K, V> {
     pub key: K,
     pub data: V
@@ -92,15 +98,13 @@ pub enum LocateResult {
 }
 
 
-pub struct Iter<'a, K: 'static, V: 'static> {
-    items: &'a [Entry<K, V>],
-}
+pub struct Iter<'a, K: 'static, V: 'static> (&'a [Entry<K, V>]);
 
 impl<'a, K: Key, V> Iterator for Iter<'a, K, V> {
     type Item = (&'a K, &'a V);
     fn next(&mut self) -> Option<Self::Item> {
-        while let Some((first, rest)) = self.items.split_first() {
-            self.items = rest;
+        while let Some((first, rest)) = self.0.split_first() {
+            self.0 = rest;
             if first.is_used() {
                 return Some((&first.key, &first.data));
             }
@@ -109,14 +113,35 @@ impl<'a, K: Key, V> Iterator for Iter<'a, K, V> {
     }
 }
 
+pub struct IterMut<'a, K: 'static, V: 'static> (&'a mut [Entry<K, V>]);
 
-fn mmap_as_ref<K, V>(mmap: &MemoryMap, len: usize) -> (&'static mut Header, &'static mut [Entry<K, V>]) {
+impl<'a, K: Key, V> Iterator for IterMut<'a, K, V> {
+    type Item = (&'a K, &'a mut V);
+    fn next(&mut self) -> Option<Self::Item> {
+        loop {
+            let slice = mem::replace(&mut self.0, &mut []);
+            match slice.split_first_mut() {
+                None => return None,
+                Some((first, rest)) => {
+                    self.0 = rest;
+                    if first.is_used() {
+                        return Some((&first.key, &mut first.data))
+                    }
+                }
+            }
+        }
+    }
+}
+
+
+/// This method is unsafe as it potentially creates references to uninitialized memory
+unsafe fn mmap_as_ref<K, V>(mmap: &MemoryMap, len: usize) -> (&'static mut Header, &'static mut [Entry<K, V>]) {
     if mmap.len() < mem::size_of::<Header>() + len * mem::size_of::<Entry<K, V>>() {
         panic!("Memory map too small");
     }
-    let header = unsafe { &mut *(mmap.data() as *mut Header) };
-    let ptr = unsafe { mmap.data().offset(mem::size_of::<Header>() as isize) as *mut Entry<K, V> };
-    let data = unsafe { slice::from_raw_parts_mut(ptr, len) };
+    let header = &mut *(mmap.data() as *mut Header);
+    let ptr = mmap.data().offset(mem::size_of::<Header>() as isize) as *mut Entry<K, V>;
+    let data = slice::from_raw_parts_mut(ptr, len);
     (header, data)
 }
 
@@ -132,7 +157,7 @@ pub struct Index<K: 'static, V: 'static> {
     data: &'static mut [Entry<K, V>]
 }
 
-impl<K: Key, V: Clone + Copy> Index<K, V> {
+impl<K: Key, V: Value> Index<K, V> {
     pub fn new(path: &Path, create: bool, magic: &[u8; 7], version: u8) -> Result<Self, IndexError> {
         let fd = try!(OpenOptions::new().read(true).write(true).create(create).open(path));
         if create {
@@ -142,12 +167,17 @@ impl<K: Key, V: Clone + Copy> Index<K, V> {
         if mmap.len() < mem::size_of::<Header>() {
             return Err(IndexError::WrongMagic);
         }
-        let (header, _) = mmap_as_ref::<K, V>(&mmap, INITIAL_SIZE as usize);
+        let (header, data) = unsafe { mmap_as_ref::<K, V>(&mmap, INITIAL_SIZE as usize) };
         if create {
+            // This is safe, nothing in header is Drop
             header.magic = magic.to_owned();
             header.version = version;
             header.entries = 0;
             header.capacity = INITIAL_SIZE as u64;
+            // Initialize data without dropping the uninitialized data in it
+            for d in data {
+                unsafe { ptr::write(d, Entry::default()) }
+            }
         }
         if header.magic != *magic {
             return Err(IndexError::WrongMagic);
@@ -155,7 +185,7 @@ impl<K: Key, V: Clone + Copy> Index<K, V> {
         if header.version != version {
             return Err(IndexError::UnsupportedVersion(header.version));
         }
-        let (header, data) = mmap_as_ref(&mmap, header.capacity as usize);
+        let (header, data) = unsafe { mmap_as_ref(&mmap, header.capacity as usize) };
         let index = Index{
             capacity: header.capacity as usize,
             mask: header.capacity as usize -1,
@@ -171,8 +201,10 @@ impl<K: Key, V: Clone + Copy> Index<K, V> {
         Ok(index)
     }
 
+    /// This method is unsafe as there is no way to guarantee that the contents of the file are
+    /// valid objects.
     #[inline]
-    pub fn open<P: AsRef<Path>>(path: P, magic: &[u8; 7], version: u8) -> Result<Self, IndexError> {
+    pub unsafe fn open<P: AsRef<Path>>(path: P, magic: &[u8; 7], version: u8) -> Result<Self, IndexError> {
         Index::new(path.as_ref(), false, magic, version)
     }
 
@@ -235,7 +267,7 @@ impl<K: Key, V: Clone + Copy> Index<K, V> {
         try!(self.reinsert(new_capacity, old_capacity));
         try!(Self::resize_fd(&self.fd, new_capacity));
         self.mmap = try!(Self::map_fd(&self.fd));
-        let (header, data) = mmap_as_ref(&self.mmap, new_capacity);
+        let (header, data) = unsafe { mmap_as_ref(&self.mmap, new_capacity) };
         self.header = header;
         self.data = data;
         assert_eq!(self.data.len(), self.capacity);
@@ -249,7 +281,11 @@ impl<K: Key, V: Clone + Copy> Index<K, V> {
         let new_capacity = 2 * self.capacity;
         try!(Self::resize_fd(&self.fd, new_capacity));
         self.mmap = try!(Self::map_fd(&self.fd));
-        let (header, data) = mmap_as_ref(&self.mmap, new_capacity);
+        let (header, data) = unsafe { mmap_as_ref(&self.mmap, new_capacity) };
+        // Initialize upper half of data without dropping the uninitialized data in it
+        for d in &mut data[self.capacity..] {
+            unsafe { ptr::write(d, Entry::default()) }
+        }
         self.header = header;
         self.data = data;
         self.set_capacity(new_capacity);
@@ -467,7 +503,12 @@ impl<K: Key, V: Clone + Copy> Index<K, V> {
 
     #[inline]
     pub fn iter(&self) -> Iter<K, V> {
-        Iter{items: self.data}
+        Iter(self.data)
+    }
+
+    #[inline]
+    pub fn iter_mut(&mut self) -> IterMut<K, V> {
+        IterMut(self.data)
     }
 
     #[inline]

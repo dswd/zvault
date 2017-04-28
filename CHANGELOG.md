@@ -3,6 +3,11 @@
 This project follows [semantic versioning](http://semver.org).
 
 
+### UNRELEASED
+* [modified] Added root repository to exclude list
+* [modified] Initializing data in index before use
+
+
 ### v0.3.0 (2017-04-27)
 * [added] Ability to read/write tar file from/to stdin/stdout
 * [added] Added date to bundles

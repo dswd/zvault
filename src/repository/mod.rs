@@ -40,7 +40,7 @@ const INDEX_VERSION: u8 = 1;
 
 
 #[repr(packed)]
-#[derive(Clone, Copy, PartialEq, Debug)]
+#[derive(Clone, Copy, PartialEq, Debug, Default)]
 pub struct Location {
     pub bundle: u32,
     pub chunk: u32
@@ -50,6 +50,8 @@ impl Location {
         Location{ bundle: bundle, chunk: chunk }
     }
 }
+
+impl ::index::Value for Location {}
 
 impl ::index::Key for Hash {
     fn hash(&self) -> u64 {
@@ -116,7 +118,7 @@ impl Repository {
         let lock = try!(local_locks.lock(false));
         let crypto = Arc::new(Mutex::new(try!(Crypto::open(layout.keys_path()))));
         let (bundles, new, gone) = try!(BundleDb::open(layout.clone(), crypto.clone()));
-        let (index, mut rebuild_index) = match Index::open(layout.index_path(), &INDEX_MAGIC, INDEX_VERSION) {
+        let (index, mut rebuild_index) = match unsafe { Index::open(layout.index_path(), &INDEX_MAGIC, INDEX_VERSION) } {
             Ok(index) => (index, false),
             Err(err) => {
                 error!("Failed to load local index:\n\tcaused by: {}", err);
