@@ -4,6 +4,7 @@ This project follows [semantic versioning](http://semver.org).
 
 
 ### UNRELEASED
+* [added] Derive key pairs from passwords
 * [modified] Added root repository to exclude list
 * [modified] Initializing data in index before use
 

@@ -14,6 +14,7 @@ extern crate chrono;
 #[macro_use] extern crate log;
 extern crate byteorder;
 extern crate sodiumoxide;
+extern crate libsodium_sys;
 extern crate ansi_term;
 extern crate filetime;
 extern crate regex;

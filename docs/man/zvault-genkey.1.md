@@ -14,6 +14,10 @@ writes it to the given file `FILE`.
 
 ## OPTIONS
 
+  * `-p`, `--password <PASSWORD>`:
+
+    Derive the key pair from the given password instead of randomly creating it.
+
   * `-h`, `--help`:
 
     Prints help information

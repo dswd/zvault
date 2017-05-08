@@ -7,9 +7,11 @@ use std::sync::{Once, ONCE_INIT};
 use serde_yaml;
 use serde_bytes::ByteBuf;
 
+use libsodium_sys;
 use sodiumoxide;
 use sodiumoxide::crypto::sealedbox;
 use sodiumoxide::crypto::box_;
+use sodiumoxide::crypto::pwhash;
 pub use sodiumoxide::crypto::box_::{SecretKey, PublicKey};
 
 use ::util::*;
@@ -210,5 +212,22 @@ impl Crypto {
     pub fn gen_keypair() -> (PublicKey, SecretKey) {
         sodium_init();
         box_::gen_keypair()
+    }
+
+    pub fn keypair_from_password(password: &str) -> (PublicKey, SecretKey) {
+        let salt = pwhash::Salt::from_slice(b"the_great_zvault_password_salt_1").unwrap();
+        let mut key = [0u8; pwhash::HASHEDPASSWORDBYTES];
+        let key = pwhash::derive_key(&mut key, password.as_bytes(), &salt, pwhash::OPSLIMIT_INTERACTIVE, pwhash::MEMLIMIT_INTERACTIVE).unwrap();
+        let mut seed = [0u8; 32];
+        let offset = key.len()-seed.len();
+        for (i, b) in seed.iter_mut().enumerate() {
+            *b = key[i+offset];
+        }
+        let mut pk = [0u8; 32];
+        let mut sk = [0u8; 32];
+        if unsafe { libsodium_sys::crypto_box_seed_keypair(&mut pk, &mut sk, &seed) } != 0 {
+            panic!("Libsodium failed");
+        }
+        (PublicKey::from_slice(&pk).unwrap(), SecretKey::from_slice(&sk).unwrap())
     }
 }

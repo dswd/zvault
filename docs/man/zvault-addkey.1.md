@@ -32,6 +32,11 @@ key will be set as default encryption key.
     Set the key pair as default
 
 
+  * `-p`, `--password <PASSWORD>`:
+
+    Derive the key pair from the given password instead of randomly creating it.
+    
+
   * `-h`, `--help`:
 
     Prints help information

@@ -116,11 +116,13 @@ pub enum Arguments {
         hash: Option<HashMethod>
     },
     GenKey {
-        file: Option<String>
+        file: Option<String>,
+        password: Option<String>
     },
     AddKey {
         repo_path: String,
         file: Option<String>,
+        password: Option<String>,
         set_default: bool
     },
     AlgoTest {
@@ -399,11 +401,14 @@ pub fn parse() -> Result<(LogLevel, Arguments), ErrorCode> {
             .arg(Arg::from_usage("<REPO> 'Path of the repository'")
                 .validator(|val| validate_repo_path(val, true, Some(false), Some(false)))))
         .subcommand(SubCommand::with_name("genkey").about("Generate a new key pair")
+            .arg(Arg::from_usage("-p --password [PASSWORD] 'Derive the key pair from the given password'"))
             .arg(Arg::from_usage("[FILE] 'Destination file for the keypair'")))
         .subcommand(SubCommand::with_name("addkey").about("Add a key pair to the repository")
             .arg(Arg::from_usage("-g --generate 'Generate a new key pair'")
-                .conflicts_with("FILE"))
+                .conflicts_with_all(&["FILE", "PASSWORD"]))
             .arg(Arg::from_usage("[set_default] --default -d 'Set the key pair as default'"))
+            .arg(Arg::from_usage("-p --password [PASSWORD] 'Derive the key pair from the given password'")
+                .conflicts_with("FILE"))
             .arg(Arg::from_usage("<REPO> 'Path of the repository'")
                 .validator(|val| validate_repo_path(val, true, Some(false), Some(false))))
             .arg(Arg::from_usage("[FILE] 'File containing the keypair'")
@@ -592,7 +597,8 @@ pub fn parse() -> Result<(LogLevel, Arguments), ErrorCode> {
         },
         ("genkey", Some(args)) => {
             Arguments::GenKey {
-                file: args.value_of("FILE").map(|v| v.to_string())
+                file: args.value_of("FILE").map(|v| v.to_string()),
+                password: args.value_of("password").map(|v| v.to_string())
             }
         },
         ("addkey", Some(args)) => {
@@ -600,6 +606,7 @@ pub fn parse() -> Result<(LogLevel, Arguments), ErrorCode> {
             Arguments::AddKey {
                 repo_path: repository.to_string(),
                 set_default: args.is_present("set_default"),
+                password: args.value_of("password").map(|v| v.to_string()),
                 file: args.value_of("FILE").map(|v| v.to_string())
             }
         },

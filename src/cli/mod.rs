@@ -625,8 +625,11 @@ pub fn run() -> Result<(), ErrorCode> {
                 print_config(&repo.config);
             }
         },
-        Arguments::GenKey{file} => {
-            let (public, secret) = Crypto::gen_keypair();
+        Arguments::GenKey{file, password} => {
+            let (public, secret) = match password {
+                None => Crypto::gen_keypair(),
+                Some(ref password) => Crypto::keypair_from_password(password)
+            };
             info!("Created the following key pair");
             println!("public: {}", to_hex(&public[..]));
             println!("secret: {}", to_hex(&secret[..]));
@@ -634,13 +637,16 @@ pub fn run() -> Result<(), ErrorCode> {
                 checked!(Crypto::save_keypair_to_file(&public, &secret, file), "save key pair", ErrorCode::SaveKey);
             }
         },
-        Arguments::AddKey{repo_path, set_default, file} => {
+        Arguments::AddKey{repo_path, set_default, password, file} => {
             let mut repo = try!(open_repository(&repo_path));
             let (public, secret) = if let Some(file) = file {
                 checked!(Crypto::load_keypair_from_file(file), "load key pair", ErrorCode::LoadKey)
             } else {
                 info!("Created the following key pair");
-                let (public, secret) = Crypto::gen_keypair();
+                let (public, secret) = match password {
+                    None => Crypto::gen_keypair(),
+                    Some(ref password) => Crypto::keypair_from_password(password)
+                };
                 println!("public: {}", to_hex(&public[..]));
                 println!("secret: {}", to_hex(&secret[..]));
                 (public, secret)
