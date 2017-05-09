@@ -3,10 +3,11 @@
 This project follows [semantic versioning](http://semver.org).
 
 
-### UNRELEASED
+### v0.3.1 (2017-05-09)
 * [added] Derive key pairs from passwords
 * [modified] Added root repository to exclude list
 * [modified] Initializing data in index before use
+* [modified] Updated dependencies
 
 
 ### v0.3.0 (2017-04-27)

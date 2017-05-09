@@ -1,6 +1,6 @@
 [package]
 name = "zvault"
-version = "0.3.0"
+version = "0.3.1"
 authors = ["Dennis Schwerdel <schwerdel@googlemail.com>"]
 description = "Deduplicating backup tool"
 

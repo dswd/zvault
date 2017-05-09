@@ -1,3 +1,12 @@
+zvault (0.3.1) stable; urgency=medium
+
+  * [added] Derive key pairs from passwords
+  * [modified] Added root repository to exclude list
+  * [modified] Initializing data in index before use
+  * [modified] Updated dependencies
+
+ -- Dennis Schwerdel <schwerdel@informatik.uni-kl.de>  Tue, 09 May 2017 09:34:22 +0200
+
 zvault (0.3.0) stable; urgency=medium
 
   * [added] Ability to read/write tar file from/to stdin/stdout
