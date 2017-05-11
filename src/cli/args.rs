@@ -279,6 +279,15 @@ fn validate_existing_path(val: String) -> Result<(), String> {
     }
 }
 
+#[allow(unknown_lints,needless_pass_by_value)]
+fn validate_existing_path_or_stdio(val: String) -> Result<(), String> {
+    if val != "-" && !Path::new(&val).exists() {
+        Err("Path does not exist".to_string())
+    } else {
+        Ok(())
+    }
+}
+
 
 #[allow(unknown_lints,cyclomatic_complexity)]
 pub fn parse() -> Result<(LogLevel, Arguments), ErrorCode> {
@@ -312,7 +321,7 @@ pub fn parse() -> Result<(LogLevel, Arguments), ErrorCode> {
             .arg(Arg::from_usage("--tar 'Read the source data from a tar file'")
                 .conflicts_with_all(&["reference", "exclude", "excludes_from"]))
             .arg(Arg::from_usage("<SRC> 'Source path to backup'")
-                .validator(validate_existing_path))
+                .validator(validate_existing_path_or_stdio))
             .arg(Arg::from_usage("<BACKUP> 'Backup path, [repository]::backup'")
                 .validator(|val| validate_repo_path(val, true, Some(true), Some(false)))))
         .subcommand(SubCommand::with_name("restore").about("Restore a backup or subtree")

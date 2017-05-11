@@ -313,6 +313,10 @@ pub fn run() -> Result<(), ErrorCode> {
                 error!("A backup with that name already exists");
                 return Err(ErrorCode::BackupAlreadyExists)
             }
+            if src_path == "-" && !tar {
+                error!("Reading from stdin requires --tar");
+                return Err(ErrorCode::InvalidArgs)
+            }
             let mut reference_backup = None;
             if !full && !tar {
                 reference_backup = match reference {

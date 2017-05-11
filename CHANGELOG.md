@@ -6,6 +6,7 @@ This project follows [semantic versioning](http://semver.org).
 ### UNRELEASED
 * [modifed] Changed order of arguments in `addkey` to match src-dst scheme
 * [fixed] Fixed `addkey` subcommand
+* [fixed] Fixed reading tar files from stdin
 
 
 ### v0.3.1 (2017-05-09)
