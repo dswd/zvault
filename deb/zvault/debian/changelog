@@ -1,3 +1,13 @@
+zvault (0.3.2) stable; urgency=medium
+
+  * [modified] Changed order of arguments in `addkey` to match src-dst scheme
+  * [modified] Skip root folder on restore
+  * [fixed] Fixed `addkey` subcommand
+  * [fixed] Fixed reading tar files from stdin
+  * [fixed] Fixed exporting files with long names as tar files
+
+ -- Dennis Schwerdel <schwerdel@informatik.uni-kl.de>  Thu, 11 May 2017 10:52:51 +0200
+
 zvault (0.3.1) stable; urgency=medium
 
   * [added] Derive key pairs from passwords

@@ -3,7 +3,7 @@
 This project follows [semantic versioning](http://semver.org).
 
 
-### UNRELEASED
+### v0.3.2 (2017-05-11)
 * [modified] Changed order of arguments in `addkey` to match src-dst scheme
 * [modified] Skip root folder on restore
 * [fixed] Fixed `addkey` subcommand
