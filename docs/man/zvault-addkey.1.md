@@ -3,7 +3,7 @@ zvault-addkey(1) -- Add a key pair to the repository
 
 ## SYNOPSIS
 
-`zvault addkey [OPTIONS] <REPO> [FILE]`
+`zvault addkey [OPTIONS] [FILE] <REPO>`
 
 
 ## DESCRIPTION
@@ -14,7 +14,8 @@ If `FILE` is given, the key pair is read from the file and added to the
 repository.
 
 If `--generate` is set, a new key pair is generated, printed to console and
-added to the repository.
+added to the repository. If `--password` is also set, the key pair will be
+derived from the given password instead of creating a random one.
 
 If `--default` is set, encryption will be enabled (if not already) and the new
 key will be set as default encryption key.
@@ -35,7 +36,8 @@ key will be set as default encryption key.
   * `-p`, `--password <PASSWORD>`:
 
     Derive the key pair from the given password instead of randomly creating it.
-    
+    This setting requires that `--generate` is set too.
+
 
   * `-h`, `--help`:
 

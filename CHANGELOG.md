@@ -3,6 +3,11 @@
 This project follows [semantic versioning](http://semver.org).
 
 
+### UNRELEASED
+* [modifed] Changed order of arguments in `addkey` to match src-dst scheme
+* [fixed] Fixed `addkey` subcommand
+
+
 ### v0.3.1 (2017-05-09)
 * [added] Derive key pairs from passwords
 * [modified] Added root repository to exclude list
