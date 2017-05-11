@@ -145,25 +145,29 @@ impl Repository {
         let mut queue = VecDeque::new();
         queue.push_back((path.as_ref().to_owned(), inode));
         let cache = users::UsersCache::new();
+        let mut is_root = true;
         while let Some((path, mut inode)) = queue.pop_front() {
-            if let Some(name) = backup.user_names.get(&inode.user) {
-                if let Some(user) = cache.get_user_by_name(name) {
-                    inode.user = user.uid();
+            if inode.file_type != FileType::Directory || !is_root {
+                if let Some(name) = backup.user_names.get(&inode.user) {
+                    if let Some(user) = cache.get_user_by_name(name) {
+                        inode.user = user.uid();
+                    }
                 }
-            }
-            if let Some(name) = backup.group_names.get(&inode.group) {
-                if let Some(group) = cache.get_group_by_name(name) {
-                    inode.group = group.gid();
+                if let Some(name) = backup.group_names.get(&inode.group) {
+                    if let Some(group) = cache.get_group_by_name(name) {
+                        inode.group = group.gid();
+                    }
                 }
+                try!(self.save_inode_at(&inode, &path));
             }
-            try!(self.save_inode_at(&inode, &path));
             if inode.file_type == FileType::Directory {
-                let path = path.join(inode.name);
+                let path = if is_root { path.to_path_buf() } else { path.join(inode.name) };
                 for chunks in inode.children.unwrap().values() {
                     let inode = try!(self.get_inode(chunks));
                     queue.push_back((path.clone(), inode));
                 }
             }
+            is_root = false;
         }
         Ok(())
     }

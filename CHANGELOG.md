@@ -4,9 +4,11 @@ This project follows [semantic versioning](http://semver.org).
 
 
 ### UNRELEASED
-* [modifed] Changed order of arguments in `addkey` to match src-dst scheme
+* [modified] Changed order of arguments in `addkey` to match src-dst scheme
+* [modified] Skip root folder on restore
 * [fixed] Fixed `addkey` subcommand
 * [fixed] Fixed reading tar files from stdin
+* [fixed] Fixed exporting files with long names as tar files
 
 
 ### v0.3.1 (2017-05-09)

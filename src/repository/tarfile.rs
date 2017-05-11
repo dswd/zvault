@@ -5,10 +5,14 @@ use std::path::{Path, PathBuf};
 use std::io::{self, Read, Write, Cursor};
 use std::fs::File;
 use std::str;
+use std::os::unix::ffi::OsStrExt;
 
 use chrono::prelude::*;
 
 use tar;
+
+static MAX_NAME_LEN: usize = 99;
+static MAX_LINK_LEN: usize = 99;
 
 
 struct PaxBuilder(Vec<u8>);
@@ -38,6 +42,8 @@ impl PaxBuilder {
 
 trait BuilderExt {
     fn append_pax_extensions(&mut self, headers: &PaxBuilder) -> Result<(), io::Error>;
+    fn append_long_name(&mut self, path: &Path) -> Result<(), io::Error>;
+    fn append_long_link(&mut self, path: &Path) -> Result<(), io::Error>;
 }
 
 impl<T: Write> BuilderExt for tar::Builder<T> {
@@ -47,6 +53,24 @@ impl<T: Write> BuilderExt for tar::Builder<T> {
         header.set_entry_type(tar::EntryType::XHeader);
         header.set_cksum();
         self.append(&header, headers.as_bytes())
+    }
+
+    fn append_long_name(&mut self, path: &Path) -> Result<(), io::Error> {
+        let mut header = tar::Header::new_gnu();
+        let bytes = path.as_os_str().as_bytes();
+        header.set_size(bytes.len() as u64);
+        header.set_entry_type(tar::EntryType::GNULongName);
+        header.set_cksum();
+        self.append(&header, bytes)
+    }
+
+    fn append_long_link(&mut self, path: &Path) -> Result<(), io::Error> {
+        let mut header = tar::Header::new_gnu();
+        let bytes = path.as_os_str().as_bytes();
+        header.set_size(bytes.len() as u64);
+        header.set_entry_type(tar::EntryType::GNULongLink);
+        header.set_cksum();
+        self.append(&header, bytes)
     }
 }
 
@@ -261,46 +285,56 @@ impl Repository {
         Ok(try!(tarfile.append_pax_extensions(&pax)))
     }
 
-    fn export_tarfile_recurse<W: Write>(&mut self, backup: &Backup, path: &Path, inode: Inode, tarfile: &mut tar::Builder<W>) -> Result<(), RepositoryError> {
-        if !inode.xattrs.is_empty() {
-            try!(self.export_xattrs(&inode, tarfile));
-        }
-        let mut header = tar::Header::new_gnu();
-        header.set_size(inode.size);
-        let path = path.join(inode.name);
-        try!(header.set_path(&path));
-        if let Some(target) = inode.symlink_target {
-            try!(header.set_link_name(target));
-        }
-        header.set_mode(inode.mode);
-        header.set_uid(inode.user);
-        if let Some(name) = backup.user_names.get(&inode.user) {
-            header.set_username(name).ok();
-        }
-        header.set_gid(inode.group);
-        if let Some(name) = backup.group_names.get(&inode.group) {
-            header.set_groupname(name).ok();
-        }
-        header.set_mtime(inode.timestamp as u64);
-        header.set_entry_type(match inode.file_type {
-            FileType::File => tar::EntryType::Regular,
-            FileType::Symlink => tar::EntryType::Symlink,
-            FileType::Directory => tar::EntryType::Directory
-        });
-        header.set_cksum();
-        match inode.data {
-            None => try!(tarfile.append(&header, Cursor::new(&[]))),
-            Some(FileData::Inline(data)) => try!(tarfile.append(&header, Cursor::new(data))),
-            Some(FileData::ChunkedDirect(chunks)) => try!(tarfile.append(&header, self.get_reader(chunks))),
-            Some(FileData::ChunkedIndirect(chunks)) => {
-                let chunks = ChunkList::read_from(&try!(self.get_data(&chunks)));
-                try!(tarfile.append(&header, self.get_reader(chunks)))
+    fn export_tarfile_recurse<W: Write>(&mut self, backup: &Backup, path: &Path, inode: Inode, tarfile: &mut tar::Builder<W>, skip_root: bool) -> Result<(), RepositoryError> {
+        let path = if skip_root { path.to_path_buf() } else { path.join(&inode.name) };
+        if inode.file_type != FileType::Directory || !skip_root {
+            if !inode.xattrs.is_empty() {
+                try!(self.export_xattrs(&inode, tarfile));
+            }
+            let mut header = tar::Header::new_gnu();
+            header.set_size(inode.size);
+            if path.as_os_str().as_bytes().len() >= MAX_NAME_LEN {
+                try!(tarfile.append_long_name(&path));
+            } else {
+                try!(header.set_path(&path));
+            }
+            if let Some(target) = inode.symlink_target {
+                if target.len() >= MAX_LINK_LEN {
+                    try!(tarfile.append_long_link(Path::new(&target)));
+                } else {
+                    try!(header.set_link_name(target));
+                }
+            }
+            header.set_mode(inode.mode);
+            header.set_uid(inode.user);
+            if let Some(name) = backup.user_names.get(&inode.user) {
+                header.set_username(name).ok();
+            }
+            header.set_gid(inode.group);
+            if let Some(name) = backup.group_names.get(&inode.group) {
+                header.set_groupname(name).ok();
+            }
+            header.set_mtime(inode.timestamp as u64);
+            header.set_entry_type(match inode.file_type {
+                FileType::File => tar::EntryType::Regular,
+                FileType::Symlink => tar::EntryType::Symlink,
+                FileType::Directory => tar::EntryType::Directory
+            });
+            header.set_cksum();
+            match inode.data {
+                None => try!(tarfile.append(&header, Cursor::new(&[]))),
+                Some(FileData::Inline(data)) => try!(tarfile.append(&header, Cursor::new(data))),
+                Some(FileData::ChunkedDirect(chunks)) => try!(tarfile.append(&header, self.get_reader(chunks))),
+                Some(FileData::ChunkedIndirect(chunks)) => {
+                    let chunks = ChunkList::read_from(&try!(self.get_data(&chunks)));
+                    try!(tarfile.append(&header, self.get_reader(chunks)))
+                }
             }
         }
         if let Some(children) = inode.children {
             for chunks in children.values() {
                 let inode = try!(self.get_inode(chunks));
-                try!(self.export_tarfile_recurse(backup, &path, inode, tarfile));
+                try!(self.export_tarfile_recurse(backup, &path, inode, tarfile, false));
             }
         }
         Ok(())
@@ -310,11 +344,11 @@ impl Repository {
         let tarfile = tarfile.as_ref();
         if tarfile == Path::new("-") {
             let mut tarfile = tar::Builder::new(io::stdout());
-            try!(self.export_tarfile_recurse(backup, Path::new(""), inode, &mut tarfile));
+            try!(self.export_tarfile_recurse(backup, Path::new(""), inode, &mut tarfile, true));
             try!(tarfile.finish());
         } else {
             let mut tarfile = tar::Builder::new(try!(File::create(tarfile)));
-            try!(self.export_tarfile_recurse(backup, Path::new(""), inode, &mut tarfile));
+            try!(self.export_tarfile_recurse(backup, Path::new(""), inode, &mut tarfile, true));
             try!(tarfile.finish());
         }
         Ok(())
