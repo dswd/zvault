@@ -12,7 +12,7 @@ use std::io::{BufReader, BufRead};
 use std::fs::File;
 use std::env;
 use std::str;
-use std::path::Path;
+use std::path::{Path, PathBuf};
 
 use self::args::Arguments;
 
@@ -76,8 +76,8 @@ pub const DEFAULT_COMPRESSION: &'static str = "brotli/3";
 pub const DEFAULT_BUNDLE_SIZE_STR: &'static str = "25";
 pub const DEFAULT_VACUUM_RATIO_STR: &'static str = "0";
 lazy_static! {
-    pub static ref DEFAULT_REPOSITORY: String = {
-        env::home_dir().unwrap().join(".zvault").to_string_lossy().to_string()
+    pub static ref ZVAULT_FOLDER: PathBuf = {
+        env::home_dir().unwrap().join(".zvault")
     };
 }
 
@@ -93,7 +93,7 @@ macro_rules! checked {
     };
 }
 
-fn open_repository(path: &str) -> Result<Repository, ErrorCode> {
+fn open_repository(path: &Path) -> Result<Repository, ErrorCode> {
     Ok(checked!(Repository::open(path), "load repository", ErrorCode::LoadRepository))
 }
 

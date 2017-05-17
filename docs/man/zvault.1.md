@@ -76,8 +76,10 @@ location.
 ### Path syntax
 
 Most subcommands work with a repository that has to be specified as a parameter.
-If this repository is specified as `::`, the default repository in `~/.zvault`
-will be used instead.
+If the given repository path is absolute, this path will be used as is.
+If the given path is relative, the repository will be located in
+`~/.zvault/repos`. If the path is empty (specified as `::`), the default
+repository in `~/.zvault/repos/default` will be used.
 
 Some subcommands need to reference a specific backup in the repository. This is
 done via the syntax `repository::backup_name` where `repository` is the path to

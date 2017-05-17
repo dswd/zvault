@@ -1,13 +1,13 @@
 use ::prelude::*;
 use super::*;
 
-use std::path::Path;
+use std::path::{Path, PathBuf};
 use log::LogLevel;
 use clap::{App, AppSettings, Arg, SubCommand};
 
 pub enum Arguments {
     Init {
-        repo_path: String,
+        repo_path: PathBuf,
         bundle_size: usize,
         chunker: ChunkerType,
         compression: Option<Compression>,
@@ -16,7 +16,7 @@ pub enum Arguments {
         remote_path: String
     },
     Backup {
-        repo_path: String,
+        repo_path: PathBuf,
         backup_name: String,
         src_path: String,
         full: bool,
@@ -28,20 +28,20 @@ pub enum Arguments {
         tar: bool
     },
     Restore {
-        repo_path: String,
+        repo_path: PathBuf,
         backup_name: String,
         inode: Option<String>,
         dst_path: String,
         tar: bool
     },
     Remove {
-        repo_path: String,
+        repo_path: PathBuf,
         backup_name: String,
         inode: Option<String>,
         force: bool
     },
     Prune {
-        repo_path: String,
+        repo_path: PathBuf,
         prefix: String,
         daily: usize,
         weekly: usize,
@@ -50,13 +50,13 @@ pub enum Arguments {
         force: bool
     },
     Vacuum {
-        repo_path: String,
+        repo_path: PathBuf,
         ratio: f32,
         force: bool,
         combine: bool
     },
     Check {
-        repo_path: String,
+        repo_path: PathBuf,
         backup_name: Option<String>,
         inode: Option<String>,
         bundles: bool,
@@ -65,56 +65,56 @@ pub enum Arguments {
         repair: bool
     },
     List {
-        repo_path: String,
+        repo_path: PathBuf,
         backup_name: Option<String>,
         inode: Option<String>
     },
     Info {
-        repo_path: String,
+        repo_path: PathBuf,
         backup_name: Option<String>,
         inode: Option<String>
     },
     Copy {
-        repo_path_src: String,
+        repo_path_src: PathBuf,
         backup_name_src: String,
-        repo_path_dst: String,
+        repo_path_dst: PathBuf,
         backup_name_dst: String,
     },
     Mount {
-        repo_path: String,
+        repo_path: PathBuf,
         backup_name: Option<String>,
         inode: Option<String>,
         mount_point: String
     },
     Versions {
-        repo_path: String,
+        repo_path: PathBuf,
         path: String
     },
     Diff {
-        repo_path_old: String,
+        repo_path_old: PathBuf,
         backup_name_old: String,
         inode_old: Option<String>,
-        repo_path_new: String,
+        repo_path_new: PathBuf,
         backup_name_new: String,
         inode_new: Option<String>
     },
     Analyze {
-        repo_path: String
+        repo_path: PathBuf
     },
     BundleList {
-        repo_path: String
+        repo_path: PathBuf
     },
     BundleInfo {
-        repo_path: String,
+        repo_path: PathBuf,
         bundle_id: BundleId
     },
     Import {
-        repo_path: String,
+        repo_path: PathBuf,
         remote_path: String,
         key_files: Vec<String>
     },
     Config {
-        repo_path: String,
+        repo_path: PathBuf,
         bundle_size: Option<usize>,
         chunker: Option<ChunkerType>,
         compression: Option<Option<Compression>>,
@@ -126,7 +126,7 @@ pub enum Arguments {
         password: Option<String>
     },
     AddKey {
-        repo_path: String,
+        repo_path: PathBuf,
         file: Option<String>,
         password: Option<String>,
         set_default: bool
@@ -142,16 +142,25 @@ pub enum Arguments {
 }
 
 
-fn parse_repo_path(repo_path: &str, existing: bool, backup_restr: Option<bool>, path_restr: Option<bool>) -> Result<(&str, Option<&str>, Option<&str>), String> {
-    let mut parts = repo_path.splitn(3, "::");
-    let mut repo = parts.next().unwrap_or(&DEFAULT_REPOSITORY);
-    if repo.is_empty() {
-        repo = &DEFAULT_REPOSITORY;
+fn convert_repo_path(mut path_str: &str) -> PathBuf {
+    if path_str.is_empty() {
+        path_str = "default";
     }
-    if existing && !Path::new(repo).join("config.yaml").exists() {
+    let path = Path::new(path_str);
+    if path.is_absolute() {
+        path.to_path_buf()
+    } else {
+        ZVAULT_FOLDER.join("repos").join(path)
+    }
+}
+
+fn parse_repo_path(repo_path: &str, existing: bool, backup_restr: Option<bool>, path_restr: Option<bool>) -> Result<(PathBuf, Option<&str>, Option<&str>), String> {
+    let mut parts = repo_path.splitn(3, "::");
+    let repo = convert_repo_path(parts.next().unwrap_or(""));
+    if existing && !repo.join("config.yaml").exists() {
         return Err("The specified repository does not exist".to_string());
     }
-    if !existing && Path::new(repo).exists() {
+    if !existing && repo.exists() {
         return Err("The specified repository already exists".to_string());
     }
     let mut backup = parts.next();
@@ -462,14 +471,14 @@ pub fn parse() -> Result<(LogLevel, Arguments), ErrorCode> {
                 compression: parse_compression(args.value_of("compression").unwrap()).unwrap(),
                 encryption: args.is_present("encrypt"),
                 hash: parse_hash(args.value_of("hash").unwrap()).unwrap(),
-                repo_path: repository.to_string(),
+                repo_path: repository,
                 remote_path: args.value_of("remote").unwrap().to_string()
             }
         },
         ("backup", Some(args)) => {
             let (repository, backup, _inode) = parse_repo_path(args.value_of("BACKUP").unwrap(), true, Some(true), Some(false)).unwrap();
             Arguments::Backup {
-                repo_path: repository.to_string(),
+                repo_path: repository,
                 backup_name: backup.unwrap().to_string(),
                 full: args.is_present("full"),
                 same_device: !args.is_present("cross_device"),
@@ -484,7 +493,7 @@ pub fn parse() -> Result<(LogLevel, Arguments), ErrorCode> {
         ("restore", Some(args)) => {
             let (repository, backup, inode) = parse_repo_path(args.value_of("BACKUP").unwrap(), true, Some(true), None).unwrap();
             Arguments::Restore {
-                repo_path: repository.to_string(),
+                repo_path: repository,
                 backup_name: backup.unwrap().to_string(),
                 inode: inode.map(|v| v.to_string()),
                 dst_path: args.value_of("DST").unwrap().to_string(),
@@ -494,7 +503,7 @@ pub fn parse() -> Result<(LogLevel, Arguments), ErrorCode> {
         ("remove", Some(args)) => {
             let (repository, backup, inode) = parse_repo_path(args.value_of("BACKUP").unwrap(), true, Some(true), None).unwrap();
             Arguments::Remove {
-                repo_path: repository.to_string(),
+                repo_path: repository,
                 backup_name: backup.unwrap().to_string(),
                 inode: inode.map(|v| v.to_string()),
                 force: args.is_present("force")
@@ -503,7 +512,7 @@ pub fn parse() -> Result<(LogLevel, Arguments), ErrorCode> {
         ("prune", Some(args)) => {
             let (repository, _backup, _inode) = parse_repo_path(args.value_of("REPO").unwrap(), true, Some(false), Some(false)).unwrap();
             Arguments::Prune {
-                repo_path: repository.to_string(),
+                repo_path: repository,
                 prefix: args.value_of("prefix").unwrap_or("").to_string(),
                 force: args.is_present("force"),
                 daily: parse_num(args.value_of("daily").unwrap()).unwrap() as usize,
@@ -515,7 +524,7 @@ pub fn parse() -> Result<(LogLevel, Arguments), ErrorCode> {
         ("vacuum", Some(args)) => {
             let (repository, _backup, _inode) = parse_repo_path(args.value_of("REPO").unwrap(), true, Some(false), Some(false)).unwrap();
             Arguments::Vacuum {
-                repo_path: repository.to_string(),
+                repo_path: repository,
                 force: args.is_present("force"),
                 combine: args.is_present("combine"),
                 ratio: parse_num(args.value_of("ratio").unwrap()).unwrap() as f32 / 100.0
@@ -524,7 +533,7 @@ pub fn parse() -> Result<(LogLevel, Arguments), ErrorCode> {
         ("check", Some(args)) => {
             let (repository, backup, inode) = parse_repo_path(args.value_of("PATH").unwrap(), true, None, None).unwrap();
             Arguments::Check {
-                repo_path: repository.to_string(),
+                repo_path: repository,
                 backup_name: backup.map(|v| v.to_string()),
                 inode: inode.map(|v| v.to_string()),
                 bundles: args.is_present("bundles"),
@@ -536,7 +545,7 @@ pub fn parse() -> Result<(LogLevel, Arguments), ErrorCode> {
         ("list", Some(args)) => {
             let (repository, backup, inode) = parse_repo_path(args.value_of("PATH").unwrap(), true, None, None).unwrap();
             Arguments::List {
-                repo_path: repository.to_string(),
+                repo_path: repository,
                 backup_name: backup.map(|v| v.to_string()),
                 inode: inode.map(|v| v.to_string())
             }
@@ -544,20 +553,20 @@ pub fn parse() -> Result<(LogLevel, Arguments), ErrorCode> {
         ("bundlelist", Some(args)) => {
             let (repository, _backup, _inode) = parse_repo_path(args.value_of("REPO").unwrap(), true, Some(false), Some(false)).unwrap();
             Arguments::BundleList {
-                repo_path: repository.to_string(),
+                repo_path: repository,
             }
         },
         ("bundleinfo", Some(args)) => {
             let (repository, _backup, _inode) = parse_repo_path(args.value_of("REPO").unwrap(), true, Some(false), Some(false)).unwrap();
             Arguments::BundleInfo {
-                repo_path: repository.to_string(),
+                repo_path: repository,
                 bundle_id: try!(parse_bundle_id(args.value_of("BUNDLE").unwrap()))
             }
         },
         ("info", Some(args)) => {
             let (repository, backup, inode) = parse_repo_path(args.value_of("PATH").unwrap(), true, None, None).unwrap();
             Arguments::Info {
-                repo_path: repository.to_string(),
+                repo_path: repository,
                 backup_name: backup.map(|v| v.to_string()),
                 inode: inode.map(|v| v.to_string())
             }
@@ -566,16 +575,16 @@ pub fn parse() -> Result<(LogLevel, Arguments), ErrorCode> {
             let (repository_src, backup_src, _inode) = parse_repo_path(args.value_of("SRC").unwrap(), true, Some(true), Some(false)).unwrap();
             let (repository_dst, backup_dst, _inode) = parse_repo_path(args.value_of("DST").unwrap(), true, Some(true), Some(false)).unwrap();
             Arguments::Copy {
-                repo_path_src: repository_src.to_string(),
+                repo_path_src: repository_src,
                 backup_name_src: backup_src.unwrap().to_string(),
-                repo_path_dst: repository_dst.to_string(),
+                repo_path_dst: repository_dst,
                 backup_name_dst: backup_dst.unwrap().to_string(),
             }
         },
         ("mount", Some(args)) => {
             let (repository, backup, inode) = parse_repo_path(args.value_of("PATH").unwrap(), true, None, None).unwrap();
             Arguments::Mount {
-                repo_path: repository.to_string(),
+                repo_path: repository,
                 backup_name: backup.map(|v| v.to_string()),
                 inode: inode.map(|v| v.to_string()),
                 mount_point: args.value_of("MOUNTPOINT").unwrap().to_string()
@@ -584,7 +593,7 @@ pub fn parse() -> Result<(LogLevel, Arguments), ErrorCode> {
         ("versions", Some(args)) => {
             let (repository, _backup, _inode) = parse_repo_path(args.value_of("REPO").unwrap(), true, Some(false), Some(false)).unwrap();
             Arguments::Versions {
-                repo_path: repository.to_string(),
+                repo_path: repository,
                 path: args.value_of("PATH").unwrap().to_string()
             }
         },
@@ -592,10 +601,10 @@ pub fn parse() -> Result<(LogLevel, Arguments), ErrorCode> {
             let (repository_old, backup_old, inode_old) = parse_repo_path(args.value_of("OLD").unwrap(), true, Some(true), None).unwrap();
             let (repository_new, backup_new, inode_new) = parse_repo_path(args.value_of("NEW").unwrap(), true, Some(true), None).unwrap();
             Arguments::Diff {
-                repo_path_old: repository_old.to_string(),
+                repo_path_old: repository_old,
                 backup_name_old: backup_old.unwrap().to_string(),
                 inode_old: inode_old.map(|v| v.to_string()),
-                repo_path_new: repository_new.to_string(),
+                repo_path_new: repository_new,
                 backup_name_new: backup_new.unwrap().to_string(),
                 inode_new: inode_new.map(|v| v.to_string()),
             }
@@ -603,13 +612,13 @@ pub fn parse() -> Result<(LogLevel, Arguments), ErrorCode> {
         ("analyze", Some(args)) => {
             let (repository, _backup, _inode) = parse_repo_path(args.value_of("REPO").unwrap(), true, Some(false), Some(false)).unwrap();
             Arguments::Analyze {
-                repo_path: repository.to_string()
+                repo_path: repository
             }
         },
         ("import", Some(args)) => {
             let (repository, _backup, _inode) = parse_repo_path(args.value_of("REPO").unwrap(), false, Some(false), Some(false)).unwrap();
             Arguments::Import {
-                repo_path: repository.to_string(),
+                repo_path: repository,
                 remote_path: args.value_of("REMOTE").unwrap().to_string(),
                 key_files: args.values_of("key").map(|v| v.map(|k| k.to_string()).collect()).unwrap_or_else(|| vec![])
             }
@@ -622,7 +631,7 @@ pub fn parse() -> Result<(LogLevel, Arguments), ErrorCode> {
                 compression: args.value_of("compression").map(|v| parse_compression(v).unwrap()),
                 encryption: args.value_of("encryption").map(|v| parse_public_key(v).unwrap()),
                 hash: args.value_of("hash").map(|v| parse_hash(v).unwrap()),
-                repo_path: repository.to_string(),
+                repo_path: repository,
             }
         },
         ("genkey", Some(args)) => {
@@ -634,7 +643,7 @@ pub fn parse() -> Result<(LogLevel, Arguments), ErrorCode> {
         ("addkey", Some(args)) => {
             let (repository, _backup, _inode) = parse_repo_path(args.value_of("REPO").unwrap(), true, Some(false), Some(false)).unwrap();
             Arguments::AddKey {
-                repo_path: repository.to_string(),
+                repo_path: repository,
                 set_default: args.is_present("set_default"),
                 password: args.value_of("password").map(|v| v.to_string()),
                 file: args.value_of("FILE").map(|v| v.to_string())
