@@ -62,9 +62,24 @@ The options are exactly the same as for _zvault-init(1)_.
   values.
 
 
+* `-q`, `--quiet`:
+
+  Print less information
+
+
+* `-v`, `--verbose`:
+
+  Print more information
+
+
 * `-h`, `--help`:
 
   Prints help information
+
+
+* `-V`, `--version`:     
+
+  Prints version information
 
 
 ## COPYRIGHT

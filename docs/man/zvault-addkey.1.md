@@ -23,25 +23,41 @@ key will be set as default encryption key.
 
 ## OPTIONS
 
-  * `-g`, `--generate`:
+* `-g`, `--generate`:
 
-    Generate a new key pair
-
-
-  * `-d`, `--default`:
-
-    Set the key pair as default
+  Generate a new key pair
 
 
-  * `-p`, `--password <PASSWORD>`:
+* `-d`, `--default`:
 
-    Derive the key pair from the given password instead of randomly creating it.
-    This setting requires that `--generate` is set too.
+  Set the key pair as default
 
 
-  * `-h`, `--help`:
+* `-p`, `--password <PASSWORD>`:
 
-    Prints help information
+  Derive the key pair from the given password instead of randomly creating it.
+  This setting requires that `--generate` is set too.
+
+
+* `-q`, `--quiet`:
+
+  Print less information
+
+
+* `-v`, `--verbose`:
+
+  Print more information
+
+
+* `-h`, `--help`:
+
+  Prints help information
+
+
+* `-V`, `--version`:     
+
+  Prints version information
+
 
 
 ## COPYRIGHT

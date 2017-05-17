@@ -62,30 +62,45 @@ has become inaccessible.
 
 ## OPTIONS
 
-  * `-b`, `--bundles`:
+* `-b`, `--bundles`:
 
   Check the integrity of the bundles too.
 
 
-  * `--bundle-data`:
+* `--bundle-data`:
 
-    Also check the contents of the bundles by fetching and decompressing them.
-    Note: This flag causes the check to be much slower.
-
-
-  * `-i`, `--index`:
-
-    Also check the integrity of the index and its contents.
+  Also check the contents of the bundles by fetching and decompressing them.
+  Note: This flag causes the check to be much slower.
 
 
-  * `-r`, `--repair`:
+* `-i`, `--index`:
 
-    Try to repair broken bundles, backups and rebuild local data when necessary.
+  Also check the integrity of the index and its contents.
 
 
-  * `-h`, `--help`:
+* `-r`, `--repair`:
 
-    Prints help information
+  Try to repair broken bundles, backups and rebuild local data when necessary.
+
+
+* `-q`, `--quiet`:
+
+  Print less information
+
+
+* `-v`, `--verbose`:
+
+  Print more information
+
+
+* `-h`, `--help`:
+
+  Prints help information
+
+
+* `-V`, `--version`:     
+
+  Prints version information
 
 
 ## COPYRIGHT

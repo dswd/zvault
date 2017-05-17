@@ -20,9 +20,24 @@ earliest backup that version appeared in.
 
 ## OPTIONS
 
-  * `-h`, `--help`:
+* `-q`, `--quiet`:
 
-    Prints help information
+  Print less information
+
+
+* `-v`, `--verbose`:
+
+  Print more information
+
+
+* `-h`, `--help`:
+
+  Prints help information
+
+
+* `-V`, `--version`:     
+
+  Prints version information
 
 
 ## COPYRIGHT

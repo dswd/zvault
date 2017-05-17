@@ -43,25 +43,40 @@ should be avoided when the storage space permits it.
 
 ## OPTIONS
 
-  * `--combine`:
+* `--combine`:
 
-    Also combine small bundles into larger ones.
-
-
-  * `-r`, `--ratio <NUM>`:
-
-    Do not rewrite bundles with more than `NUM`% of used chunks.
-    The ratio must be given in whole percentage, e.g. 50 mean 50%.
+  Also combine small bundles into larger ones.
 
 
-  * `-f`, `--force`:
+* `-r`, `--ratio <NUM>`:
 
-    Actually run the vacuum instead of simulating it.
+  Do not rewrite bundles with more than `NUM`% of used chunks.
+  The ratio must be given in whole percentage, e.g. 50 mean 50%.
 
 
-  * `-h`, `--help`:
+* `-f`, `--force`:
 
-    Prints help information
+  Actually run the vacuum instead of simulating it.
+
+
+* `-q`, `--quiet`:
+
+  Print less information
+
+
+* `-v`, `--verbose`:
+
+  Print more information
+
+
+* `-h`, `--help`:
+
+  Prints help information
+
+
+* `-V`, `--version`:     
+
+  Prints version information
 
 
 ## COPYRIGHT

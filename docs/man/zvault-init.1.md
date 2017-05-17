@@ -25,48 +25,69 @@ configuration can be changed by _zvault-config(1)_ later.
 
 ## OPTIONS
 
-  * `--bundle-size <SIZE>`:
+* `--bundle-size <SIZE>`:
 
-    Set the target bundle size in MiB (default: 25).
-    Please see zvault(1) for more information on *bundle size*.
-
-
-  * `--chunker <CHUNKER>`:
-
-    Set the chunker algorithm and target chunk size (default: fastcdc/16).
-    Please see _zvault(1)_ for more information on *chunkers* and possible
-    values.
+  Set the target bundle size in MiB (default: 25).
+  Please see zvault(1) for more information on *bundle size*.
 
 
-  * `-c`, `--compression <COMPRESSION>`:
+* `--chunker <CHUNKER>`:
 
-    Set the compression method and level (default: brotli/3).
-    Please see _zvault(1)_ for more information on *compression* and possible
-    values.
-
-
-  * `-e`, `--encrypt`:
-
-    Generate a keypair and enable encryption.
-    Please see _zvault(1)_ for more information on *encryption*.
+  Set the chunker algorithm and target chunk size (default: fastcdc/16).
+  Please see _zvault(1)_ for more information on *chunkers* and possible
+  values.
 
 
-  * `--hash <HASH>`:
+* `-c`, `--compression <COMPRESSION>`:
 
-    Set the hash method (default: blake2).
-    Please see _zvault(1)_ for more information on *hash methods* and possible
-    values.
-
-
-  * `-h`, `--help`:
-
-    Prints help information
+  Set the compression method and level (default: brotli/3).
+  Please see _zvault(1)_ for more information on *compression* and possible
+  values.
 
 
-  * `-r`, `--remote <REMOTE>`:
+* `-e`, `--encrypt`:
 
-    Set the path to the mounted remote storage. There should be an empty folder
-    at this location.
+  Generate a keypair and enable encryption.
+  Please see _zvault(1)_ for more information on *encryption*.
+
+
+* `--hash <HASH>`:
+
+  Set the hash method (default: blake2).
+  Please see _zvault(1)_ for more information on *hash methods* and possible
+  values.
+
+
+* `-h`, `--help`:
+
+  Prints help information
+
+
+* `-r`, `--remote <REMOTE>`:
+
+  Set the path to the mounted remote storage. There should be an empty folder
+  at this location.
+
+
+* `-q`, `--quiet`:
+
+  Print less information
+
+
+* `-v`, `--verbose`:
+
+  Print more information
+
+
+* `-h`, `--help`:
+
+  Prints help information
+
+
+* `-V`, `--version`:     
+
+  Prints version information
+
 
 
 ## COPYRIGHT

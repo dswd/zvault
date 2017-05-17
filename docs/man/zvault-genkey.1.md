@@ -14,13 +14,29 @@ writes it to the given file `FILE`.
 
 ## OPTIONS
 
-  * `-p`, `--password <PASSWORD>`:
+* `-p`, `--password <PASSWORD>`:
 
-    Derive the key pair from the given password instead of randomly creating it.
+  Derive the key pair from the given password instead of randomly creating it.
 
-  * `-h`, `--help`:
 
-    Prints help information
+* `-q`, `--quiet`:
+
+  Print less information
+
+
+* `-v`, `--verbose`:
+
+  Print more information
+
+
+* `-h`, `--help`:
+
+  Prints help information
+
+
+* `-V`, `--version`:     
+
+  Prints version information
 
 
 ## COPYRIGHT

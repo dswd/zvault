@@ -25,17 +25,32 @@ imported via _zvault-backup(1)_ also with the `--tar` flag.
 
 ## OPTIONS
 
-  * `-k`, `--key <FILE>...`:
+* `-k`, `--key <FILE>...`:
 
-    Add the key pair in the given file to the repository before importing the
-    remote bundles. This option can be used to add keys that are needed to read
-    the bundles. If multiple keys are needed, this options can be given multiple
-    times.
+  Add the key pair in the given file to the repository before importing the
+  remote bundles. This option can be used to add keys that are needed to read
+  the bundles. If multiple keys are needed, this options can be given multiple
+  times.
 
 
-  * `-h`, `--help`:
+* `-q`, `--quiet`:
 
-    Prints help information
+  Print less information
+
+
+* `-v`, `--verbose`:
+
+  Print more information
+
+
+* `-h`, `--help`:
+
+  Prints help information
+
+
+* `-V`, `--version`:     
+
+  Prints version information
 
 
 ## COPYRIGHT

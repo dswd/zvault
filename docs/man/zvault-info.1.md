@@ -17,9 +17,24 @@ The repository, backup or backup subtree given by `PATH` must be in the format
 
 ## OPTIONS
 
-  * `-h`, `--help`:
+* `-q`, `--quiet`:
 
-    Prints help information
+  Print less information
+
+
+* `-v`, `--verbose`:
+
+  Print more information
+
+
+* `-h`, `--help`:
+
+  Prints help information
+
+
+* `-V`, `--version`:     
+
+  Prints version information
 
 
 ## COPYRIGHT

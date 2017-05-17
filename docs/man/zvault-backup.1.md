@@ -45,77 +45,92 @@ restore and access times change by reading files.
 
 ## OPTIONS
 
-  * `-e`, `--exclude <PATTERN>...`:
+* `-e`, `--exclude <PATTERN>...`:
 
-    Exclude this path or file pattern. This option can be given multiple times.
-    Please see *EXCLUDE PATTERNS* for details on pattern.
+  Exclude this path or file pattern. This option can be given multiple times.
+  Please see *EXCLUDE PATTERNS* for details on pattern.
 
-    This option conflicts with `--tar`.
-
-
-  * `--excludes-from <FILE>`:
-
-    Read the list of excludes from this file.
-    Please see *EXCLUDE PATTERNS* for details on pattern.
-
-    This option conflicts with `--tar`.
+  This option conflicts with `--tar`.
 
 
-  * `--full`:
+* `--excludes-from <FILE>`:
 
-    Create a full backup without using another backup as a reference. This makes
-    sure that all files in the source path (except excluded files) are fully
-    read. The file contents will still be deduplicated by using existing backups
-    but all files are read fully.
+  Read the list of excludes from this file.
+  Please see *EXCLUDE PATTERNS* for details on pattern.
 
-    This option conflicts with `--ref`.
+  This option conflicts with `--tar`.
 
 
-  * `--no-default-excludes`:
+* `--full`:
 
-    Do not load the default `excludes` file from the repository folder.
-    Those excludes are pre-filled with generic pattern to exclude like pseudo
-    filesystems or cache folders.
+  Create a full backup without using another backup as a reference. This makes
+  sure that all files in the source path (except excluded files) are fully
+  read. The file contents will still be deduplicated by using existing backups
+  but all files are read fully.
 
-
-  * `--ref <REF>`:
-
-    Base the new backup on this reference backup instead of automatically
-    selecting a matching one. The backup given as `REF` must be a valid backup
-    name as listed by zvault-list(1).
-
-    This option conflicts with `--full`.
+  This option conflicts with `--ref`.
 
 
-  * `--tar`:
+* `--no-default-excludes`:
 
-    Read the source data from a tar archive instead of the filesystem. When this
-    flag is set, the `SRC` path must specify a valid tar file.
-    The contents of the archive are then read instead of the filesystem. Note
-    that the tar file contents are read as files and directories and not just
-    as a single file (this would happen when `SRC` is a tar file and `--tar` is
-    not set).
-
-    This option can be used to import a backup that has been exported using
-    zvault-restore(1) with the `--tar` flag.
-
-    This flag conflicts with `--exclude` and `--excludes_from`.
+  Do not load the default `excludes` file from the repository folder.
+  Those excludes are pre-filled with generic pattern to exclude like pseudo
+  filesystems or cache folders.
 
 
-  * `-x`, `--xdev`:
+* `--ref <REF>`:
 
-    Allow to cross filesystem boundaries. By default, paths on different
-    filesystems than the start path will be ignored. If this flag is set,
-    the scan will traverse also into mounted filesystems.
-    **Note:** Please use this option with case. Some pseudo filesystems
-    contain arbitrarily deep nested directories that will send zVault into
-    an infinite loop. Also it should be avoided to include the remote storage
-    in the backup.
+  Base the new backup on this reference backup instead of automatically
+  selecting a matching one. The backup given as `REF` must be a valid backup
+  name as listed by zvault-list(1).
+
+  This option conflicts with `--full`.
 
 
-  * `-h`, `--help`:
+* `--tar`:
 
-    Prints help information
+  Read the source data from a tar archive instead of the filesystem. When this
+  flag is set, the `SRC` path must specify a valid tar file.
+  The contents of the archive are then read instead of the filesystem. Note
+  that the tar file contents are read as files and directories and not just
+  as a single file (this would happen when `SRC` is a tar file and `--tar` is
+  not set).
+
+  This option can be used to import a backup that has been exported using
+  zvault-restore(1) with the `--tar` flag.
+
+  This flag conflicts with `--exclude` and `--excludes_from`.
+
+
+* `-x`, `--xdev`:
+
+  Allow to cross filesystem boundaries. By default, paths on different
+  filesystems than the start path will be ignored. If this flag is set,
+  the scan will traverse also into mounted filesystems.
+  **Note:** Please use this option with case. Some pseudo filesystems
+  contain arbitrarily deep nested directories that will send zVault into
+  an infinite loop. Also it should be avoided to include the remote storage
+  in the backup.
+
+
+* `-q`, `--quiet`:
+
+  Print less information
+
+
+* `-v`, `--verbose`:
+
+  Print more information
+
+
+* `-h`, `--help`:
+
+  Prints help information
+
+
+* `-V`, `--version`:     
+
+  Prints version information
 
 
 ## EXCLUDE PATTERNS

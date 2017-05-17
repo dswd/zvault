@@ -23,18 +23,33 @@ If `--tar` is not set, the data will be written into the existing folder `DST`.
 
 ## OPTIONS
 
-  * `--tar`:
+* `--tar`:
 
-    Write the backup to a tar archive named `DST` instead of creating files and
-    folders at this location.
+  Write the backup to a tar archive named `DST` instead of creating files and
+  folders at this location.
 
-    This option can be used to export a backup that can be imported again using
-    zvault-backup(1) with the `--tar` flag.
+  This option can be used to export a backup that can be imported again using
+  zvault-backup(1) with the `--tar` flag.
 
 
-  * `-h`, `--help`:
+* `-q`, `--quiet`:
 
-    Prints help information
+  Print less information
+
+
+* `-v`, `--verbose`:
+
+  Print more information
+
+
+* `-h`, `--help`:
+
+  Prints help information
+
+
+* `-V`, `--version`:     
+
+  Prints version information
 
 
 ## COPYRIGHT

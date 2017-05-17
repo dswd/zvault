@@ -52,39 +52,54 @@ data of the deleted backups becomes inaccessible and can not be restored.**
 
 ## OPTIONS
 
-  * `-p`, `--prefix <PREFIX>`:
+* `-p`, `--prefix <PREFIX>`:
 
-    Only consider backups starting with this prefix.
-
-
-  * `-d`, `--daily <NUM>`:
-
-    Keep the newest backup for each of the last `NUM` days.
+  Only consider backups starting with this prefix.
 
 
-  * `-w`, `--weekly <NUM>`:
+* `-d`, `--daily <NUM>`:
 
-    Keep the newest backup for each of the last `NUM` weeks.
-
-
-  * `-m`, `--monthly <NUM>`:
-
-    Keep the newest backup for each of the last `NUM` months.
+  Keep the newest backup for each of the last `NUM` days.
 
 
-  * `-y`, `--yearly <NUM>`:
+* `-w`, `--weekly <NUM>`:
 
-    Keep the newest backup for each of the last `NUM` years.
-
-
-  * `-f`, `--force`:
-
-    Actually remove backups instead of displaying what would be removed.
+  Keep the newest backup for each of the last `NUM` weeks.
 
 
-  * `-h`, `--help`:
+* `-m`, `--monthly <NUM>`:
 
-    Prints help information
+  Keep the newest backup for each of the last `NUM` months.
+
+
+* `-y`, `--yearly <NUM>`:
+
+  Keep the newest backup for each of the last `NUM` years.
+
+
+* `-f`, `--force`:
+
+  Actually remove backups instead of displaying what would be removed.
+
+
+* `-q`, `--quiet`:
+
+  Print less information
+
+
+* `-v`, `--verbose`:
+
+  Print more information
+
+
+* `-h`, `--help`:
+
+  Prints help information
+
+
+* `-V`, `--version`:     
+
+  Prints version information
 
 
 ## COPYRIGHT

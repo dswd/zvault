@@ -35,14 +35,29 @@ data of the deleted backups becomes inaccessible and can not be restored.**
 
 ## OPTIONS
 
-  * `-f`, `--force`:
+* `-f`, `--force`:
 
-    Remove multiple backups in a backup folder
+  Remove multiple backups in a backup folder
 
 
-  * `-h`, `--help`:
+* `-q`, `--quiet`:
 
-    Prints help information
+  Print less information
+
+
+* `-v`, `--verbose`:
+
+  Print more information
+
+
+* `-h`, `--help`:
+
+  Prints help information
+
+
+* `-V`, `--version`:     
+
+  Prints version information
 
 
 ## COPYRIGHT

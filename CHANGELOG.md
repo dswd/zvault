@@ -5,6 +5,7 @@ This project follows [semantic versioning](http://semver.org).
 
 ### UNRELEASED
 * [added] Added `copy` subcommand
+* [modified] Also documenting common flags in subcommands
 
 
 ### v0.3.2 (2017-05-11)
