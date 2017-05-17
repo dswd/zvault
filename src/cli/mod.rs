@@ -404,6 +404,19 @@ pub fn run() -> Result<(), ErrorCode> {
             }
             info!("Restore finished");
         },
+        Arguments::Copy{repo_path_src, backup_name_src, repo_path_dst, backup_name_dst} => {
+            if repo_path_src != repo_path_dst {
+                error!("Can only run copy on same repository");
+                return Err(ErrorCode::InvalidArgs)
+            }
+            let mut repo = try!(open_repository(&repo_path_src));
+            if repo.has_backup(&backup_name_dst) {
+                error!("A backup with that name already exists");
+                return Err(ErrorCode::BackupAlreadyExists)
+            }
+            let backup = try!(get_backup(&repo, &backup_name_src));
+            checked!(repo.save_backup(&backup, &backup_name_dst), "save backup file", ErrorCode::SaveBackup);
+        },
         Arguments::Remove{repo_path, backup_name, inode, force} => {
             let mut repo = try!(open_repository(&repo_path));
             if let Some(inode) = inode {

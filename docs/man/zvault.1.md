@@ -43,6 +43,7 @@ location.
   * `info`          Display information on a repository, a backup or a subtree, _zvault-info(1)_
   * `mount`         Mount the repository, a backup or a subtree, _zvault-mount(1)_
   * `remove`        Remove a backup or a subtree, _zvault-remove(1)_
+  * `copy`          Create a copy of a backup, _zvault-copy(1)_
   * `prune`         Remove backups based on age, _zvault-prune(1)_
   * `vacuum`        Reclaim space by rewriting bundles, _zvault-vacuum(1)_
 

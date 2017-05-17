@@ -74,6 +74,12 @@ pub enum Arguments {
         backup_name: Option<String>,
         inode: Option<String>
     },
+    Copy {
+        repo_path_src: String,
+        backup_name_src: String,
+        repo_path_dst: String,
+        backup_name_dst: String,
+    },
     Mount {
         repo_path: String,
         backup_name: Option<String>,
@@ -396,6 +402,11 @@ pub fn parse() -> Result<(LogLevel, Arguments), ErrorCode> {
                 .validator(|val| validate_repo_path(val, true, Some(true), None)))
             .arg(Arg::from_usage("<NEW> 'New version, [repository]::backup[::subpath]'")
                 .validator(|val| validate_repo_path(val, true, Some(true), None))))
+        .subcommand(SubCommand::with_name("copy").alias("cp").about("Create a copy of a backup")
+            .arg(Arg::from_usage("<SRC> 'Existing backup, [repository]::backup'")
+                .validator(|val| validate_repo_path(val, true, Some(true), Some(false))))
+            .arg(Arg::from_usage("<DST> 'Destination backup, [repository]::backup'")
+                .validator(|val| validate_repo_path(val, true, Some(true), Some(false)))))
         .subcommand(SubCommand::with_name("config").about("Display or change the configuration")
             .arg(Arg::from_usage("[bundle_size] --bundle-size [SIZE] 'Set the target bundle size in MiB'")
                 .validator(validate_num))
@@ -549,6 +560,16 @@ pub fn parse() -> Result<(LogLevel, Arguments), ErrorCode> {
                 repo_path: repository.to_string(),
                 backup_name: backup.map(|v| v.to_string()),
                 inode: inode.map(|v| v.to_string())
+            }
+        },
+        ("copy", Some(args)) => {
+            let (repository_src, backup_src, _inode) = parse_repo_path(args.value_of("SRC").unwrap(), true, Some(true), Some(false)).unwrap();
+            let (repository_dst, backup_dst, _inode) = parse_repo_path(args.value_of("DST").unwrap(), true, Some(true), Some(false)).unwrap();
+            Arguments::Copy {
+                repo_path_src: repository_src.to_string(),
+                backup_name_src: backup_src.unwrap().to_string(),
+                repo_path_dst: repository_dst.to_string(),
+                backup_name_dst: backup_dst.unwrap().to_string(),
             }
         },
         ("mount", Some(args)) => {
