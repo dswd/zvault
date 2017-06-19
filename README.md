@@ -84,60 +84,80 @@ their contents. Once mounted, graphical programs like file managers can be used
 to work on the backup data and find the needed files.
 
 
-## Example usage
+## Example scenario
 
-As an example, I am going to backup my projects folder. To do that, I am
-initializing an encrypted zVault repository, storing the data on a remote
-filesystem which has been mounted on `/mnt/backup`.
+I am using zVault on several of my computers. Here are some numbers from my
+desktop PC. On this computer I am running daily backups of both the system `/`
+(exclusing some folder like `/home`) with 12.9 GiB and the home folder `/home`
+with 53.6 GiB.
 
-    #$> zvault init :: --encrypt --remote /mnt/backup
-    public: 2bea1d15...
-    secret: 3698a88c...
-
+    $> zvault config ::
     Bundle size: 25.0 MiB
     Chunker: fastcdc/16
     Compression: brotli/3
-    Encryption: 2bea1d15...
+    Encryption: 8678d...
     Hash method: blake2
 
-The repository has been created and zVault has generated as new key pair for me.
-I should now store this key pair in a safe location before I continue.
+The backup repository uses the default configuration with encryption enabled.
+The repository currently contains 12 backup versions of each folder. Both
+folders combined currently contain over 66.5 GiB not counting changed between
+the different versions.
 
-Now I can backup my home directory to the repository.
+    $> zvault info ::
+    Bundles: 1675
+    Total size: 37.9 GiB
+    Uncompressed size: 58.1 GiB
+    Compression ratio: 65.3%
+    Chunk count: 5580237
+    Average chunk size: 10.9 KiB
+    Index: 192.0 MiB, 67% full
 
-    #$> zvault backup /home/dswd/projects ::projects1
-    info: No reference backup found, doing a full scan instead
-    Date: Thu,  6 Apr 2017 20:33:20 +0200
-    Source: dswd-desktop:/home/dswd/projects
-    Duration: 0:00:26.2
-    Entries: 14618 files, 6044 dirs
-    Total backup size: 1.4 GiB
-    Modified data size: 1.4 GiB
-    Deduplicated size: 1.2 GiB, 14.9% saved
-    Compressed size: 0.5 GiB in 23 bundles, 54.7% saved
-    Chunk count: 95151, avg size: 12.8 KiB
+The repository info reveals that the data stored in the repository is only
+58.1 GiB, so 8.4 GiB / 12.5% has been saved by deduplication. Another 20.2 GiB /
+34.7% have been saved by compression. In total, 28.6 out of 66.5 GiB / 43% have
+been saved in total.
 
-The backup run took about 26 seconds and by looking at the data, I see that
-deduplication saved about 15% and compression again saved over 50% so that in
-the end my backup only uses 0.5 GiB out of 1.4 GiB.
+The data is stored in over 5 million chunks of an average size of 10.9 KiB. The
+average chunk is smaller than configured because of files smaller than the chunk
+size. The chunks are stored in an index file which takes up 192 MiB on disk and
+in memory during backup runs. Additionally, 337 MiB of bundle data is stored
+locally to allow fast access to metadata. In total that is less than 1% of the
+original data.
 
-After some work, I create another backup.
+    $> zvault info ::home/2017-06-19
+    Date: Mon, 19 Jun 2017 00:00:48 +0200
+    Source: desktop:/home
+    Duration: 0:01:57.2
+    Entries: 193624 files, 40651 dirs
+    Total backup size: 53.6 GiB
+    Modified data size: 2.4 GiB
+    Deduplicated size: 50.8 MiB, 97.9% saved
+    Compressed size: 8.9 MiB in 2 bundles, 82.4% saved
+    Chunk count: 2443, avg size: 21.3 KiB
 
-    #$> zvault backup /home/dswd/projects ::projects2
-    info: Using backup projects1 as reference
-    Date: Thu,  6 Apr 2017 20:46:19 +0200
-    Source: dswd-desktop:/home/dswd/projects
-    Duration: 0:00:00.7
-    Entries: 14626 files, 6046 dirs
-    Total backup size: 1.4 GiB
-    Modified data size: 27.2 MiB
-    Deduplicated size: 17.2 MiB, 36.9% saved
-    Compressed size: 6.1 MiB in 2 bundles, 64.4% saved
-    Chunk count: 995, avg size: 17.7 KiB
+This is the information on the last backup run for `/home`. The total data in
+that backup is 53.6 GiB of which 2.4 GiB have been detected to have changed by
+comparing file dates to the last backup. Of those changed files, deduplication
+reduced the data to 50.8 MiB and compression reduced this to 8.9 MiB. The whole
+backup run took less than 2 minutes.
 
-This time, the backup run took less than a second as zVault skipped most of
-the folder because it was unchanged. The backup only stored 6.1 MiB of data.
-This shows the true potential of deduplication.
+    $> zvault info ::system/2017-06-19
+    Date: Mon, 19 Jun 2017 00:00:01 +0200
+    Source: desktop:/
+    Duration: 0:00:46.5
+    Entries: 435905 files, 56257 dirs
+    Total backup size: 12.9 GiB
+    Modified data size: 43.1 MiB
+    Deduplicated size: 6.8 MiB, 84.2% saved
+    Compressed size: 1.9 MiB in 2 bundles, 72.3% saved
+    Chunk count: 497, avg size: 14.0 KiB
+
+The information of the last backup run for `/` looks similar. Out of 12.9 GiB,
+deduplication and compression reduced the new data to 1.9 MiB and the backup
+took less than one minute.
+
+This data seems representative as other backup runs and other systems yield
+similar results.
 
 
 ### Semantic Versioning
