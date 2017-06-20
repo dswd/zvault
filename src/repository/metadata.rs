@@ -68,14 +68,16 @@ pub enum FileType {
     Directory,
     Symlink,
     BlockDevice,
-    CharDevice
+    CharDevice,
+    NamedPipe
 }
 serde_impl!(FileType(u8) {
     File => 0,
     Directory => 1,
     Symlink => 2,
     BlockDevice => 3,
-    CharDevice => 4
+    CharDevice => 4,
+    NamedPipe => 5
 });
 impl fmt::Display for FileType {
     fn fmt(&self, format: &mut fmt::Formatter) -> Result<(), fmt::Error> {
@@ -84,7 +86,8 @@ impl fmt::Display for FileType {
             FileType::Directory => write!(format, "directory"),
             FileType::Symlink => write!(format, "symlink"),
             FileType::BlockDevice => write!(format, "block device"),
-            FileType::CharDevice => write!(format, "char device")
+            FileType::CharDevice => write!(format, "char device"),
+            FileType::NamedPipe => write!(format, "named pipe")
         }
     }
 }
@@ -181,6 +184,8 @@ impl Inode {
             FileType::BlockDevice
         } else if meta.file_type().is_char_device() {
             FileType::CharDevice
+        } else if meta.file_type().is_fifo() {
+            FileType::NamedPipe
         } else {
             return Err(InodeError::UnsupportedFiletype(path.to_owned()));
         };
@@ -223,6 +228,13 @@ impl Inode {
                     try!(symlink(src, &full_path).map_err(|e| InodeError::Create(e, full_path.clone())));
                 } else {
                     return Err(InodeError::Integrity("Symlink without target"))
+                }
+            },
+            FileType::NamedPipe => {
+                let name = try!(ffi::CString::new(full_path.as_os_str().as_bytes()).map_err(|_| InodeError::Integrity("Name contains nulls")));
+                let mode = self.mode | libc::S_IFIFO;
+                if unsafe { libc::mkfifo(name.as_ptr(), mode) } != 0 {
+                    return Err(InodeError::Create(io::Error::last_os_error(), full_path.clone()));
                 }
             },
             FileType::BlockDevice | FileType::CharDevice => {

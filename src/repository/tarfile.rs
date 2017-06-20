@@ -87,6 +87,7 @@ fn inode_from_entry<R: Read>(entry: &mut tar::Entry<R>) -> Result<Inode, Reposit
             tar::EntryType::Directory => FileType::Directory,
             tar::EntryType::Block => FileType::BlockDevice,
             tar::EntryType::Char => FileType::CharDevice,
+            tar::EntryType::Fifo => FileType::NamedPipe,
             _ => return Err(InodeError::UnsupportedFiletype(path.to_path_buf()).into())
         };
         Inode {
@@ -330,7 +331,8 @@ impl Repository {
                 FileType::Symlink => tar::EntryType::Symlink,
                 FileType::Directory => tar::EntryType::Directory,
                 FileType::BlockDevice => tar::EntryType::Block,
-                FileType::CharDevice => tar::EntryType::Char
+                FileType::CharDevice => tar::EntryType::Char,
+                FileType::NamedPipe => tar::EntryType::Fifo
             });
             header.set_cksum();
             match inode.data {

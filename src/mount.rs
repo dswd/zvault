@@ -70,7 +70,8 @@ fn convert_file_type(kind: FileType) -> fuse::FileType {
         FileType::File => fuse::FileType::RegularFile,
         FileType::Symlink => fuse::FileType::Symlink,
         FileType::BlockDevice => fuse::FileType::BlockDevice,
-        FileType::CharDevice => fuse::FileType::CharDevice
+        FileType::CharDevice => fuse::FileType::CharDevice,
+        FileType::NamedPipe => fuse::FileType::NamedPipe
     }
 }
 

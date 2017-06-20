@@ -7,6 +7,7 @@ This project follows [semantic versioning](http://semver.org).
 * [added] Added `copy` subcommand
 * [added] Added support for xattrs in fuse mount
 * [added] Added support for block/char devices
+* [added] Added support for fifo files
 * [modified] Also documenting common flags in subcommands
 * [modified] Using repository aliases (**conversion needed**)
 * [modified] Remote path must be absolute

@@ -307,14 +307,16 @@ The `FileType` describes the type of an inode.
   children
 - `Symlink` means a symlink that points to a target
 - `BlockDevice` means a block device
-- `CharDevice` mean a character device
+- `CharDevice` means a character device
+- `NamedPipe` means a named pipe/fifo
 
     FileType {
         File => 0,
         Directory => 1,
         Symlink => 2,
         BlockDevice => 3,
-        CharDevice => 4
+        CharDevice => 4,
+        NamedPipe => 5
     }
 
 

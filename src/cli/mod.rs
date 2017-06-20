@@ -156,7 +156,8 @@ pub fn format_inode_one_line(inode: &Inode) -> String {
         FileType::BlockDevice | FileType::CharDevice => {
             let device = inode.device.unwrap_or((0, 0));
             format!("{:25}\t{:12}\t{}:{}", inode.name, inode.file_type, device.0, device.1)
-        }
+        },
+        FileType::NamedPipe => format!("{:25}\t fifo", inode.name)
     }
 }
 
