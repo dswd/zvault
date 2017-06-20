@@ -251,9 +251,9 @@ impl Repository {
         let mut failed_paths = vec![];
         let tarfile = tarfile.as_ref();
         let (root_inode, chunks) = if tarfile == Path::new("-") {
-            try!(self.import_tarfile_as_inode(&mut backup, try!(File::open(tarfile)), &mut failed_paths))
-        } else {
             try!(self.import_tarfile_as_inode(&mut backup, io::stdin(), &mut failed_paths))
+        } else {
+            try!(self.import_tarfile_as_inode(&mut backup, try!(File::open(tarfile)), &mut failed_paths))
         };
         backup.root = chunks;
         try!(self.flush());

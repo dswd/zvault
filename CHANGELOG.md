@@ -9,6 +9,7 @@ This project follows [semantic versioning](http://semver.org).
 * [modified] Also documenting common flags in subcommands
 * [modified] Using repository aliases (**conversion needed**)
 * [modified] Remote path must be absolute
+* [fixed] Fixed tarfile import
 
 
 ### v0.3.2 (2017-05-11)
