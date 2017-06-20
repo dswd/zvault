@@ -8,6 +8,7 @@ This project follows [semantic versioning](http://semver.org).
 * [added] Added support for xattrs in fuse mount
 * [modified] Also documenting common flags in subcommands
 * [modified] Using repository aliases (**conversion needed**)
+* [modified] Remote path must be absolute
 
 
 ### v0.3.2 (2017-05-11)

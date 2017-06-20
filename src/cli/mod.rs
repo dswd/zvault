@@ -287,6 +287,10 @@ pub fn run() -> Result<(), ErrorCode> {
     }
     match args {
         Arguments::Init{repo_path, bundle_size, chunker, compression, encryption, hash, remote_path} => {
+            if ! Path::new(&remote_path).is_absolute() {
+                error!("The remote path of a repository must be absolute.");
+                return Err(ErrorCode::InvalidArgs)
+            }
             let mut repo = checked!(Repository::create(repo_path, Config {
                 bundle_size: bundle_size,
                 chunker: chunker,
