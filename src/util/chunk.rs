@@ -128,3 +128,102 @@ impl<'a> Deserialize<'a> for ChunkList {
         Ok(ChunkList::read_n_from(data.len()/20, &mut Cursor::new(data)).unwrap())
     }
 }
+
+
+
+mod tests {
+
+    #[allow(unused_imports)]
+    use super::ChunkList;
+
+    #[allow(unused_imports)]
+    use super::super::Hash;
+
+    #[allow(unused_imports)]
+    use super::super::msgpack;
+
+    #[test]
+    fn test_new() {
+        ChunkList::new();
+    }
+
+    #[test]
+    fn test_with_capacity() {
+        ChunkList::with_capacity(0);
+        ChunkList::with_capacity(1024);
+    }
+
+    #[test]
+    fn test_push() {
+        let mut list = ChunkList::new();
+        assert!(list.is_empty());
+        assert_eq!(list.len(), 0);
+        list.push((Hash::default(), 0));
+        assert!(!list.is_empty());
+        assert_eq!(list.len(), 1);
+        list.push((Hash::default(), 1));
+        assert!(!list.is_empty());
+        assert_eq!(list.len(), 2);
+    }
+
+    #[test]
+    fn test_into_inner() {
+        let mut list = ChunkList::new();
+        list.push((Hash::default(), 0));
+        list.push((Hash::default(), 1));
+        assert_eq!(list.into_inner(), vec![(Hash::default(), 0), (Hash::default(), 1)]);
+    }
+
+    #[test]
+    fn test_write_to() {
+        let mut list = ChunkList::new();
+        list.push((Hash::default(), 0));
+        list.push((Hash::default(), 1));
+        let mut buf = Vec::new();
+        assert!(list.write_to(&mut buf).is_ok());
+        assert_eq!(buf.len(), 40);
+        assert_eq!(&buf[16..20], &[0,0,0,0]);
+        assert_eq!(&buf[36..40], &[1,0,0,0]);
+    }
+
+    #[test]
+    fn test_encoded_size() {
+        let mut list = ChunkList::new();
+        list.push((Hash::default(), 0));
+        list.push((Hash::default(), 1));
+        assert_eq!(list.encoded_size(), 40);
+    }
+
+    #[test]
+    fn test_read_from() {
+        let data = vec![0,0,0,0, 0,0,0,0, 0,0,0,0, 0,0,0,0, 0,0,0,0,  0,0,0,0, 0,0,0,0, 0,0,0,0, 0,0,0,0, 1,0,0,0];
+        let list = ChunkList::read_from(&data);
+        assert_eq!(list.len(), 2);
+        assert_eq!(list[0], (Hash::default(), 0));
+        assert_eq!(list[1], (Hash::default(), 1));
+    }
+
+    #[test]
+    fn test_serialize() {
+        let mut list = ChunkList::new();
+        list.push((Hash::default(), 0));
+        list.push((Hash::default(), 1));
+        let mut buf = Vec::new();
+        assert!(list.write_to(&mut buf).is_ok());
+        let encoded = msgpack::encode(&list).unwrap();
+        assert_eq!(buf, &encoded[2..]);
+        assert_eq!(&[196,40], &encoded[..2]);
+    }
+
+    #[test]
+    fn test_deserialize() {
+        let mut list = ChunkList::new();
+        list.push((Hash::default(), 0));
+        list.push((Hash::default(), 1));
+        let mut buf = vec![196,40];
+        assert!(list.write_to(&mut buf).is_ok());
+        assert!(msgpack::decode::<ChunkList>(&buf).is_ok());
+        assert_eq!(msgpack::decode::<ChunkList>(&buf).unwrap(), list);
+    }
+
+}
