@@ -1,4 +1,3 @@
-//mod checksum; not used
 mod compression;
 mod encryption;
 mod hash;
