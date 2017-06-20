@@ -1,6 +1,5 @@
 # Mounted locations and pseudo filesystems
 /cdrom
-/dev
 lost+found
 /mnt
 /sys

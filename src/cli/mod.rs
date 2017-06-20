@@ -153,6 +153,10 @@ pub fn format_inode_one_line(inode: &Inode) -> String {
         FileType::Directory => format!("{:25}\t{} entries", format!("{}/", inode.name), inode.children.as_ref().map(|c| c.len()).unwrap_or(0)),
         FileType::File => format!("{:25}\t{:>10}\t{}", inode.name, to_file_size(inode.size), Local.timestamp(inode.timestamp, 0).to_rfc2822()),
         FileType::Symlink => format!("{:25}\t -> {}", inode.name, inode.symlink_target.as_ref().map(|s| s as &str).unwrap_or("?")),
+        FileType::BlockDevice | FileType::CharDevice => {
+            let device = inode.device.unwrap_or((0, 0));
+            format!("{:25}\t{:12}\t{}:{}", inode.name, inode.file_type, device.0, device.1)
+        }
     }
 }
 

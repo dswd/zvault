@@ -69,6 +69,8 @@ fn convert_file_type(kind: FileType) -> fuse::FileType {
         FileType::Directory => fuse::FileType::Directory,
         FileType::File => fuse::FileType::RegularFile,
         FileType::Symlink => fuse::FileType::Symlink,
+        FileType::BlockDevice => fuse::FileType::BlockDevice,
+        FileType::CharDevice => fuse::FileType::CharDevice
     }
 }
 
@@ -112,7 +114,7 @@ impl FuseInode {
             nlink: 1,
             uid: uid,
             gid: gid,
-            rdev: 0,
+            rdev: self.inode.device.map_or(0, |(major, minor)| (major << 8) + minor),
             flags: 0
         }
     }

@@ -85,6 +85,8 @@ fn inode_from_entry<R: Read>(entry: &mut tar::Entry<R>) -> Result<Inode, Reposit
             tar::EntryType::Regular | tar::EntryType::Link | tar::EntryType::Continuous => FileType::File,
             tar::EntryType::Symlink => FileType::Symlink,
             tar::EntryType::Directory => FileType::Directory,
+            tar::EntryType::Block => FileType::BlockDevice,
+            tar::EntryType::Char => FileType::CharDevice,
             _ => return Err(InodeError::UnsupportedFiletype(path.to_path_buf()).into())
         };
         Inode {
@@ -96,6 +98,10 @@ fn inode_from_entry<R: Read>(entry: &mut tar::Entry<R>) -> Result<Inode, Reposit
             user: try!(header.uid()),
             group: try!(header.gid()),
             timestamp: try!(header.mtime()) as i64,
+            device: match file_type {
+                FileType::BlockDevice | FileType::CharDevice => Some((try!(header.device_major()).unwrap_or(0), try!(header.device_minor()).unwrap_or(0))),
+                _ => None
+            },
             ..Default::default()
         }
     };
@@ -305,6 +311,10 @@ impl Repository {
                     try!(header.set_link_name(target));
                 }
             }
+            if let Some((major, minor)) = inode.device {
+                try!(header.set_device_major(major));
+                try!(header.set_device_minor(minor));
+            }
             header.set_mode(inode.mode);
             header.set_uid(inode.user);
             if let Some(name) = backup.user_names.get(&inode.user) {
@@ -318,7 +328,9 @@ impl Repository {
             header.set_entry_type(match inode.file_type {
                 FileType::File => tar::EntryType::Regular,
                 FileType::Symlink => tar::EntryType::Symlink,
-                FileType::Directory => tar::EntryType::Directory
+                FileType::Directory => tar::EntryType::Directory,
+                FileType::BlockDevice => tar::EntryType::Block,
+                FileType::CharDevice => tar::EntryType::Char
             });
             header.set_cksum();
             match inode.data {

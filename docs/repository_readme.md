@@ -306,11 +306,15 @@ The `FileType` describes the type of an inode.
 - `Directory` means a directory that does not contain data but might have
   children
 - `Symlink` means a symlink that points to a target
+- `BlockDevice` means a block device
+- `CharDevice` mean a character device
 
     FileType {
         File => 0,
         Directory => 1,
-        Symlink => 2
+        Symlink => 2,
+        BlockDevice => 3,
+        CharDevice => 4
     }
 
 
@@ -432,6 +436,9 @@ as well as the whole subtree (including all children recursively). `cum_size` is
 the sum of all inode data sizes plus 1000 bytes for each inode (for encoded
 metadata). `cum_dirs` and `cum_files` is the count of directories and
 non-directories (symlinks and regular files).
+The `xattrs` contains a mapping of all extended attributes of the inode. And
+`device` contains a tuple with the major and minor device id if the inode is a
+block or character device.
 
     Inode {
         name: string => 0,
@@ -447,6 +454,8 @@ non-directories (symlinks and regular files).
         cum_size: int => 12,
         cum_dirs: int => 13,
         cum_files: int => 14
+        xattrs: {string => bytes}? => 15,
+        device: (int, int)? => 16
     }
 
 This structure is encoded with the following field default values:

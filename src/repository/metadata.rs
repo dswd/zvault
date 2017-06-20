@@ -2,14 +2,17 @@ use ::prelude::*;
 
 use filetime::{self, FileTime};
 use xattr;
+use libc;
 
 use std::collections::BTreeMap;
 use std::path::{Path, PathBuf};
 use std::fs::{self, File, Permissions};
 use std::os::linux::fs::MetadataExt;
-use std::os::unix::fs::{PermissionsExt, symlink};
+use std::os::unix::fs::{FileTypeExt, PermissionsExt, MetadataExt as UnixMetadataExt, symlink};
 use std::io::{self, Read, Write};
+use std::os::unix::ffi::OsStrExt;
 use std::fmt;
+use std::ffi;
 
 
 quick_error!{
@@ -63,19 +66,25 @@ quick_error!{
 pub enum FileType {
     File,
     Directory,
-    Symlink
+    Symlink,
+    BlockDevice,
+    CharDevice
 }
 serde_impl!(FileType(u8) {
     File => 0,
     Directory => 1,
-    Symlink => 2
+    Symlink => 2,
+    BlockDevice => 3,
+    CharDevice => 4
 });
 impl fmt::Display for FileType {
     fn fmt(&self, format: &mut fmt::Formatter) -> Result<(), fmt::Error> {
         match *self {
             FileType::File => write!(format, "file"),
             FileType::Directory => write!(format, "directory"),
-            FileType::Symlink => write!(format, "symlink")
+            FileType::Symlink => write!(format, "symlink"),
+            FileType::BlockDevice => write!(format, "block device"),
+            FileType::CharDevice => write!(format, "char device")
         }
     }
 }
@@ -109,7 +118,8 @@ pub struct Inode {
     pub cum_size: u64,
     pub cum_dirs: usize,
     pub cum_files: usize,
-    pub xattrs: BTreeMap<String, msgpack::Bytes>
+    pub xattrs: BTreeMap<String, msgpack::Bytes>,
+    pub device: Option<(u32, u32)>
 }
 impl Default for Inode {
     fn default() -> Self {
@@ -127,7 +137,8 @@ impl Default for Inode {
             cum_size: 0,
             cum_dirs: 0,
             cum_files: 0,
-            xattrs: BTreeMap::new()
+            xattrs: BTreeMap::new(),
+            device: None
         }
     }
 }
@@ -145,7 +156,8 @@ serde_impl!(Inode(u8?) {
     cum_size: u64 => 12,
     cum_dirs: usize => 13,
     cum_files: usize => 14,
-    xattrs: BTreeMap<String, msgpack::Bytes> => 15
+    xattrs: BTreeMap<String, msgpack::Bytes> => 15,
+    device: Option<(u32, u32)> => 16
 });
 
 
@@ -165,11 +177,21 @@ impl Inode {
             FileType::Directory
         } else if meta.file_type().is_symlink() {
             FileType::Symlink
+        } else if meta.file_type().is_block_device() {
+            FileType::BlockDevice
+        } else if meta.file_type().is_char_device() {
+            FileType::CharDevice
         } else {
             return Err(InodeError::UnsupportedFiletype(path.to_owned()));
         };
         if meta.file_type().is_symlink() {
             inode.symlink_target = Some(try!(fs::read_link(path).map_err(|e| InodeError::ReadLinkTarget(e, path.to_owned()))).to_string_lossy().to_string());
+        }
+        if meta.file_type().is_block_device() || meta.file_type().is_char_device() {
+            let rdev = meta.rdev();
+            let major = (rdev >> 8) as u32;
+            let minor = (rdev & 0xff) as u32;
+            inode.device = Some((major, minor));
         }
         inode.mode = meta.permissions().mode();
         inode.user = meta.st_uid();
@@ -201,6 +223,22 @@ impl Inode {
                     try!(symlink(src, &full_path).map_err(|e| InodeError::Create(e, full_path.clone())));
                 } else {
                     return Err(InodeError::Integrity("Symlink without target"))
+                }
+            },
+            FileType::BlockDevice | FileType::CharDevice => {
+                let name = try!(ffi::CString::new(full_path.as_os_str().as_bytes()).map_err(|_| InodeError::Integrity("Name contains nulls")));
+                let mode = self.mode | match self.file_type {
+                    FileType::BlockDevice => libc::S_IFBLK,
+                    FileType::CharDevice => libc::S_IFCHR,
+                    _ => unreachable!()
+                };
+                let device = if let Some((major, minor)) = self.device {
+                    unsafe { libc::makedev(major, minor) }
+                } else {
+                    return Err(InodeError::Integrity("Device without id"))
+                };
+                if unsafe { libc::mknod(name.as_ptr(), mode, device) } != 0 {
+                    return Err(InodeError::Create(io::Error::last_os_error(), full_path.clone()));
                 }
             }
         }
