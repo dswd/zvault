@@ -5,6 +5,7 @@ This project follows [semantic versioning](http://semver.org).
 
 ### UNRELEASED
 * [added] Added `copy` subcommand
+* [added] Added support for xattrs in fuse mount
 * [modified] Also documenting common flags in subcommands
 * [modified] Using repository aliases (**conversion needed**)
 

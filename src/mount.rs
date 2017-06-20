@@ -558,10 +558,21 @@ impl<'a> fuse::Filesystem for FuseFilesystem<'a> {
     }
 
     /// List extended attribute names
-    fn listxattr (&mut self, _req: &fuse::Request, _ino: u64, _size: u32, reply: fuse::ReplyXattr) {
-        // #FIXME:20 If arg.size is zero, the size of the attribute list should be sent with fuse_getxattr_out
-        // #FIXME:10 If arg.size is non-zero, send the attribute list if it fits, or ERANGE otherwise
-        reply.error(libc::ENOSYS);
+    fn listxattr (&mut self, _req: &fuse::Request, ino: u64, size: u32, reply: fuse::ReplyXattr) {
+        let inode = inode!(self, ino, reply);
+        let inode = inode.borrow();
+        let mut names_str = String::new();
+        for name in inode.inode.xattrs.keys() {
+            names_str.push_str(name);
+            names_str.push('\0');
+        }
+        if size == 0 {
+            return reply.size(names_str.len() as u32);
+        }
+        if size < names_str.len() as u32 {
+            return reply.error(libc::ERANGE);
+        }
+        reply.data(names_str.as_bytes());
     }
 
     /// Remove an extended attribute
