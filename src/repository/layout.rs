@@ -86,14 +86,17 @@ impl RepositoryLayout {
     }
 
     fn bundle_path(&self, bundle: &BundleId, mut folder: PathBuf, mut count: usize) -> (PathBuf, PathBuf) {
-        let mut file = bundle.to_string().to_owned() + ".bundle";
-        while count >= 100 {
-            if file.len() < 10 {
-                break
+        let file = bundle.to_string().to_owned() + ".bundle";
+        {
+            let mut rest = &file as &str;
+            while count >= 100 {
+                if rest.len() < 10 {
+                    break
+                }
+                folder = folder.join(&rest[0..2]);
+                rest = &rest[2..];
+                count /= 250;
             }
-            folder = folder.join(&file[0..2]);
-            file = file[2..].to_string();
-            count /= 250;
         }
         (folder, file.into())
     }

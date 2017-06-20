@@ -11,6 +11,7 @@ This project follows [semantic versioning](http://semver.org).
 * [modified] Also documenting common flags in subcommands
 * [modified] Using repository aliases (**conversion needed**)
 * [modified] Remote path must be absolute
+* [modified] Not removing prefixes from bundle names anymore
 * [fixed] Fixed tarfile import
 
 
