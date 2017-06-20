@@ -2,6 +2,7 @@
 /cdrom
 lost+found
 /mnt
+/dev
 /sys
 /proc
 /run
