@@ -274,3 +274,122 @@ impl Drop for CompressionStream {
         unsafe { squash_object_unref(self.stream as *mut libc::c_void); }
     }
 }
+
+
+mod tests {
+
+    #[allow(unused_imports)]
+    use super::*;
+
+    #[test]
+    fn test_parse() {
+        let method = Compression::from_string("deflate/1").unwrap();
+        assert_eq!(("deflate", 1), (method.name(), method.level()));
+        let method = Compression::from_string("zlib/2").unwrap();
+        assert_eq!(("deflate", 2), (method.name(), method.level()));
+        let method = Compression::from_string("gzip/3").unwrap();
+        assert_eq!(("deflate", 3), (method.name(), method.level()));
+        let method = Compression::from_string("brotli/1").unwrap();
+        assert_eq!(("brotli", 1), (method.name(), method.level()));
+        let method = Compression::from_string("lzma/1").unwrap();
+        assert_eq!(("lzma", 1), (method.name(), method.level()));
+        let method = Compression::from_string("lzma2/2").unwrap();
+        assert_eq!(("lzma", 2), (method.name(), method.level()));
+        let method = Compression::from_string("xz/3").unwrap();
+        assert_eq!(("lzma", 3), (method.name(), method.level()));
+        let method = Compression::from_string("lz4/1").unwrap();
+        assert_eq!(("lz4", 1), (method.name(), method.level()));
+    }
+
+    #[test]
+    fn test_to_string() {
+        assert_eq!("brotli/1", Compression::from_string("brotli/1").unwrap().to_string());
+        assert_eq!("deflate/1", Compression::from_string("gzip/1").unwrap().to_string());
+    }
+
+    #[allow(dead_code, needless_range_loop)]
+    fn test_data(n: usize) -> Vec<u8> {
+        let mut input = vec![0; n];
+        for i in 0..input.len() {
+            input[i] = (i * i * i) as u8;
+        }
+        input
+    }
+
+    #[allow(dead_code)]
+    fn test_compression(method: &str, min_lvl: u8, max_lvl: u8) {
+        let input = test_data(16*1024);
+        for i in min_lvl..max_lvl+1 {
+            let method = Compression::from_string(&format!("{}/{}", method, i)).unwrap();
+            println!("{}", method.to_string());
+            let compressed = method.compress(&input).unwrap();
+            let decompressed = method.decompress(&compressed).unwrap();
+            assert_eq!(input.len(), decompressed.len());
+            for i in 0..input.len() {
+                assert_eq!(input[i], decompressed[i]);
+            }
+        }
+    }
+
+    #[test]
+    fn test_compression_deflate() {
+        test_compression("deflate", 1, 9)
+    }
+
+    #[test]
+    fn test_compression_brotli() {
+        test_compression("brotli", 1, 11)
+    }
+
+    #[test]
+    fn test_compression_lzma() {
+        test_compression("lzma", 1, 9)
+    }
+
+    #[test]
+    fn test_compression_lz4() {
+        test_compression("lz4", 1, 11)
+    }
+
+    #[allow(dead_code)]
+    fn test_stream_compression(method: &str, min_lvl: u8, max_lvl: u8) {
+        let input = test_data(512*1024);
+        for i in min_lvl..max_lvl+1 {
+            let method = Compression::from_string(&format!("{}/{}", method, i)).unwrap();
+            println!("{}", method.to_string());
+            let mut compressor = method.compress_stream().unwrap();
+            let mut compressed = Vec::with_capacity(input.len());
+            compressor.process(&input, &mut compressed).unwrap();
+            compressor.finish(&mut compressed).unwrap();
+            let mut decompressor = method.decompress_stream().unwrap();
+            let mut decompressed = Vec::with_capacity(input.len());
+            decompressor.process(&compressed, &mut decompressed).unwrap();
+            decompressor.finish(&mut decompressed).unwrap();
+            assert_eq!(input.len(), decompressed.len());
+            for i in 0..input.len() {
+                assert_eq!(input[i], decompressed[i]);
+            }
+        }
+    }
+
+    #[test]
+    fn test_stream_compression_deflate() {
+        test_stream_compression("deflate", 1, 9)
+    }
+
+    #[test]
+    fn test_stream_compression_brotli() {
+        test_stream_compression("brotli", 1, 11)
+    }
+
+    #[test]
+    fn test_stream_compression_lzma() {
+        test_stream_compression("lzma", 1, 9)
+    }
+
+    #[test]
+    fn test_stream_compression_lz4() {
+        test_stream_compression("lz4", 1, 11)
+    }
+
+}

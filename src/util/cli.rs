@@ -7,7 +7,7 @@ pub fn to_file_size(size: u64) -> String {
     if size >= 512.0 {
         size /= 1024.0;
     } else {
-        return format!("{:.0} Bytes", size);
+        return format!("{:.0} Byte", size);
     }
     if size >= 512.0 {
         size /= 1024.0;
@@ -79,4 +79,53 @@ impl<T: Iterator> Iterator for ProgressIter<T> {
             }
         }
     }
+}
+
+
+mod tests {
+
+    #[allow(unused_imports)]
+    use super::*;
+
+    #[test]
+    fn test_to_file_size() {
+        assert_eq!("0 Byte", to_file_size(0));
+        assert_eq!("1 Byte", to_file_size(1));
+        assert_eq!("15 Byte", to_file_size(15));
+        assert_eq!("456 Byte", to_file_size(456));
+        assert_eq!("0.7 KiB", to_file_size(670));
+        assert_eq!("237.0 KiB", to_file_size(242670));
+        assert_eq!("442.5 KiB", to_file_size(453170));
+        assert_eq!("0.7 MiB", to_file_size(753170));
+        assert_eq!("12.2 MiB", to_file_size(12753170));
+        assert_eq!("222.0 MiB", to_file_size(232753170));
+        assert_eq!("5.1 GiB", to_file_size(5435353170));
+        assert_eq!("291.1 GiB", to_file_size(312534553170));
+        assert_eq!("3.9 TiB", to_file_size(4312534553170));
+    }
+
+    #[test]
+    fn test_to_speed() {
+        assert_eq!("0 Byte/s", to_speed(0, 1.0));
+        assert_eq!("100 Byte/s", to_speed(100, 1.0));
+        assert_eq!("1.0 KiB/s", to_speed(100, 0.1));
+        assert_eq!("10 Byte/s", to_speed(100, 10.0));
+        assert_eq!("237.0 KiB/s", to_speed(242670, 1.0));
+        assert_eq!("0.7 MiB/s", to_speed(753170, 1.0));
+        assert_eq!("222.0 MiB/s", to_speed(232753170, 1.0));
+        assert_eq!("291.1 GiB/s", to_speed(312534553170, 1.0));
+        assert_eq!("3.9 TiB/s", to_speed(4312534553170, 1.0));
+    }
+
+    #[test]
+    fn test_to_duration() {
+        assert_eq!("0:00:00.0", to_duration(0.0));
+        assert_eq!("0:00:00.1", to_duration(0.1));
+        assert_eq!("0:00:01.0", to_duration(1.0));
+        assert_eq!("0:01:00.0", to_duration(60.0));
+        assert_eq!("1:00:00.0", to_duration(3600.0));
+        assert_eq!("2:02:02.2", to_duration(7322.2));
+    }
+
+
 }
