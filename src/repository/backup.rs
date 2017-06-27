@@ -119,7 +119,10 @@ impl Repository {
             mark_needed(&backups, &mut keep, monthly, |d| (d.year(), d.month()));
         }
         if weekly > 0 {
-            mark_needed(&backups, &mut keep, weekly, |d| (d.isoweekdate().0, d.isoweekdate().1));
+            mark_needed(&backups, &mut keep, weekly, |d| {
+                let week = d.iso_week();
+                (week.year(), week.week())
+            });
         }
         if daily > 0 {
             mark_needed(&backups, &mut keep, daily, |d| (d.year(), d.month(), d.day()));

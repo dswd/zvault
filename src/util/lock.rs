@@ -85,7 +85,7 @@ impl LockHandle {
 
     pub fn refresh(&self) -> Result<(), LockError> {
         let mut file = try!(LockFile::load(&self.path));
-        file.date = UTC::now().timestamp();
+        file.date = Utc::now().timestamp();
         file.save(&self.path)
     }
 }
@@ -142,7 +142,7 @@ impl LockFolder {
         let lockfile = LockFile {
             hostname: get_hostname().unwrap(),
             processid: unsafe { libc::getpid() } as usize,
-            date: UTC::now().timestamp(),
+            date: Utc::now().timestamp(),
             exclusive: exclusive
         };
         let path = self.path.join(format!("{}-{}.lock", &lockfile.hostname, lockfile.processid));
