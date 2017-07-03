@@ -393,3 +393,455 @@ mod tests {
     }
 
 }
+
+
+#[cfg(feature = "bench")]
+mod benches {
+
+    #[allow(unused_imports)]
+    use super::*;
+
+    use test::Bencher;
+
+
+    #[allow(dead_code, needless_range_loop)]
+    fn test_data(n: usize) -> Vec<u8> {
+        let mut input = vec![0; n];
+        for i in 0..input.len() {
+            input[i] = (i * i * i) as u8;
+        }
+        input
+    }
+
+    #[allow(dead_code)]
+    fn bench_stream_compression(b: &mut Bencher, method: Compression) {
+        let input = test_data(512*1024);
+        b.iter(|| {
+            let mut compressor = method.compress_stream().unwrap();
+            let mut compressed = Vec::with_capacity(input.len());
+            compressor.process(&input, &mut compressed).unwrap();
+            compressor.finish(&mut compressed).unwrap();
+        });
+        b.bytes = input.len() as u64;
+    }
+
+    #[allow(dead_code)]
+    fn bench_stream_decompression(b: &mut Bencher, method: Compression) {
+        let input = test_data(512*1024);
+        let mut compressor = method.compress_stream().unwrap();
+        let mut compressed = Vec::with_capacity(input.len());
+        compressor.process(&input, &mut compressed).unwrap();
+        compressor.finish(&mut compressed).unwrap();
+        b.iter(|| {
+            let mut decompressor = method.decompress_stream().unwrap();
+            let mut decompressed = Vec::with_capacity(compressed.len());
+            decompressor.process(&compressed, &mut decompressed).unwrap();
+            decompressor.finish(&mut decompressed).unwrap();
+        });
+        b.bytes = input.len() as u64;
+    }
+
+    #[bench]
+    fn bench_deflate_1_compress(b: &mut Bencher) {
+        bench_stream_compression(b, Compression::from_string("deflate/1").unwrap())
+    }
+
+    #[bench]
+    fn bench_deflate_2_compress(b: &mut Bencher) {
+        bench_stream_compression(b, Compression::from_string("deflate/2").unwrap())
+    }
+
+    #[bench]
+    fn bench_deflate_3_compress(b: &mut Bencher) {
+        bench_stream_compression(b, Compression::from_string("deflate/3").unwrap())
+    }
+
+    #[bench]
+    fn bench_deflate_4_compress(b: &mut Bencher) {
+        bench_stream_compression(b, Compression::from_string("deflate/4").unwrap())
+    }
+
+    #[bench]
+    fn bench_deflate_5_compress(b: &mut Bencher) {
+        bench_stream_compression(b, Compression::from_string("deflate/5").unwrap())
+    }
+
+    #[bench]
+    fn bench_deflate_6_compress(b: &mut Bencher) {
+        bench_stream_compression(b, Compression::from_string("deflate/6").unwrap())
+    }
+
+    #[bench]
+    fn bench_deflate_7_compress(b: &mut Bencher) {
+        bench_stream_compression(b, Compression::from_string("deflate/7").unwrap())
+    }
+
+    #[bench]
+    fn bench_deflate_8_compress(b: &mut Bencher) {
+        bench_stream_compression(b, Compression::from_string("deflate/8").unwrap())
+    }
+
+    #[bench]
+    fn bench_deflate_9_compress(b: &mut Bencher) {
+        bench_stream_compression(b, Compression::from_string("deflate/9").unwrap())
+    }
+
+    #[bench]
+    fn bench_deflate_1_decompress(b: &mut Bencher) {
+        bench_stream_decompression(b, Compression::from_string("deflate/1").unwrap())
+    }
+
+    #[bench]
+    fn bench_deflate_2_decompress(b: &mut Bencher) {
+        bench_stream_decompression(b, Compression::from_string("deflate/2").unwrap())
+    }
+
+    #[bench]
+    fn bench_deflate_3_decompress(b: &mut Bencher) {
+        bench_stream_decompression(b, Compression::from_string("deflate/3").unwrap())
+    }
+
+    #[bench]
+    fn bench_deflate_4_decompress(b: &mut Bencher) {
+        bench_stream_decompression(b, Compression::from_string("deflate/4").unwrap())
+    }
+
+    #[bench]
+    fn bench_deflate_5_decompress(b: &mut Bencher) {
+        bench_stream_decompression(b, Compression::from_string("deflate/5").unwrap())
+    }
+
+    #[bench]
+    fn bench_deflate_6_decompress(b: &mut Bencher) {
+        bench_stream_decompression(b, Compression::from_string("deflate/6").unwrap())
+    }
+
+    #[bench]
+    fn bench_deflate_7_decompress(b: &mut Bencher) {
+        bench_stream_decompression(b, Compression::from_string("deflate/7").unwrap())
+    }
+
+    #[bench]
+    fn bench_deflate_8_decompress(b: &mut Bencher) {
+        bench_stream_decompression(b, Compression::from_string("deflate/8").unwrap())
+    }
+
+    #[bench]
+    fn bench_deflate_9_decompress(b: &mut Bencher) {
+        bench_stream_decompression(b, Compression::from_string("deflate/9").unwrap())
+    }
+
+
+    #[bench]
+    fn bench_brotli_1_compress(b: &mut Bencher) {
+        bench_stream_compression(b, Compression::from_string("brotli/1").unwrap())
+    }
+
+    #[bench]
+    fn bench_brotli_2_compress(b: &mut Bencher) {
+        bench_stream_compression(b, Compression::from_string("brotli/2").unwrap())
+    }
+
+    #[bench]
+    fn bench_brotli_3_compress(b: &mut Bencher) {
+        bench_stream_compression(b, Compression::from_string("brotli/3").unwrap())
+    }
+
+    #[bench]
+    fn bench_brotli_4_compress(b: &mut Bencher) {
+        bench_stream_compression(b, Compression::from_string("brotli/4").unwrap())
+    }
+
+    #[bench]
+    fn bench_brotli_5_compress(b: &mut Bencher) {
+        bench_stream_compression(b, Compression::from_string("brotli/5").unwrap())
+    }
+
+    #[bench]
+    fn bench_brotli_6_compress(b: &mut Bencher) {
+        bench_stream_compression(b, Compression::from_string("brotli/6").unwrap())
+    }
+
+    #[bench]
+    fn bench_brotli_7_compress(b: &mut Bencher) {
+        bench_stream_compression(b, Compression::from_string("brotli/7").unwrap())
+    }
+
+    #[bench]
+    fn bench_brotli_8_compress(b: &mut Bencher) {
+        bench_stream_compression(b, Compression::from_string("brotli/8").unwrap())
+    }
+
+    #[bench]
+    fn bench_brotli_9_compress(b: &mut Bencher) {
+        bench_stream_compression(b, Compression::from_string("brotli/9").unwrap())
+    }
+
+    #[bench]
+    fn bench_brotli_10_compress(b: &mut Bencher) {
+        bench_stream_compression(b, Compression::from_string("brotli/10").unwrap())
+    }
+
+    #[bench]
+    fn bench_brotli_11_compress(b: &mut Bencher) {
+        bench_stream_compression(b, Compression::from_string("brotli/11").unwrap())
+    }
+
+    #[bench]
+    fn bench_brotli_1_decompress(b: &mut Bencher) {
+        bench_stream_decompression(b, Compression::from_string("brotli/1").unwrap())
+    }
+
+    #[bench]
+    fn bench_brotli_2_decompress(b: &mut Bencher) {
+        bench_stream_decompression(b, Compression::from_string("brotli/2").unwrap())
+    }
+
+    #[bench]
+    fn bench_brotli_3_decompress(b: &mut Bencher) {
+        bench_stream_decompression(b, Compression::from_string("brotli/3").unwrap())
+    }
+
+    #[bench]
+    fn bench_brotli_4_decompress(b: &mut Bencher) {
+        bench_stream_decompression(b, Compression::from_string("brotli/4").unwrap())
+    }
+
+    #[bench]
+    fn bench_brotli_5_decompress(b: &mut Bencher) {
+        bench_stream_decompression(b, Compression::from_string("brotli/5").unwrap())
+    }
+
+    #[bench]
+    fn bench_brotli_6_decompress(b: &mut Bencher) {
+        bench_stream_decompression(b, Compression::from_string("brotli/6").unwrap())
+    }
+
+    #[bench]
+    fn bench_brotli_7_decompress(b: &mut Bencher) {
+        bench_stream_decompression(b, Compression::from_string("brotli/7").unwrap())
+    }
+
+    #[bench]
+    fn bench_brotli_8_decompress(b: &mut Bencher) {
+        bench_stream_decompression(b, Compression::from_string("brotli/8").unwrap())
+    }
+
+    #[bench]
+    fn bench_brotli_9_decompress(b: &mut Bencher) {
+        bench_stream_decompression(b, Compression::from_string("brotli/9").unwrap())
+    }
+
+    #[bench]
+    fn bench_brotli_10_decompress(b: &mut Bencher) {
+        bench_stream_decompression(b, Compression::from_string("brotli/10").unwrap())
+    }
+
+    #[bench]
+    fn bench_brotli_11_decompress(b: &mut Bencher) {
+        bench_stream_decompression(b, Compression::from_string("brotli/11").unwrap())
+    }
+
+
+    #[bench]
+    fn bench_lzma_1_compress(b: &mut Bencher) {
+        bench_stream_compression(b, Compression::from_string("lzma/1").unwrap())
+    }
+
+    #[bench]
+    fn bench_lzma_2_compress(b: &mut Bencher) {
+        bench_stream_compression(b, Compression::from_string("lzma/2").unwrap())
+    }
+
+    #[bench]
+    fn bench_lzma_3_compress(b: &mut Bencher) {
+        bench_stream_compression(b, Compression::from_string("lzma/3").unwrap())
+    }
+
+    #[bench]
+    fn bench_lzma_4_compress(b: &mut Bencher) {
+        bench_stream_compression(b, Compression::from_string("lzma/4").unwrap())
+    }
+
+    #[bench]
+    fn bench_lzma_5_compress(b: &mut Bencher) {
+        bench_stream_compression(b, Compression::from_string("lzma/5").unwrap())
+    }
+
+    #[bench]
+    fn bench_lzma_6_compress(b: &mut Bencher) {
+        bench_stream_compression(b, Compression::from_string("lzma/6").unwrap())
+    }
+
+    #[bench]
+    fn bench_lzma_7_compress(b: &mut Bencher) {
+        bench_stream_compression(b, Compression::from_string("lzma/7").unwrap())
+    }
+
+    #[bench]
+    fn bench_lzma_8_compress(b: &mut Bencher) {
+        bench_stream_compression(b, Compression::from_string("lzma/8").unwrap())
+    }
+
+    #[bench]
+    fn bench_lzma_9_compress(b: &mut Bencher) {
+        bench_stream_compression(b, Compression::from_string("lzma/9").unwrap())
+    }
+
+    #[bench]
+    fn bench_lzma_1_decompress(b: &mut Bencher) {
+        bench_stream_decompression(b, Compression::from_string("lzma/1").unwrap())
+    }
+
+    #[bench]
+    fn bench_lzma_2_decompress(b: &mut Bencher) {
+        bench_stream_decompression(b, Compression::from_string("lzma/2").unwrap())
+    }
+
+    #[bench]
+    fn bench_lzma_3_decompress(b: &mut Bencher) {
+        bench_stream_decompression(b, Compression::from_string("lzma/3").unwrap())
+    }
+
+    #[bench]
+    fn bench_lzma_4_decompress(b: &mut Bencher) {
+        bench_stream_decompression(b, Compression::from_string("lzma/4").unwrap())
+    }
+
+    #[bench]
+    fn bench_lzma_5_decompress(b: &mut Bencher) {
+        bench_stream_decompression(b, Compression::from_string("lzma/5").unwrap())
+    }
+
+    #[bench]
+    fn bench_lzma_6_decompress(b: &mut Bencher) {
+        bench_stream_decompression(b, Compression::from_string("lzma/6").unwrap())
+    }
+
+    #[bench]
+    fn bench_lzma_7_decompress(b: &mut Bencher) {
+        bench_stream_decompression(b, Compression::from_string("lzma/7").unwrap())
+    }
+
+    #[bench]
+    fn bench_lzma_8_decompress(b: &mut Bencher) {
+        bench_stream_decompression(b, Compression::from_string("lzma/8").unwrap())
+    }
+
+    #[bench]
+    fn bench_lzma_9_decompress(b: &mut Bencher) {
+        bench_stream_decompression(b, Compression::from_string("lzma/9").unwrap())
+    }
+
+
+    #[bench]
+    fn bench_lz4_1_compress(b: &mut Bencher) {
+        bench_stream_compression(b, Compression::from_string("lz4/1").unwrap())
+    }
+
+    #[bench]
+    fn bench_lz4_2_compress(b: &mut Bencher) {
+        bench_stream_compression(b, Compression::from_string("lz4/2").unwrap())
+    }
+
+    #[bench]
+    fn bench_lz4_3_compress(b: &mut Bencher) {
+        bench_stream_compression(b, Compression::from_string("lz4/3").unwrap())
+    }
+
+    #[bench]
+    fn bench_lz4_4_compress(b: &mut Bencher) {
+        bench_stream_compression(b, Compression::from_string("lz4/4").unwrap())
+    }
+
+    #[bench]
+    fn bench_lz4_5_compress(b: &mut Bencher) {
+        bench_stream_compression(b, Compression::from_string("lz4/5").unwrap())
+    }
+
+    #[bench]
+    fn bench_lz4_6_compress(b: &mut Bencher) {
+        bench_stream_compression(b, Compression::from_string("lz4/6").unwrap())
+    }
+
+    #[bench]
+    fn bench_lz4_7_compress(b: &mut Bencher) {
+        bench_stream_compression(b, Compression::from_string("lz4/7").unwrap())
+    }
+
+    #[bench]
+    fn bench_lz4_8_compress(b: &mut Bencher) {
+        bench_stream_compression(b, Compression::from_string("lz4/8").unwrap())
+    }
+
+    #[bench]
+    fn bench_lz4_9_compress(b: &mut Bencher) {
+        bench_stream_compression(b, Compression::from_string("lz4/9").unwrap())
+    }
+
+    #[bench]
+    fn bench_lz4_10_compress(b: &mut Bencher) {
+        bench_stream_compression(b, Compression::from_string("lz4/10").unwrap())
+    }
+
+    #[bench]
+    fn bench_lz4_11_compress(b: &mut Bencher) {
+        bench_stream_compression(b, Compression::from_string("lz4/11").unwrap())
+    }
+
+    #[bench]
+    fn bench_lz4_1_decompress(b: &mut Bencher) {
+        bench_stream_decompression(b, Compression::from_string("lz4/1").unwrap())
+    }
+
+    #[bench]
+    fn bench_lz4_2_decompress(b: &mut Bencher) {
+        bench_stream_decompression(b, Compression::from_string("lz4/2").unwrap())
+    }
+
+    #[bench]
+    fn bench_lz4_3_decompress(b: &mut Bencher) {
+        bench_stream_decompression(b, Compression::from_string("lz4/3").unwrap())
+    }
+
+    #[bench]
+    fn bench_lz4_4_decompress(b: &mut Bencher) {
+        bench_stream_decompression(b, Compression::from_string("lz4/4").unwrap())
+    }
+
+    #[bench]
+    fn bench_lz4_5_decompress(b: &mut Bencher) {
+        bench_stream_decompression(b, Compression::from_string("lz4/5").unwrap())
+    }
+
+    #[bench]
+    fn bench_lz4_6_decompress(b: &mut Bencher) {
+        bench_stream_decompression(b, Compression::from_string("lz4/6").unwrap())
+    }
+
+    #[bench]
+    fn bench_lz4_7_decompress(b: &mut Bencher) {
+        bench_stream_decompression(b, Compression::from_string("lz4/7").unwrap())
+    }
+
+    #[bench]
+    fn bench_lz4_8_decompress(b: &mut Bencher) {
+        bench_stream_decompression(b, Compression::from_string("lz4/8").unwrap())
+    }
+
+    #[bench]
+    fn bench_lz4_9_decompress(b: &mut Bencher) {
+        bench_stream_decompression(b, Compression::from_string("lz4/9").unwrap())
+    }
+
+    #[bench]
+    fn bench_lz4_10_decompress(b: &mut Bencher) {
+        bench_stream_decompression(b, Compression::from_string("lz4/10").unwrap())
+    }
+
+    #[bench]
+    fn bench_lz4_11_decompress(b: &mut Bencher) {
+        bench_stream_decompression(b, Compression::from_string("lz4/11").unwrap())
+    }
+
+}

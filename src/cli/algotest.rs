@@ -184,7 +184,7 @@ pub fn run(path: &str, bundle_size: usize, chunker: ChunkerType, compression: Op
                 c.finish(&mut dummy).unwrap();
             }
         }).num_milliseconds() as f32 / 1_000.0;
-        println!("- {}, {}", to_duration(decompress_time), to_speed(size, decompress_time));
+        println!("- {}, {}", to_duration(decompress_time), to_speed(total_size - dup_size as u64, decompress_time));
         total_read_time += decompress_time;
     }
 

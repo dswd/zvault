@@ -1,5 +1,7 @@
 #![recursion_limit="128"]
 #![allow(unknown_lints, float_cmp)]
+#![cfg_attr(feature = "bench", feature(test))]
+#[cfg(feature = "bench")] extern crate test;
 extern crate serde;
 extern crate serde_bytes;
 extern crate rmp_serde;

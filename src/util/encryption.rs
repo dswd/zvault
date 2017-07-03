@@ -85,7 +85,7 @@ impl EncryptionMethod {
 pub type Encryption = (EncryptionMethod, ByteBuf);
 
 
-struct KeyfileYaml {
+pub struct KeyfileYaml {
     public: String,
     secret: String
 }
@@ -116,7 +116,7 @@ impl KeyfileYaml {
 
 
 pub struct Crypto {
-    path: PathBuf,
+    path: Option<PathBuf>,
     keys: HashMap<PublicKey, SecretKey>
 }
 
@@ -124,7 +124,7 @@ impl Crypto {
     #[inline]
     pub fn dummy() -> Self {
         sodium_init();
-        Crypto { path: PathBuf::new(), keys: HashMap::new() }
+        Crypto { path: None, keys: HashMap::new() }
     }
 
     pub fn open<P: AsRef<Path>>(path: P) -> Result<Self, EncryptionError> {
@@ -140,7 +140,7 @@ impl Crypto {
             let secret = try!(SecretKey::from_slice(&secret).ok_or(EncryptionError::InvalidKey));
             keys.insert(public, secret);
         }
-        Ok(Crypto { path: path, keys: keys })
+        Ok(Crypto { path: Some(path), keys: keys })
     }
 
     #[inline]
@@ -154,8 +154,12 @@ impl Crypto {
         self.register_secret_key(public, secret)
     }
 
+    #[inline]
     pub fn load_keypair_from_file<P: AsRef<Path>>(path: P) -> Result<(PublicKey, SecretKey), EncryptionError> {
-        let keyfile = try!(KeyfileYaml::load(path));
+        Self::load_keypair_from_file_data(&try!(KeyfileYaml::load(path)))
+    }
+
+    pub fn load_keypair_from_file_data(keyfile: &KeyfileYaml) -> Result<(PublicKey, SecretKey), EncryptionError> {
         let public = try!(parse_hex(&keyfile.public).map_err(|_| EncryptionError::InvalidKey));
         let public = try!(PublicKey::from_slice(&public).ok_or(EncryptionError::InvalidKey));
         let secret = try!(parse_hex(&keyfile.secret).map_err(|_| EncryptionError::InvalidKey));
@@ -164,14 +168,21 @@ impl Crypto {
     }
 
     #[inline]
+    pub fn save_keypair_to_file_data(public: &PublicKey, secret: &SecretKey) -> KeyfileYaml {
+        KeyfileYaml { public: to_hex(&public[..]), secret: to_hex(&secret[..]) }
+    }
+
+    #[inline]
     pub fn save_keypair_to_file<P: AsRef<Path>>(public: &PublicKey, secret: &SecretKey, path: P) -> Result<(), EncryptionError> {
-        KeyfileYaml { public: to_hex(&public[..]), secret: to_hex(&secret[..]) }.save(path)
+        Self::save_keypair_to_file_data(public, secret).save(path)
     }
 
     #[inline]
     pub fn register_secret_key(&mut self, public: PublicKey, secret: SecretKey) -> Result<(), EncryptionError> {
-        let path = self.path.join(to_hex(&public[..]) + ".yaml");
-        try!(Self::save_keypair_to_file(&public, &secret, path));
+        if let Some(ref path) = self.path {
+            let path = path.join(to_hex(&public[..]) + ".yaml");
+            try!(Self::save_keypair_to_file(&public, &secret, path));
+        }
         self.keys.insert(public, secret);
         Ok(())
     }
@@ -230,4 +241,154 @@ impl Crypto {
         }
         (PublicKey::from_slice(&pk).unwrap(), SecretKey::from_slice(&sk).unwrap())
     }
+}
+
+
+
+mod tests {
+
+    #[allow(unused_imports)]
+    use super::*;
+
+
+    #[test]
+    fn test_gen_keypair() {
+        let key1 = Crypto::gen_keypair();
+        let key2 = Crypto::gen_keypair();
+        assert!(key1.0 != key2.0);
+    }
+
+    #[test]
+    fn test_keypair_from_password() {
+        let key1 = Crypto::keypair_from_password("foo");
+        let key2 = Crypto::keypair_from_password("foo");
+        assert_eq!(key1.0, key2.0);
+        let key3 = Crypto::keypair_from_password("bar");
+        assert!(key1.0 != key3.0);
+    }
+
+    #[test]
+    fn test_add_keypair() {
+        let mut crypto = Crypto::dummy();
+        let (pk, sk) = Crypto::gen_keypair();
+        assert!(!crypto.contains_secret_key(&pk));
+        crypto.add_secret_key(pk, sk);
+        assert!(crypto.contains_secret_key(&pk));
+    }
+
+    #[test]
+    fn test_save_load_keyfile() {
+        let (pk, sk) = Crypto::gen_keypair();
+        let data = Crypto::save_keypair_to_file_data(&pk, &sk);
+        let res = Crypto::load_keypair_from_file_data(&data);
+        assert!(res.is_ok());
+        let (pk2, sk2) = res.unwrap();
+        assert_eq!(pk, pk2);
+        assert_eq!(sk, sk2);
+    }
+
+    #[test]
+    fn test_encrypt_decrpyt() {
+        let mut crypto = Crypto::dummy();
+        let (pk, sk) = Crypto::gen_keypair();
+        crypto.add_secret_key(pk, sk);
+        let encryption = (EncryptionMethod::Sodium, ByteBuf::from(&pk[..]));
+        let cleartext = b"test123";
+        let result = crypto.encrypt(&encryption, cleartext);
+        assert!(result.is_ok());
+        let ciphertext = result.unwrap();
+        assert!(&ciphertext != cleartext);
+        let result = crypto.decrypt(&encryption, &ciphertext);
+        assert!(result.is_ok());
+        let unciphered = result.unwrap();
+        assert_eq!(&cleartext[..] as &[u8], &unciphered as &[u8]);
+    }
+
+    #[test]
+    fn test_wrong_key() {
+        let mut crypto = Crypto::dummy();
+        let (pk, sk) = Crypto::gen_keypair();
+        crypto.add_secret_key(pk, sk.clone());
+        let encryption = (EncryptionMethod::Sodium, ByteBuf::from(&pk[..]));
+        let cleartext = b"test123";
+        let result = crypto.encrypt(&encryption, cleartext);
+        assert!(result.is_ok());
+        let ciphertext = result.unwrap();
+        assert!(&ciphertext != cleartext);
+        let mut crypto2 = Crypto::dummy();
+        let mut sk2 = sk[..].to_vec();
+        sk2[4] ^= 53;
+        assert!(&sk[..] as &[u8] != &sk2[..] as &[u8]);
+        crypto2.add_secret_key(pk, SecretKey::from_slice(&sk2).unwrap());
+        let result = crypto2.decrypt(&encryption, &ciphertext);
+        assert!(result.is_err());
+    }
+
+    #[test]
+    fn test_modified_ciphertext() {
+        let mut crypto = Crypto::dummy();
+        let (pk, sk) = Crypto::gen_keypair();
+        crypto.add_secret_key(pk, sk.clone());
+        let encryption = (EncryptionMethod::Sodium, ByteBuf::from(&pk[..]));
+        let cleartext = b"test123";
+        let result = crypto.encrypt(&encryption, cleartext);
+        assert!(result.is_ok());
+        let mut ciphertext = result.unwrap();
+        assert!(&ciphertext != cleartext);
+        ciphertext[4] ^= 53;
+        let result = crypto.decrypt(&encryption, &ciphertext);
+        assert!(result.is_err());
+
+    }
+
+}
+
+
+
+#[cfg(feature = "bench")]
+mod benches {
+
+    #[allow(unused_imports)]
+    use super::*;
+
+    use test::Bencher;
+
+
+    #[allow(dead_code, needless_range_loop)]
+    fn test_data(n: usize) -> Vec<u8> {
+        let mut input = vec![0; n];
+        for i in 0..input.len() {
+            input[i] = (i * i * i) as u8;
+        }
+        input
+    }
+
+    #[bench]
+    fn bench_key_generate(b: &mut Bencher) {
+        b.iter(|| Crypto::gen_keypair());
+    }
+
+    #[bench]
+    fn bench_encrypt(b: &mut Bencher) {
+        let mut crypto = Crypto::dummy();
+        let (pk, sk) = Crypto::gen_keypair();
+        crypto.add_secret_key(pk, sk.clone());
+        let encryption = (EncryptionMethod::Sodium, ByteBuf::from(&pk[..]));
+        let input = test_data(512*1024);
+        b.iter(|| crypto.encrypt(&encryption, &input));
+        b.bytes = input.len() as u64;
+    }
+
+    #[bench]
+    fn bench_decrypt(b: &mut Bencher) {
+        let mut crypto = Crypto::dummy();
+        let (pk, sk) = Crypto::gen_keypair();
+        crypto.add_secret_key(pk, sk.clone());
+        let encryption = (EncryptionMethod::Sodium, ByteBuf::from(&pk[..]));
+        let input = test_data(512*1024);
+        let output = crypto.encrypt(&encryption, &input).unwrap();
+        b.iter(|| crypto.decrypt(&encryption, &output));
+        b.bytes = input.len() as u64;
+    }
+
 }
