@@ -12,7 +12,7 @@ and leave most chunks unchanged. Multiple backups of the same data set will only
 take up the space of one copy.
 
 The deduplication in zVault is able to reuse existing data no matter whether a
-file is modified, stored again under a different name, renamed or moved to
+file is modified, stored again under a different name, renamed or moved to a
 different folder.
 
 That makes it possible to store daily backups without much overhead as backups
@@ -88,7 +88,7 @@ to work on the backup data and find the needed files.
 
 I am using zVault on several of my computers. Here are some numbers from my
 desktop PC. On this computer I am running daily backups of both the system `/`
-(exclusing some folder like `/home`) with 12.9 GiB and the home folder `/home`
+(excluding some folders like `/home`) with 12.9 GiB and the home folder `/home`
 with 53.6 GiB.
 
     $> zvault config ::
@@ -100,7 +100,7 @@ with 53.6 GiB.
 
 The backup repository uses the default configuration with encryption enabled.
 The repository currently contains 12 backup versions of each folder. Both
-folders combined currently contain over 66.5 GiB not counting changed between
+folders combined currently contain over 66.5 GiB not counting changes between
 the different versions.
 
     $> zvault info ::
@@ -115,7 +115,7 @@ the different versions.
 The repository info reveals that the data stored in the repository is only
 58.1 GiB, so 8.4 GiB / 12.5% has been saved by deduplication. Another 20.2 GiB /
 34.7% have been saved by compression. In total, 28.6 out of 66.5 GiB / 43% have
-been saved in total.
+been saved.
 
 The data is stored in over 5 million chunks of an average size of 10.9 KiB. The
 average chunk is smaller than configured because of files smaller than the chunk
@@ -137,9 +137,9 @@ original data.
 
 This is the information on the last backup run for `/home`. The total data in
 that backup is 53.6 GiB of which 2.4 GiB have been detected to have changed by
-comparing file dates to the last backup. Of those changed files, deduplication
-reduced the data to 50.8 MiB and compression reduced this to 8.9 MiB. The whole
-backup run took less than 2 minutes.
+comparing file dates and sizes to the last backup. Of those changed files,
+deduplication reduced the data to 50.8 MiB and compression reduced this to
+8.9 MiB. The whole backup run took less than 2 minutes.
 
     $> zvault info ::system/2017-06-19
     Date: Mon, 19 Jun 2017 00:00:01 +0200

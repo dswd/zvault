@@ -16,3 +16,21 @@ pub fn get_hostname() -> Result<String, ()> {
         Err(())
     }
 }
+
+
+
+mod tests {
+
+    #[allow(unused_imports)]
+    use super::*;
+
+
+    #[test]
+    fn test_gethostname() {
+        let res = get_hostname();
+        assert!(res.is_ok());
+        let name = res.unwrap();
+        assert!(name.len() >= 1);
+    }
+
+}

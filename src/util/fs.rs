@@ -19,3 +19,5 @@ mod linux {
 }
 
 pub use self::linux::*;
+
+// Not testing since this requires root
