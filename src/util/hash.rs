@@ -111,7 +111,7 @@ impl HashMethod {
         match *self {
             HashMethod::Blake2 => {
                 let hash = blake2b(16, &[], data);
-                let hash = unsafe { &*mem::transmute::<_, *mut (u64, u64)>(hash.as_bytes().as_ptr()) };
+                let hash = unsafe { &*mem::transmute::<_, *const (u64, u64)>(hash.as_bytes().as_ptr()) };
                 Hash { high: u64::from_be(hash.0), low: u64::from_be(hash.1) }
             },
             HashMethod::Murmur3 => {
@@ -136,6 +136,75 @@ impl HashMethod {
             HashMethod::Blake2 => "blake2",
             HashMethod::Murmur3 => "murmur3"
         }
+    }
+
+}
+
+
+
+mod tests {
+
+    #[allow(unused_imports)]
+    use super::*;
+
+
+    #[test]
+    fn test_parse() {
+        assert_eq!(HashMethod::from("blake2"), Ok(HashMethod::Blake2));
+        assert_eq!(HashMethod::from("murmur3"), Ok(HashMethod::Murmur3));
+        assert!(HashMethod::from("foo").is_err());
+    }
+
+    #[test]
+    fn test_to_str() {
+        assert_eq!(HashMethod::Blake2.name(), "blake2");
+        assert_eq!(HashMethod::Murmur3.name(), "murmur3");
+    }
+
+    #[test]
+    fn test_blake2() {
+        assert_eq!(HashMethod::Blake2.hash(b"abc"), Hash{high: 0xcf4ab791c62b8d2b, low: 0x2109c90275287816});
+    }
+
+    #[test]
+    fn test_murmur3() {
+        assert_eq!(HashMethod::Murmur3.hash(b"123"), Hash{high: 10978418110857903978, low: 4791445053355511657});
+    }
+
+}
+
+
+
+#[cfg(feature = "bench")]
+mod benches {
+
+    #[allow(unused_imports)]
+    use super::*;
+
+    use test::Bencher;
+
+
+    #[allow(dead_code, needless_range_loop)]
+    fn test_data(n: usize) -> Vec<u8> {
+        let mut input = vec![0; n];
+        for i in 0..input.len() {
+            input[i] = (i * i * i) as u8;
+        }
+        input
+    }
+
+    #[bench]
+    fn bench_blake2(b: &mut Bencher) {
+        let data = test_data(16*1024);
+        b.bytes = data.len() as u64;
+        b.iter(|| HashMethod::Blake2.hash(&data));
+    }
+
+    #[bench]
+    fn bench_murmur3(b: &mut Bencher) {
+        let data = test_data(16*1024);
+        b.bytes = data.len() as u64;
+        b.iter(|| HashMethod::Murmur3.hash(&data));
     }
 
 }
