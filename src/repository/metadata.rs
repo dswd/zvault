@@ -205,8 +205,9 @@ impl Inode {
         if xattr::SUPPORTED_PLATFORM {
             if let Ok(attrs) = xattr::list(path) {
                 for name in attrs {
-                    let data = try!(xattr::get(path, &name).map_err(|e| InodeError::ReadXattr(e, path.to_owned())));
-                    inode.xattrs.insert(name.to_string_lossy().to_string(), data.into());
+                    if let Some(data) = try!(xattr::get(path, &name).map_err(|e| InodeError::ReadXattr(e, path.to_owned()))) {
+                        inode.xattrs.insert(name.to_string_lossy().to_string(), data.into());
+                    }
                 }
             }
         }
