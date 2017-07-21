@@ -14,16 +14,14 @@ use sodiumoxide::crypto::box_;
 use sodiumoxide::crypto::pwhash;
 pub use sodiumoxide::crypto::box_::{SecretKey, PublicKey};
 
-use ::util::*;
+use util::*;
 
 
 static INIT: Once = ONCE_INIT;
 
 fn sodium_init() {
-    INIT.call_once(|| {
-        if !sodiumoxide::init() {
-            panic!("Failed to initialize sodiumoxide");
-        }
+    INIT.call_once(|| if !sodiumoxide::init() {
+        panic!("Failed to initialize sodiumoxide");
     });
 }
 
@@ -58,9 +56,9 @@ quick_error!{
 
 
 #[derive(Clone, Debug, Eq, PartialEq, Hash)]
-#[allow(unknown_lints,non_camel_case_types)]
+#[allow(unknown_lints, non_camel_case_types)]
 pub enum EncryptionMethod {
-    Sodium,
+    Sodium
 }
 serde_impl!(EncryptionMethod(u64) {
     Sodium => 0
@@ -70,13 +68,13 @@ impl EncryptionMethod {
     pub fn from_string(val: &str) -> Result<Self, &'static str> {
         match val {
             "sodium" => Ok(EncryptionMethod::Sodium),
-            _ => Err("Unsupported encryption method")
+            _ => Err("Unsupported encryption method"),
         }
     }
 
     pub fn to_string(&self) -> String {
         match *self {
-            EncryptionMethod::Sodium => "sodium".to_string()
+            EncryptionMethod::Sodium => "sodium".to_string(),
         }
     }
 }
@@ -124,7 +122,10 @@ impl Crypto {
     #[inline]
     pub fn dummy() -> Self {
         sodium_init();
-        Crypto { path: None, keys: HashMap::new() }
+        Crypto {
+            path: None,
+            keys: HashMap::new()
+        }
     }
 
     pub fn open<P: AsRef<Path>>(path: P) -> Result<Self, EncryptionError> {
@@ -134,13 +135,24 @@ impl Crypto {
         for entry in try!(fs::read_dir(&path)) {
             let entry = try!(entry);
             let keyfile = try!(KeyfileYaml::load(entry.path()));
-            let public = try!(parse_hex(&keyfile.public).map_err(|_| EncryptionError::InvalidKey));
-            let public = try!(PublicKey::from_slice(&public).ok_or(EncryptionError::InvalidKey));
-            let secret = try!(parse_hex(&keyfile.secret).map_err(|_| EncryptionError::InvalidKey));
-            let secret = try!(SecretKey::from_slice(&secret).ok_or(EncryptionError::InvalidKey));
+            let public = try!(parse_hex(&keyfile.public).map_err(
+                |_| EncryptionError::InvalidKey
+            ));
+            let public = try!(PublicKey::from_slice(&public).ok_or(
+                EncryptionError::InvalidKey
+            ));
+            let secret = try!(parse_hex(&keyfile.secret).map_err(
+                |_| EncryptionError::InvalidKey
+            ));
+            let secret = try!(SecretKey::from_slice(&secret).ok_or(
+                EncryptionError::InvalidKey
+            ));
             keys.insert(public, secret);
         }
-        Ok(Crypto { path: Some(path), keys: keys })
+        Ok(Crypto {
+            path: Some(path),
+            keys: keys
+        })
     }
 
     #[inline]
@@ -155,30 +167,53 @@ impl Crypto {
     }
 
     #[inline]
-    pub fn load_keypair_from_file<P: AsRef<Path>>(path: P) -> Result<(PublicKey, SecretKey), EncryptionError> {
+    pub fn load_keypair_from_file<P: AsRef<Path>>(
+        path: P,
+    ) -> Result<(PublicKey, SecretKey), EncryptionError> {
         Self::load_keypair_from_file_data(&try!(KeyfileYaml::load(path)))
     }
 
-    pub fn load_keypair_from_file_data(keyfile: &KeyfileYaml) -> Result<(PublicKey, SecretKey), EncryptionError> {
-        let public = try!(parse_hex(&keyfile.public).map_err(|_| EncryptionError::InvalidKey));
-        let public = try!(PublicKey::from_slice(&public).ok_or(EncryptionError::InvalidKey));
-        let secret = try!(parse_hex(&keyfile.secret).map_err(|_| EncryptionError::InvalidKey));
-        let secret = try!(SecretKey::from_slice(&secret).ok_or(EncryptionError::InvalidKey));
+    pub fn load_keypair_from_file_data(
+        keyfile: &KeyfileYaml,
+    ) -> Result<(PublicKey, SecretKey), EncryptionError> {
+        let public = try!(parse_hex(&keyfile.public).map_err(
+            |_| EncryptionError::InvalidKey
+        ));
+        let public = try!(PublicKey::from_slice(&public).ok_or(
+            EncryptionError::InvalidKey
+        ));
+        let secret = try!(parse_hex(&keyfile.secret).map_err(
+            |_| EncryptionError::InvalidKey
+        ));
+        let secret = try!(SecretKey::from_slice(&secret).ok_or(
+            EncryptionError::InvalidKey
+        ));
         Ok((public, secret))
     }
 
     #[inline]
     pub fn save_keypair_to_file_data(public: &PublicKey, secret: &SecretKey) -> KeyfileYaml {
-        KeyfileYaml { public: to_hex(&public[..]), secret: to_hex(&secret[..]) }
+        KeyfileYaml {
+            public: to_hex(&public[..]),
+            secret: to_hex(&secret[..])
+        }
     }
 
     #[inline]
-    pub fn save_keypair_to_file<P: AsRef<Path>>(public: &PublicKey, secret: &SecretKey, path: P) -> Result<(), EncryptionError> {
+    pub fn save_keypair_to_file<P: AsRef<Path>>(
+        public: &PublicKey,
+        secret: &SecretKey,
+        path: P,
+    ) -> Result<(), EncryptionError> {
         Self::save_keypair_to_file_data(public, secret).save(path)
     }
 
     #[inline]
-    pub fn register_secret_key(&mut self, public: PublicKey, secret: SecretKey) -> Result<(), EncryptionError> {
+    pub fn register_secret_key(
+        &mut self,
+        public: PublicKey,
+        secret: SecretKey,
+    ) -> Result<(), EncryptionError> {
         if let Some(ref path) = self.path {
             let path = path.join(to_hex(&public[..]) + ".yaml");
             try!(Self::save_keypair_to_file(&public, &secret, path));
@@ -193,28 +228,34 @@ impl Crypto {
     }
 
     fn get_secret_key(&self, public: &PublicKey) -> Result<&SecretKey, EncryptionError> {
-        self.keys.get(public).ok_or_else(|| EncryptionError::MissingKey(*public))
+        self.keys.get(public).ok_or_else(
+            || EncryptionError::MissingKey(*public)
+        )
     }
 
     #[inline]
     pub fn encrypt(&self, enc: &Encryption, data: &[u8]) -> Result<Vec<u8>, EncryptionError> {
         let &(ref method, ref public) = enc;
-        let public = try!(PublicKey::from_slice(public).ok_or(EncryptionError::InvalidKey));
+        let public = try!(PublicKey::from_slice(public).ok_or(
+            EncryptionError::InvalidKey
+        ));
         match *method {
-            EncryptionMethod::Sodium => {
-                Ok(sealedbox::seal(data, &public))
-            }
+            EncryptionMethod::Sodium => Ok(sealedbox::seal(data, &public)),
         }
     }
 
     #[inline]
     pub fn decrypt(&self, enc: &Encryption, data: &[u8]) -> Result<Vec<u8>, EncryptionError> {
         let &(ref method, ref public) = enc;
-        let public = try!(PublicKey::from_slice(public).ok_or(EncryptionError::InvalidKey));
+        let public = try!(PublicKey::from_slice(public).ok_or(
+            EncryptionError::InvalidKey
+        ));
         let secret = try!(self.get_secret_key(&public));
         match *method {
             EncryptionMethod::Sodium => {
-                sealedbox::open(data, &public, secret).map_err(|_| EncryptionError::Operation("Decryption failed"))
+                sealedbox::open(data, &public, secret).map_err(|_| {
+                    EncryptionError::Operation("Decryption failed")
+                })
             }
         }
     }
@@ -228,18 +269,27 @@ impl Crypto {
     pub fn keypair_from_password(password: &str) -> (PublicKey, SecretKey) {
         let salt = pwhash::Salt::from_slice(b"the_great_zvault_password_salt_1").unwrap();
         let mut key = [0u8; pwhash::HASHEDPASSWORDBYTES];
-        let key = pwhash::derive_key(&mut key, password.as_bytes(), &salt, pwhash::OPSLIMIT_INTERACTIVE, pwhash::MEMLIMIT_INTERACTIVE).unwrap();
+        let key = pwhash::derive_key(
+            &mut key,
+            password.as_bytes(),
+            &salt,
+            pwhash::OPSLIMIT_INTERACTIVE,
+            pwhash::MEMLIMIT_INTERACTIVE
+        ).unwrap();
         let mut seed = [0u8; 32];
-        let offset = key.len()-seed.len();
+        let offset = key.len() - seed.len();
         for (i, b) in seed.iter_mut().enumerate() {
-            *b = key[i+offset];
+            *b = key[i + offset];
         }
         let mut pk = [0u8; 32];
         let mut sk = [0u8; 32];
         if unsafe { libsodium_sys::crypto_box_seed_keypair(&mut pk, &mut sk, &seed) } != 0 {
             panic!("Libsodium failed");
         }
-        (PublicKey::from_slice(&pk).unwrap(), SecretKey::from_slice(&sk).unwrap())
+        (
+            PublicKey::from_slice(&pk).unwrap(),
+            SecretKey::from_slice(&sk).unwrap()
+        )
     }
 }
 
@@ -374,7 +424,7 @@ mod benches {
         let (pk, sk) = Crypto::gen_keypair();
         crypto.add_secret_key(pk, sk.clone());
         let encryption = (EncryptionMethod::Sodium, ByteBuf::from(&pk[..]));
-        let input = test_data(512*1024);
+        let input = test_data(512 * 1024);
         b.iter(|| crypto.encrypt(&encryption, &input));
         b.bytes = input.len() as u64;
     }
@@ -385,7 +435,7 @@ mod benches {
         let (pk, sk) = Crypto::gen_keypair();
         crypto.add_secret_key(pk, sk.clone());
         let encryption = (EncryptionMethod::Sodium, ByteBuf::from(&pk[..]));
-        let input = test_data(512*1024);
+        let input = test_data(512 * 1024);
         let output = crypto.encrypt(&encryption, &input).unwrap();
         b.iter(|| crypto.decrypt(&encryption, &output));
         b.bytes = input.len() as u64;

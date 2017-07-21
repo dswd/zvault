@@ -11,7 +11,7 @@ mod backup_file;
 mod tarfile;
 mod layout;
 
-use ::prelude::*;
+use prelude::*;
 
 use std::mem;
 use std::cmp::max;
@@ -47,7 +47,10 @@ pub struct Location {
 }
 impl Location {
     pub fn new(bundle: u32, chunk: u32) -> Self {
-        Location{ bundle: bundle, chunk: chunk }
+        Location {
+            bundle: bundle,
+            chunk: chunk
+        }
     }
 }
 
@@ -88,28 +91,42 @@ pub struct Repository {
 
 
 impl Repository {
-    pub fn create<P: AsRef<Path>, R: AsRef<Path>>(path: P, config: Config, remote: R) -> Result<Self, RepositoryError> {
+    pub fn create<P: AsRef<Path>, R: AsRef<Path>>(
+        path: P,
+        config: Config,
+        remote: R,
+    ) -> Result<Self, RepositoryError> {
         let layout = RepositoryLayout::new(path.as_ref().to_path_buf());
         try!(fs::create_dir(layout.base_path()));
-        try!(File::create(layout.excludes_path()).and_then(|mut f| f.write_all(DEFAULT_EXCLUDES)));
+        try!(File::create(layout.excludes_path()).and_then(|mut f| {
+            f.write_all(DEFAULT_EXCLUDES)
+        }));
         try!(fs::create_dir(layout.keys_path()));
         try!(fs::create_dir(layout.local_locks_path()));
         try!(symlink(remote, layout.remote_path()));
-        try!(File::create(layout.remote_readme_path()).and_then(|mut f| f.write_all(REPOSITORY_README)));
+        try!(File::create(layout.remote_readme_path()).and_then(
+            |mut f| {
+                f.write_all(REPOSITORY_README)
+            }
+        ));
         try!(fs::create_dir_all(layout.remote_locks_path()));
         try!(config.save(layout.config_path()));
         try!(BundleDb::create(layout.clone()));
-        try!(Index::<Hash, Location>::create(layout.index_path(), &INDEX_MAGIC, INDEX_VERSION));
+        try!(Index::<Hash, Location>::create(
+            layout.index_path(),
+            &INDEX_MAGIC,
+            INDEX_VERSION
+        ));
         try!(BundleMap::create().save(layout.bundle_map_path()));
         try!(fs::create_dir_all(layout.backups_path()));
         Self::open(path)
     }
 
-    #[allow(unknown_lints,useless_let_if_seq)]
+    #[allow(unknown_lints, useless_let_if_seq)]
     pub fn open<P: AsRef<Path>>(path: P) -> Result<Self, RepositoryError> {
         let layout = RepositoryLayout::new(path.as_ref().to_path_buf());
         if !layout.remote_exists() {
-            return Err(RepositoryError::NoRemote)
+            return Err(RepositoryError::NoRemote);
         }
         let config = try!(Config::load(layout.config_path()));
         let remote_locks = LockFolder::new(layout.remote_locks_path());
@@ -118,13 +135,21 @@ impl Repository {
         let lock = try!(local_locks.lock(false));
         let crypto = Arc::new(Mutex::new(try!(Crypto::open(layout.keys_path()))));
         let (bundles, new, gone) = try!(BundleDb::open(layout.clone(), crypto.clone()));
-        let (index, mut rebuild_index) = match unsafe { Index::open(layout.index_path(), &INDEX_MAGIC, INDEX_VERSION) } {
-            Ok(index) => (index, false),
-            Err(err) => {
-                error!("Failed to load local index:\n\tcaused by: {}", err);
-                (try!(Index::create(layout.index_path(), &INDEX_MAGIC, INDEX_VERSION)), true)
-            }
-        };
+        let (index, mut rebuild_index) =
+            match unsafe { Index::open(layout.index_path(), &INDEX_MAGIC, INDEX_VERSION) } {
+                Ok(index) => (index, false),
+                Err(err) => {
+                    error!("Failed to load local index:\n\tcaused by: {}", err);
+                    (
+                        try!(Index::create(
+                            layout.index_path(),
+                            &INDEX_MAGIC,
+                            INDEX_VERSION
+                        )),
+                        true
+                    )
+                }
+            };
         let (bundle_map, rebuild_bundle_map) = match BundleMap::load(layout.bundle_map_path()) {
             Ok(bundle_map) => (bundle_map, false),
             Err(err) => {
@@ -163,7 +188,12 @@ impl Repository {
             if !new.is_empty() {
                 info!("Adding {} new bundles to index", new.len());
                 try!(repo.write_mode());
-                for bundle in ProgressIter::new("adding bundles to index", new.len(), new.into_iter()) {
+                for bundle in ProgressIter::new(
+                    "adding bundles to index",
+                    new.len(),
+                    new.into_iter()
+                )
+                {
                     try!(repo.add_new_remote_bundle(bundle))
                 }
                 save_bundle_map = true;
@@ -188,7 +218,11 @@ impl Repository {
         Ok(repo)
     }
 
-    pub fn import<P: AsRef<Path>, R: AsRef<Path>>(path: P, remote: R, key_files: Vec<String>) -> Result<Self, RepositoryError> {
+    pub fn import<P: AsRef<Path>, R: AsRef<Path>>(
+        path: P,
+        remote: R,
+        key_files: Vec<String>,
+    ) -> Result<Self, RepositoryError> {
         let path = path.as_ref();
         let mut repo = try!(Repository::create(path, Config::default(), remote));
         for file in key_files {
@@ -202,15 +236,24 @@ impl Repository {
             repo.config = backup.config;
             try!(repo.save_config())
         } else {
-            warn!("No backup found in the repository to take configuration from, please set the configuration manually.");
+            warn!(
+                "No backup found in the repository to take configuration from, please set the configuration manually."
+            );
         }
         Ok(repo)
     }
 
     #[inline]
-    pub fn register_key(&mut self, public: PublicKey, secret: SecretKey) -> Result<(), RepositoryError> {
+    pub fn register_key(
+        &mut self,
+        public: PublicKey,
+        secret: SecretKey,
+    ) -> Result<(), RepositoryError> {
         try!(self.write_mode());
-        Ok(try!(self.crypto.lock().unwrap().register_secret_key(public, secret)))
+        Ok(try!(self.crypto.lock().unwrap().register_secret_key(
+            public,
+            secret
+        )))
     }
 
     #[inline]
@@ -268,7 +311,10 @@ impl Repository {
             mem::swap(&mut self.data_bundle, &mut finished);
             {
                 let bundle = try!(self.bundles.add_bundle(finished.unwrap()));
-                self.bundle_map.set(self.next_data_bundle, bundle.id.clone());
+                self.bundle_map.set(
+                    self.next_data_bundle,
+                    bundle.id.clone()
+                );
             }
             self.next_data_bundle = self.next_free_bundle_id()
         }
@@ -277,7 +323,10 @@ impl Repository {
             mem::swap(&mut self.meta_bundle, &mut finished);
             {
                 let bundle = try!(self.bundles.add_bundle(finished.unwrap()));
-                self.bundle_map.set(self.next_meta_bundle, bundle.id.clone());
+                self.bundle_map.set(
+                    self.next_meta_bundle,
+                    bundle.id.clone()
+                );
             }
             self.next_meta_bundle = self.next_free_bundle_id()
         }
@@ -291,12 +340,12 @@ impl Repository {
 
     fn add_new_remote_bundle(&mut self, bundle: BundleInfo) -> Result<(), RepositoryError> {
         if self.bundle_map.find(&bundle.id).is_some() {
-            return Ok(())
+            return Ok(());
         }
         debug!("Adding new bundle to index: {}", bundle.id);
         let bundle_id = match bundle.mode {
             BundleMode::Data => self.next_data_bundle,
-            BundleMode::Meta => self.next_meta_bundle
+            BundleMode::Meta => self.next_meta_bundle,
         };
         let chunks = try!(self.bundles.get_chunk_list(&bundle.id));
         self.bundle_map.set(bundle_id, bundle.id.clone());
@@ -307,7 +356,14 @@ impl Repository {
             self.next_data_bundle = self.next_free_bundle_id()
         }
         for (i, (hash, _len)) in chunks.into_inner().into_iter().enumerate() {
-            if let Some(old) = try!(self.index.set(&hash, &Location{bundle: bundle_id as u32, chunk: i as u32})) {
+            if let Some(old) = try!(self.index.set(
+                &hash,
+                &Location {
+                    bundle: bundle_id as u32,
+                    chunk: i as u32
+                }
+            ))
+            {
                 // Duplicate chunk, forced ordering: higher bundle id wins
                 let old_bundle_id = try!(self.get_bundle_id(old.bundle));
                 if old_bundle_id > bundle.id {

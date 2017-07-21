@@ -63,7 +63,7 @@ impl ChunkList {
         if src.len() % 20 != 0 {
             warn!("Reading truncated chunk list");
         }
-        ChunkList::read_n_from(src.len()/20, &mut Cursor::new(src)).unwrap()
+        ChunkList::read_n_from(src.len() / 20, &mut Cursor::new(src)).unwrap()
     }
 
     #[inline]
@@ -111,7 +111,10 @@ impl DerefMut for ChunkList {
 
 impl Serialize for ChunkList {
     #[inline]
-    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error> where S: serde::Serializer {
+    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+    where
+        S: serde::Serializer,
+    {
         let mut buf = Vec::with_capacity(self.encoded_size());
         self.write_to(&mut buf).unwrap();
         Bytes::from(&buf as &[u8]).serialize(serializer)
@@ -120,12 +123,17 @@ impl Serialize for ChunkList {
 
 impl<'a> Deserialize<'a> for ChunkList {
     #[inline]
-    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error> where D: serde::Deserializer<'a> {
+    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
+    where
+        D: serde::Deserializer<'a>,
+    {
         let data: Vec<u8> = try!(ByteBuf::deserialize(deserializer)).into();
         if data.len() % 20 != 0 {
             return Err(D::Error::custom("Invalid chunk list length"));
         }
-        Ok(ChunkList::read_n_from(data.len()/20, &mut Cursor::new(data)).unwrap())
+        Ok(
+            ChunkList::read_n_from(data.len() / 20, &mut Cursor::new(data)).unwrap()
+        )
     }
 }
 
@@ -171,7 +179,10 @@ mod tests {
         let mut list = ChunkList::new();
         list.push((Hash::default(), 0));
         list.push((Hash::default(), 1));
-        assert_eq!(list.into_inner(), vec![(Hash::default(), 0), (Hash::default(), 1)]);
+        assert_eq!(
+            list.into_inner(),
+            vec![(Hash::default(), 0), (Hash::default(), 1)]
+        );
     }
 
     #[test]
@@ -182,8 +193,8 @@ mod tests {
         let mut buf = Vec::new();
         assert!(list.write_to(&mut buf).is_ok());
         assert_eq!(buf.len(), 40);
-        assert_eq!(&buf[16..20], &[0,0,0,0]);
-        assert_eq!(&buf[36..40], &[1,0,0,0]);
+        assert_eq!(&buf[16..20], &[0, 0, 0, 0]);
+        assert_eq!(&buf[36..40], &[1, 0, 0, 0]);
     }
 
     #[test]
@@ -196,7 +207,48 @@ mod tests {
 
     #[test]
     fn test_read_from() {
-        let data = vec![0,0,0,0, 0,0,0,0, 0,0,0,0, 0,0,0,0, 0,0,0,0,  0,0,0,0, 0,0,0,0, 0,0,0,0, 0,0,0,0, 1,0,0,0];
+        let data = vec![
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            1,
+            0,
+            0,
+            0,
+        ];
         let list = ChunkList::read_from(&data);
         assert_eq!(list.len(), 2);
         assert_eq!(list[0], (Hash::default(), 0));
@@ -212,7 +264,7 @@ mod tests {
         assert!(list.write_to(&mut buf).is_ok());
         let encoded = msgpack::encode(&list).unwrap();
         assert_eq!(buf, &encoded[2..]);
-        assert_eq!(&[196,40], &encoded[..2]);
+        assert_eq!(&[196, 40], &encoded[..2]);
     }
 
     #[test]
@@ -220,7 +272,7 @@ mod tests {
         let mut list = ChunkList::new();
         list.push((Hash::default(), 0));
         list.push((Hash::default(), 1));
-        let mut buf = vec![196,40];
+        let mut buf = vec![196, 40];
         assert!(list.write_to(&mut buf).is_ok());
         assert!(msgpack::decode::<ChunkList>(&buf).is_ok());
         assert_eq!(msgpack::decode::<ChunkList>(&buf).unwrap(), list);

@@ -55,7 +55,11 @@ impl<T> ProgressIter<T> {
         let msg = format!("{}: ", msg);
         bar.message(&msg);
         bar.set_max_refresh_rate(Some(Duration::from_millis(100)));
-        ProgressIter { inner: inner, bar: bar, msg: msg }
+        ProgressIter {
+            inner: inner,
+            bar: bar,
+            msg: msg
+        }
     }
 }
 
@@ -72,7 +76,7 @@ impl<T: Iterator> Iterator for ProgressIter<T> {
                 let msg = self.msg.clone() + "done.";
                 self.bar.finish_print(&msg);
                 None
-            },
+            }
             Some(item) => {
                 self.bar.inc();
                 Some(item)

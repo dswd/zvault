@@ -27,7 +27,7 @@ impl Hash {
 
     #[inline]
     pub fn empty() -> Self {
-        Hash{high: 0, low: 0}
+        Hash { high: 0, low: 0 }
     }
 
     #[inline]
@@ -45,14 +45,20 @@ impl Hash {
     pub fn read_from(src: &mut Read) -> Result<Self, io::Error> {
         let high = try!(src.read_u64::<LittleEndian>());
         let low = try!(src.read_u64::<LittleEndian>());
-        Ok(Hash { high: high, low: low })
+        Ok(Hash {
+            high: high,
+            low: low
+        })
     }
 
     #[inline]
     pub fn from_string(val: &str) -> Result<Self, ()> {
         let high = try!(u64::from_str_radix(&val[..16], 16).map_err(|_| ()));
         let low = try!(u64::from_str_radix(&val[16..], 16).map_err(|_| ()));
-        Ok(Self { high: high, low: low })
+        Ok(Self {
+            high: high,
+            low: low
+        })
     }
 }
 
@@ -72,7 +78,10 @@ impl fmt::Debug for Hash {
 
 
 impl Serialize for Hash {
-    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error> where S: serde::Serializer {
+    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+    where
+        S: serde::Serializer,
+    {
         let mut dat = [0u8; 16];
         LittleEndian::write_u64(&mut dat[..8], self.high);
         LittleEndian::write_u64(&mut dat[8..], self.low);
@@ -81,12 +90,15 @@ impl Serialize for Hash {
 }
 
 impl<'a> Deserialize<'a> for Hash {
-    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error> where D: serde::Deserializer<'a> {
+    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
+    where
+        D: serde::Deserializer<'a>,
+    {
         let dat: Vec<u8> = try!(ByteBuf::deserialize(deserializer)).into();
         if dat.len() != 16 {
             return Err(D::Error::custom("Invalid key length"));
         }
-        Ok(Hash{
+        Ok(Hash {
             high: LittleEndian::read_u64(&dat[..8]),
             low: LittleEndian::read_u64(&dat[8..])
         })
@@ -111,9 +123,13 @@ impl HashMethod {
         match *self {
             HashMethod::Blake2 => {
                 let hash = blake2b(16, &[], data);
-                let hash = unsafe { &*mem::transmute::<_, *const (u64, u64)>(hash.as_bytes().as_ptr()) };
-                Hash { high: u64::from_be(hash.0), low: u64::from_be(hash.1) }
-            },
+                let hash =
+                    unsafe { &*mem::transmute::<_, *const (u64, u64)>(hash.as_bytes().as_ptr()) };
+                Hash {
+                    high: u64::from_be(hash.0),
+                    low: u64::from_be(hash.1)
+                }
+            }
             HashMethod::Murmur3 => {
                 let (a, b) = murmurhash3_x64_128(data, 0);
                 Hash { high: a, low: b }
@@ -126,7 +142,7 @@ impl HashMethod {
         match name {
             "blake2" => Ok(HashMethod::Blake2),
             "murmur3" => Ok(HashMethod::Murmur3),
-            _ => Err("Unsupported hash method")
+            _ => Err("Unsupported hash method"),
         }
     }
 
@@ -134,10 +150,9 @@ impl HashMethod {
     pub fn name(&self) -> &'static str {
         match *self {
             HashMethod::Blake2 => "blake2",
-            HashMethod::Murmur3 => "murmur3"
+            HashMethod::Murmur3 => "murmur3",
         }
     }
-
 }
 
 
@@ -163,12 +178,24 @@ mod tests {
 
     #[test]
     fn test_blake2() {
-        assert_eq!(HashMethod::Blake2.hash(b"abc"), Hash{high: 0xcf4ab791c62b8d2b, low: 0x2109c90275287816});
+        assert_eq!(
+            HashMethod::Blake2.hash(b"abc"),
+            Hash {
+                high: 0xcf4ab791c62b8d2b,
+                low: 0x2109c90275287816
+            }
+        );
     }
 
     #[test]
     fn test_murmur3() {
-        assert_eq!(HashMethod::Murmur3.hash(b"123"), Hash{high: 10978418110857903978, low: 4791445053355511657});
+        assert_eq!(
+            HashMethod::Murmur3.hash(b"123"),
+            Hash {
+                high: 10978418110857903978,
+                low: 4791445053355511657
+            }
+        );
     }
 
 }
@@ -195,14 +222,14 @@ mod benches {
 
     #[bench]
     fn bench_blake2(b: &mut Bencher) {
-        let data = test_data(16*1024);
+        let data = test_data(16 * 1024);
         b.bytes = data.len() as u64;
         b.iter(|| HashMethod::Blake2.hash(&data));
     }
 
     #[bench]
     fn bench_murmur3(b: &mut Bencher) {
-        let data = test_data(16*1024);
+        let data = test_data(16 * 1024);
         b.bytes = data.len() as u64;
         b.iter(|| HashMethod::Murmur3.hash(&data));
     }

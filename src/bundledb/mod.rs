@@ -10,7 +10,7 @@ pub use self::reader::{BundleReader, BundleReaderError};
 pub use self::db::*;
 pub use self::uploader::BundleUploader;
 
-use ::prelude::*;
+use prelude::*;
 
 use std::fmt;
 use serde;
@@ -47,7 +47,10 @@ impl BundleId {
 
     #[inline]
     pub fn random() -> Self {
-        BundleId(Hash{high: rand::random(), low: rand::random()})
+        BundleId(Hash {
+            high: rand::random(),
+            low: rand::random()
+        })
     }
 }
 
@@ -68,7 +71,8 @@ impl fmt::Debug for BundleId {
 
 #[derive(Eq, Debug, PartialEq, Clone, Copy)]
 pub enum BundleMode {
-    Data, Meta
+    Data,
+    Meta
 }
 serde_impl!(BundleMode(u8) {
     Data => 0,

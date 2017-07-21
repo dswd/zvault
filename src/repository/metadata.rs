@@ -1,4 +1,4 @@
-use ::prelude::*;
+use prelude::*;
 
 use filetime::{self, FileTime};
 use xattr;
@@ -87,7 +87,7 @@ impl fmt::Display for FileType {
             FileType::Symlink => write!(format, "symlink"),
             FileType::BlockDevice => write!(format, "block device"),
             FileType::CharDevice => write!(format, "char device"),
-            FileType::NamedPipe => write!(format, "named pipe")
+            FileType::NamedPipe => write!(format, "named pipe"),
         }
     }
 }
@@ -167,8 +167,12 @@ serde_impl!(Inode(u8?) {
 impl Inode {
     pub fn get_from<P: AsRef<Path>>(path: P) -> Result<Self, InodeError> {
         let path = path.as_ref();
-        let name = path.file_name().map(|s| s.to_string_lossy().to_string()).unwrap_or_else(|| "_".to_string());
-        let meta = try!(fs::symlink_metadata(path).map_err(|e| InodeError::ReadMetadata(e, path.to_owned())));
+        let name = path.file_name()
+            .map(|s| s.to_string_lossy().to_string())
+            .unwrap_or_else(|| "_".to_string());
+        let meta = try!(fs::symlink_metadata(path).map_err(|e| {
+            InodeError::ReadMetadata(e, path.to_owned())
+        }));
         let mut inode = Inode::default();
         inode.name = name;
         if meta.is_file() {
@@ -190,7 +194,12 @@ impl Inode {
             return Err(InodeError::UnsupportedFiletype(path.to_owned()));
         };
         if meta.file_type().is_symlink() {
-            inode.symlink_target = Some(try!(fs::read_link(path).map_err(|e| InodeError::ReadLinkTarget(e, path.to_owned()))).to_string_lossy().to_string());
+            inode.symlink_target = Some(
+                try!(fs::read_link(path).map_err(|e| {
+                    InodeError::ReadLinkTarget(e, path.to_owned())
+                })).to_string_lossy()
+                    .to_string()
+            );
         }
         if meta.file_type().is_block_device() || meta.file_type().is_char_device() {
             let rdev = meta.rdev();
@@ -205,8 +214,14 @@ impl Inode {
         if xattr::SUPPORTED_PLATFORM {
             if let Ok(attrs) = xattr::list(path) {
                 for name in attrs {
-                    if let Some(data) = try!(xattr::get(path, &name).map_err(|e| InodeError::ReadXattr(e, path.to_owned()))) {
-                        inode.xattrs.insert(name.to_string_lossy().to_string(), data.into());
+                    if let Some(data) = try!(xattr::get(path, &name).map_err(|e| {
+                        InodeError::ReadXattr(e, path.to_owned())
+                    }))
+                    {
+                        inode.xattrs.insert(
+                            name.to_string_lossy().to_string(),
+                            data.into()
+                        );
                     }
                 }
             }
@@ -219,39 +234,58 @@ impl Inode {
         let mut file = None;
         match self.file_type {
             FileType::File => {
-                file = Some(try!(File::create(&full_path).map_err(|e| InodeError::Create(e, full_path.clone()))));
-            },
+                file = Some(try!(File::create(&full_path).map_err(|e| {
+                    InodeError::Create(e, full_path.clone())
+                })));
+            }
             FileType::Directory => {
-                try!(fs::create_dir(&full_path).map_err(|e| InodeError::Create(e, full_path.clone())));
-            },
+                try!(fs::create_dir(&full_path).map_err(|e| {
+                    InodeError::Create(e, full_path.clone())
+                }));
+            }
             FileType::Symlink => {
                 if let Some(ref src) = self.symlink_target {
-                    try!(symlink(src, &full_path).map_err(|e| InodeError::Create(e, full_path.clone())));
+                    try!(symlink(src, &full_path).map_err(|e| {
+                        InodeError::Create(e, full_path.clone())
+                    }));
                 } else {
-                    return Err(InodeError::Integrity("Symlink without target"))
+                    return Err(InodeError::Integrity("Symlink without target"));
                 }
-            },
+            }
             FileType::NamedPipe => {
-                let name = try!(ffi::CString::new(full_path.as_os_str().as_bytes()).map_err(|_| InodeError::Integrity("Name contains nulls")));
+                let name = try!(
+                    ffi::CString::new(full_path.as_os_str().as_bytes())
+                        .map_err(|_| InodeError::Integrity("Name contains nulls"))
+                );
                 let mode = self.mode | libc::S_IFIFO;
                 if unsafe { libc::mkfifo(name.as_ptr(), mode) } != 0 {
-                    return Err(InodeError::Create(io::Error::last_os_error(), full_path.clone()));
+                    return Err(InodeError::Create(
+                        io::Error::last_os_error(),
+                        full_path.clone()
+                    ));
                 }
-            },
+            }
             FileType::BlockDevice | FileType::CharDevice => {
-                let name = try!(ffi::CString::new(full_path.as_os_str().as_bytes()).map_err(|_| InodeError::Integrity("Name contains nulls")));
-                let mode = self.mode | match self.file_type {
-                    FileType::BlockDevice => libc::S_IFBLK,
-                    FileType::CharDevice => libc::S_IFCHR,
-                    _ => unreachable!()
-                };
+                let name = try!(
+                    ffi::CString::new(full_path.as_os_str().as_bytes())
+                        .map_err(|_| InodeError::Integrity("Name contains nulls"))
+                );
+                let mode = self.mode |
+                    match self.file_type {
+                        FileType::BlockDevice => libc::S_IFBLK,
+                        FileType::CharDevice => libc::S_IFCHR,
+                        _ => unreachable!(),
+                    };
                 let device = if let Some((major, minor)) = self.device {
                     unsafe { libc::makedev(major, minor) }
                 } else {
-                    return Err(InodeError::Integrity("Device without id"))
+                    return Err(InodeError::Integrity("Device without id"));
                 };
                 if unsafe { libc::mknod(name.as_ptr(), mode, device) } != 0 {
-                    return Err(InodeError::Create(io::Error::last_os_error(), full_path.clone()));
+                    return Err(InodeError::Create(
+                        io::Error::last_os_error(),
+                        full_path.clone()
+                    ));
                 }
             }
         }
@@ -271,26 +305,37 @@ impl Inode {
             }
         }
         if let Err(err) = fs::set_permissions(&full_path, Permissions::from_mode(self.mode)) {
-            warn!("Failed to set permissions {:o} on {:?}: {}", self.mode, full_path, err);
+            warn!(
+                "Failed to set permissions {:o} on {:?}: {}",
+                self.mode,
+                full_path,
+                err
+            );
         }
         if let Err(err) = chown(&full_path, self.user, self.group) {
-            warn!("Failed to set user {} and group {} on {:?}: {}", self.user, self.group, full_path, err);
+            warn!(
+                "Failed to set user {} and group {} on {:?}: {}",
+                self.user,
+                self.group,
+                full_path,
+                err
+            );
         }
         Ok(file)
     }
 
     #[inline]
     pub fn is_same_meta(&self, other: &Inode) -> bool {
-        self.file_type == other.file_type && self.size == other.size && self.mode == other.mode
-        && self.user == other.user && self.group == other.group && self.name == other.name
-        && self.timestamp == other.timestamp && self.symlink_target == other.symlink_target
+        self.file_type == other.file_type && self.size == other.size &&
+            self.mode == other.mode && self.user == other.user &&
+            self.group == other.group && self.name == other.name &&
+            self.timestamp == other.timestamp && self.symlink_target == other.symlink_target
     }
 
     #[inline]
     pub fn is_same_meta_quick(&self, other: &Inode) -> bool {
-        self.timestamp == other.timestamp
-        && self.file_type == other.file_type
-        && self.size == other.size
+        self.timestamp == other.timestamp && self.file_type == other.file_type &&
+            self.size == other.size
     }
 
     #[inline]
@@ -306,13 +351,17 @@ impl Inode {
 
 
 impl Repository {
-    pub fn create_inode<P: AsRef<Path>>(&mut self, path: P, reference: Option<&Inode>) -> Result<Inode, RepositoryError> {
+    pub fn create_inode<P: AsRef<Path>>(
+        &mut self,
+        path: P,
+        reference: Option<&Inode>,
+    ) -> Result<Inode, RepositoryError> {
         let mut inode = try!(Inode::get_from(path.as_ref()));
         if inode.file_type == FileType::File && inode.size > 0 {
             if let Some(reference) = reference {
                 if reference.is_same_meta_quick(&inode) {
                     inode.data = reference.data.clone();
-                    return Ok(inode)
+                    return Ok(inode);
                 }
             }
             let mut file = try!(File::open(path));
@@ -345,16 +394,20 @@ impl Repository {
         Ok(try!(Inode::decode(&try!(self.get_data(chunks)))))
     }
 
-    pub fn save_inode_at<P: AsRef<Path>>(&mut self, inode: &Inode, path: P) -> Result<(), RepositoryError> {
+    pub fn save_inode_at<P: AsRef<Path>>(
+        &mut self,
+        inode: &Inode,
+        path: P,
+    ) -> Result<(), RepositoryError> {
         if let Some(mut file) = try!(inode.create_at(path.as_ref())) {
             if let Some(ref contents) = inode.data {
                 match *contents {
                     FileData::Inline(ref data) => {
                         try!(file.write_all(data));
-                    },
+                    }
                     FileData::ChunkedDirect(ref chunks) => {
                         try!(self.get_stream(chunks, &mut file));
-                    },
+                    }
                     FileData::ChunkedIndirect(ref chunks) => {
                         let chunk_data = try!(self.get_data(chunks));
                         let chunks = ChunkList::read_from(&chunk_data);

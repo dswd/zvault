@@ -1,4 +1,4 @@
-use ::prelude::*;
+use prelude::*;
 use super::*;
 
 use std::path::{Path, PathBuf};
@@ -54,14 +54,22 @@ pub struct BundleWriter {
     crypto: Arc<Mutex<Crypto>>,
     raw_size: usize,
     chunk_count: usize,
-    chunks: ChunkList,
+    chunks: ChunkList
 }
 
 impl BundleWriter {
-    pub fn new(mode: BundleMode, hash_method: HashMethod, compression: Option<Compression>, encryption: Option<Encryption>, crypto: Arc<Mutex<Crypto>>) -> Result<Self, BundleWriterError> {
+    pub fn new(
+        mode: BundleMode,
+        hash_method: HashMethod,
+        compression: Option<Compression>,
+        encryption: Option<Encryption>,
+        crypto: Arc<Mutex<Crypto>>,
+    ) -> Result<Self, BundleWriterError> {
         let compression_stream = match compression {
-            Some(ref compression) => Some(try!(compression.compress_stream().map_err(BundleWriterError::CompressionSetup))),
-            None => None
+            Some(ref compression) => Some(try!(compression.compress_stream().map_err(
+                BundleWriterError::CompressionSetup
+            ))),
+            None => None,
         };
         Ok(BundleWriter {
             mode: mode,
@@ -79,19 +87,23 @@ impl BundleWriter {
 
     pub fn add(&mut self, chunk: &[u8], hash: Hash) -> Result<usize, BundleWriterError> {
         if let Some(ref mut stream) = self.compression_stream {
-            try!(stream.process(chunk, &mut self.data).map_err(BundleWriterError::Compression))
+            try!(stream.process(chunk, &mut self.data).map_err(
+                BundleWriterError::Compression
+            ))
         } else {
             self.data.extend_from_slice(chunk)
         }
         self.raw_size += chunk.len();
         self.chunk_count += 1;
         self.chunks.push((hash, chunk.len() as u32));
-        Ok(self.chunk_count-1)
+        Ok(self.chunk_count - 1)
     }
 
     pub fn finish(mut self, db: &BundleDb) -> Result<StoredBundle, BundleWriterError> {
         if let Some(stream) = self.compression_stream {
-            try!(stream.finish(&mut self.data).map_err(BundleWriterError::Compression))
+            try!(stream.finish(&mut self.data).map_err(
+                BundleWriterError::Compression
+            ))
         }
         if let Some(ref encryption) = self.encryption {
             self.data = try!(self.crypto.lock().unwrap().encrypt(encryption, &self.data));
@@ -127,12 +139,19 @@ impl BundleWriter {
             encryption: self.encryption,
             info_size: info_data.len()
         };
-        try!(msgpack::encode_to_stream(&header, &mut file).context(&path as &Path));
+        try!(msgpack::encode_to_stream(&header, &mut file).context(
+            &path as &Path
+        ));
         try!(file.write_all(&info_data).context(&path as &Path));
         try!(file.write_all(&chunk_data).context(&path as &Path));
         try!(file.write_all(&self.data).context(&path as &Path));
-        path = path.strip_prefix(db.layout.base_path()).unwrap().to_path_buf();
-        Ok(StoredBundle { path: path, info: info })
+        path = path.strip_prefix(db.layout.base_path())
+            .unwrap()
+            .to_path_buf();
+        Ok(StoredBundle {
+            path: path,
+            info: info
+        })
     }
 
     #[inline]

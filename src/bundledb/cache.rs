@@ -1,4 +1,4 @@
-use ::prelude::*;
+use prelude::*;
 
 use std::path::{Path, PathBuf};
 use std::fs::{self, File};
@@ -62,7 +62,11 @@ impl StoredBundle {
         self.info.id.clone()
     }
 
-    pub fn copy_to<P: AsRef<Path>>(&self, base_path: &Path, path: P) -> Result<Self, BundleDbError> {
+    pub fn copy_to<P: AsRef<Path>>(
+        &self,
+        base_path: &Path,
+        path: P,
+    ) -> Result<Self, BundleDbError> {
         let src_path = base_path.join(&self.path);
         let dst_path = path.as_ref();
         try!(fs::copy(&src_path, dst_path).context(dst_path));
@@ -71,7 +75,11 @@ impl StoredBundle {
         Ok(bundle)
     }
 
-    pub fn move_to<P: AsRef<Path>>(&mut self, base_path: &Path, path: P) -> Result<(), BundleDbError> {
+    pub fn move_to<P: AsRef<Path>>(
+        &mut self,
+        base_path: &Path,
+        path: P,
+    ) -> Result<(), BundleDbError> {
         let src_path = base_path.join(&self.path);
         let dst_path = path.as_ref();
         if fs::rename(&src_path, dst_path).is_err() {
@@ -88,11 +96,11 @@ impl StoredBundle {
         let mut header = [0u8; 8];
         try!(file.read_exact(&mut header).map_err(BundleCacheError::Read));
         if header[..CACHE_FILE_STRING.len()] != CACHE_FILE_STRING {
-            return Err(BundleCacheError::WrongHeader)
+            return Err(BundleCacheError::WrongHeader);
         }
         let version = header[CACHE_FILE_STRING.len()];
         if version != CACHE_FILE_VERSION {
-            return Err(BundleCacheError::UnsupportedVersion(version))
+            return Err(BundleCacheError::UnsupportedVersion(version));
         }
         Ok(try!(msgpack::decode_from_stream(&mut file)))
     }
@@ -100,8 +108,12 @@ impl StoredBundle {
     pub fn save_list_to<P: AsRef<Path>>(list: &[Self], path: P) -> Result<(), BundleCacheError> {
         let path = path.as_ref();
         let mut file = BufWriter::new(try!(File::create(path).map_err(BundleCacheError::Write)));
-        try!(file.write_all(&CACHE_FILE_STRING).map_err(BundleCacheError::Write));
-        try!(file.write_all(&[CACHE_FILE_VERSION]).map_err(BundleCacheError::Write));
+        try!(file.write_all(&CACHE_FILE_STRING).map_err(
+            BundleCacheError::Write
+        ));
+        try!(file.write_all(&[CACHE_FILE_VERSION]).map_err(
+            BundleCacheError::Write
+        ));
         try!(msgpack::encode_to_stream(&list, &mut file));
         Ok(())
     }

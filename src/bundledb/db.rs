@@ -1,4 +1,4 @@
-use ::prelude::*;
+use prelude::*;
 use super::*;
 
 use std::path::{Path, PathBuf};
@@ -57,7 +57,12 @@ quick_error!{
 }
 
 
-fn load_bundles(path: &Path, base: &Path, bundles: &mut HashMap<BundleId, StoredBundle>, crypto: Arc<Mutex<Crypto>>) -> Result<(Vec<StoredBundle>, Vec<StoredBundle>), BundleDbError> {
+fn load_bundles(
+    path: &Path,
+    base: &Path,
+    bundles: &mut HashMap<BundleId, StoredBundle>,
+    crypto: Arc<Mutex<Crypto>>,
+) -> Result<(Vec<StoredBundle>, Vec<StoredBundle>), BundleDbError> {
     let mut paths = vec![path.to_path_buf()];
     let mut bundle_paths = HashSet::new();
     while let Some(path) = paths.pop() {
@@ -68,7 +73,7 @@ fn load_bundles(path: &Path, base: &Path, bundles: &mut HashMap<BundleId, Stored
                 paths.push(path);
             } else {
                 if path.extension() != Some("bundle".as_ref()) {
-                    continue
+                    continue;
                 }
                 bundle_paths.insert(path.strip_prefix(base).unwrap().to_path_buf());
             }
@@ -89,10 +94,13 @@ fn load_bundles(path: &Path, base: &Path, bundles: &mut HashMap<BundleId, Stored
             Err(err) => {
                 warn!("Failed to read bundle {:?}\n\tcaused by: {}", path, err);
                 info!("Ignoring unreadable bundle");
-                continue
+                continue;
             }
         };
-        let bundle = StoredBundle { info: info, path: path };
+        let bundle = StoredBundle {
+            info: info,
+            path: path
+        };
         let id = bundle.info.id.clone();
         if !bundles.contains_key(&id) {
             new.push(bundle.clone());
@@ -129,7 +137,9 @@ impl BundleDb {
         }
     }
 
-    fn load_bundle_list(&mut self) -> Result<(Vec<StoredBundle>, Vec<StoredBundle>), BundleDbError> {
+    fn load_bundle_list(
+        &mut self,
+    ) -> Result<(Vec<StoredBundle>, Vec<StoredBundle>), BundleDbError> {
         if let Ok(list) = StoredBundle::read_list_from(&self.layout.local_bundle_cache_path()) {
             for bundle in list {
                 self.local_bundles.insert(bundle.id(), bundle);
@@ -145,15 +155,31 @@ impl BundleDb {
             warn!("Failed to read remote bundle cache, rebuilding cache");
         }
         let base_path = self.layout.base_path();
-        let (new, gone) = try!(load_bundles(&self.layout.local_bundles_path(), base_path, &mut self.local_bundles, self.crypto.clone()));
+        let (new, gone) = try!(load_bundles(
+            &self.layout.local_bundles_path(),
+            base_path,
+            &mut self.local_bundles,
+            self.crypto.clone()
+        ));
         if !new.is_empty() || !gone.is_empty() {
             let bundles: Vec<_> = self.local_bundles.values().cloned().collect();
-            try!(StoredBundle::save_list_to(&bundles, &self.layout.local_bundle_cache_path()));
+            try!(StoredBundle::save_list_to(
+                &bundles,
+                &self.layout.local_bundle_cache_path()
+            ));
         }
-        let (new, gone) = try!(load_bundles(&self.layout.remote_bundles_path(), base_path, &mut self.remote_bundles, self.crypto.clone()));
+        let (new, gone) = try!(load_bundles(
+            &self.layout.remote_bundles_path(),
+            base_path,
+            &mut self.remote_bundles,
+            self.crypto.clone()
+        ));
         if !new.is_empty() || !gone.is_empty() {
             let bundles: Vec<_> = self.remote_bundles.values().cloned().collect();
-            try!(StoredBundle::save_list_to(&bundles, &self.layout.remote_bundle_cache_path()));
+            try!(StoredBundle::save_list_to(
+                &bundles,
+                &self.layout.remote_bundle_cache_path()
+            ));
         }
         Ok((new, gone))
     }
@@ -164,9 +190,15 @@ impl BundleDb {
 
     fn save_cache(&self) -> Result<(), BundleDbError> {
         let bundles: Vec<_> = self.local_bundles.values().cloned().collect();
-        try!(StoredBundle::save_list_to(&bundles, &self.layout.local_bundle_cache_path()));
+        try!(StoredBundle::save_list_to(
+            &bundles,
+            &self.layout.local_bundle_cache_path()
+        ));
         let bundles: Vec<_> = self.remote_bundles.values().cloned().collect();
-        Ok(try!(StoredBundle::save_list_to(&bundles, &self.layout.remote_bundle_cache_path())))
+        Ok(try!(StoredBundle::save_list_to(
+            &bundles,
+            &self.layout.remote_bundle_cache_path()
+        )))
     }
 
     fn update_cache(&mut self) -> Result<(), BundleDbError> {
@@ -192,13 +224,18 @@ impl BundleDb {
         let base_path = self.layout.base_path();
         for id in remove {
             if let Some(bundle) = self.local_bundles.remove(&id) {
-                try!(fs::remove_file(base_path.join(&bundle.path)).map_err(|e| BundleDbError::Remove(e, id)))
+                try!(fs::remove_file(base_path.join(&bundle.path)).map_err(|e| {
+                    BundleDbError::Remove(e, id)
+                }))
             }
         }
         Ok(())
     }
 
-    pub fn open(layout: RepositoryLayout, crypto: Arc<Mutex<Crypto>>) -> Result<(Self, Vec<BundleInfo>, Vec<BundleInfo>), BundleDbError> {
+    pub fn open(
+        layout: RepositoryLayout,
+        crypto: Arc<Mutex<Crypto>>,
+    ) -> Result<(Self, Vec<BundleInfo>, Vec<BundleInfo>), BundleDbError> {
         let mut self_ = Self::new(layout, crypto);
         let (new, gone) = try!(self_.load_bundle_list());
         try!(self_.update_cache());
@@ -208,21 +245,51 @@ impl BundleDb {
     }
 
     pub fn create(layout: RepositoryLayout) -> Result<(), BundleDbError> {
-        try!(fs::create_dir_all(layout.remote_bundles_path()).context(&layout.remote_bundles_path() as &Path));
-        try!(fs::create_dir_all(layout.local_bundles_path()).context(&layout.local_bundles_path() as &Path));
-        try!(fs::create_dir_all(layout.temp_bundles_path()).context(&layout.temp_bundles_path() as &Path));
-        try!(StoredBundle::save_list_to(&[], layout.local_bundle_cache_path()));
-        try!(StoredBundle::save_list_to(&[], layout.remote_bundle_cache_path()));
+        try!(fs::create_dir_all(layout.remote_bundles_path()).context(
+            &layout.remote_bundles_path() as
+                &Path
+        ));
+        try!(fs::create_dir_all(layout.local_bundles_path()).context(
+            &layout.local_bundles_path() as
+                &Path
+        ));
+        try!(fs::create_dir_all(layout.temp_bundles_path()).context(
+            &layout.temp_bundles_path() as
+                &Path
+        ));
+        try!(StoredBundle::save_list_to(
+            &[],
+            layout.local_bundle_cache_path()
+        ));
+        try!(StoredBundle::save_list_to(
+            &[],
+            layout.remote_bundle_cache_path()
+        ));
         Ok(())
     }
 
     #[inline]
-    pub fn create_bundle(&self, mode: BundleMode, hash_method: HashMethod, compression: Option<Compression>, encryption: Option<Encryption>) -> Result<BundleWriter, BundleDbError> {
-        Ok(try!(BundleWriter::new(mode, hash_method, compression, encryption, self.crypto.clone())))
+    pub fn create_bundle(
+        &self,
+        mode: BundleMode,
+        hash_method: HashMethod,
+        compression: Option<Compression>,
+        encryption: Option<Encryption>,
+    ) -> Result<BundleWriter, BundleDbError> {
+        Ok(try!(BundleWriter::new(
+            mode,
+            hash_method,
+            compression,
+            encryption,
+            self.crypto.clone()
+        )))
     }
 
     fn get_stored_bundle(&self, bundle_id: &BundleId) -> Result<&StoredBundle, BundleDbError> {
-        if let Some(stored) = self.local_bundles.get(bundle_id).or_else(|| self.remote_bundles.get(bundle_id)) {
+        if let Some(stored) = self.local_bundles.get(bundle_id).or_else(|| {
+            self.remote_bundles.get(bundle_id)
+        })
+        {
             Ok(stored)
         } else {
             Err(BundleDbError::NoSuchBundle(bundle_id.clone()))
@@ -232,21 +299,26 @@ impl BundleDb {
     #[inline]
     fn get_bundle(&self, stored: &StoredBundle) -> Result<BundleReader, BundleDbError> {
         let base_path = self.layout.base_path();
-        Ok(try!(BundleReader::load(base_path.join(&stored.path), self.crypto.clone())))
+        Ok(try!(BundleReader::load(
+            base_path.join(&stored.path),
+            self.crypto.clone()
+        )))
     }
 
     pub fn get_chunk(&mut self, bundle_id: &BundleId, id: usize) -> Result<Vec<u8>, BundleDbError> {
         if let Some(&mut (ref mut bundle, ref data)) = self.bundle_cache.get_mut(bundle_id) {
             let (pos, len) = try!(bundle.get_chunk_position(id));
             let mut chunk = Vec::with_capacity(len);
-            chunk.extend_from_slice(&data[pos..pos+len]);
+            chunk.extend_from_slice(&data[pos..pos + len]);
             return Ok(chunk);
         }
-        let mut bundle = try!(self.get_stored_bundle(bundle_id).and_then(|s| self.get_bundle(s)));
+        let mut bundle = try!(self.get_stored_bundle(bundle_id).and_then(
+            |s| self.get_bundle(s)
+        ));
         let (pos, len) = try!(bundle.get_chunk_position(id));
         let mut chunk = Vec::with_capacity(len);
         let data = try!(bundle.load_contents());
-        chunk.extend_from_slice(&data[pos..pos+len]);
+        chunk.extend_from_slice(&data[pos..pos + len]);
         self.bundle_cache.put(bundle_id.clone(), (bundle, data));
         Ok(chunk)
     }
@@ -255,7 +327,10 @@ impl BundleDb {
         let id = bundle.id();
         let (folder, filename) = self.layout.local_bundle_path(&id, self.local_bundles.len());
         try!(fs::create_dir_all(&folder).context(&folder as &Path));
-        let bundle = try!(bundle.copy_to(self.layout.base_path(), folder.join(filename)));
+        let bundle = try!(bundle.copy_to(
+            self.layout.base_path(),
+            folder.join(filename)
+        ));
         self.local_bundles.insert(id, bundle);
         Ok(())
     }
@@ -268,7 +343,10 @@ impl BundleDb {
         let (folder, filename) = self.layout.remote_bundle_path(self.remote_bundles.len());
         let dst_path = folder.join(filename);
         let src_path = self.layout.base_path().join(bundle.path);
-        bundle.path = dst_path.strip_prefix(self.layout.base_path()).unwrap().to_path_buf();
+        bundle.path = dst_path
+            .strip_prefix(self.layout.base_path())
+            .unwrap()
+            .to_path_buf();
         if self.uploader.is_none() {
             self.uploader = Some(BundleUploader::new(5));
         }
@@ -288,7 +366,9 @@ impl BundleDb {
     }
 
     pub fn get_chunk_list(&self, bundle: &BundleId) -> Result<ChunkList, BundleDbError> {
-        let mut bundle = try!(self.get_stored_bundle(bundle).and_then(|stored| self.get_bundle(stored)));
+        let mut bundle = try!(self.get_stored_bundle(bundle).and_then(|stored| {
+            self.get_bundle(stored)
+        }));
         Ok(try!(bundle.get_chunk_list()).clone())
     }
 
@@ -305,7 +385,9 @@ impl BundleDb {
     pub fn delete_local_bundle(&mut self, bundle: &BundleId) -> Result<(), BundleDbError> {
         if let Some(bundle) = self.local_bundles.remove(bundle) {
             let path = self.layout.base_path().join(&bundle.path);
-            try!(fs::remove_file(path).map_err(|e| BundleDbError::Remove(e, bundle.id())))
+            try!(fs::remove_file(path).map_err(|e| {
+                BundleDbError::Remove(e, bundle.id())
+            }))
         }
         Ok(())
     }
@@ -322,24 +404,29 @@ impl BundleDb {
 
     pub fn check(&mut self, full: bool, repair: bool) -> Result<bool, BundleDbError> {
         let mut to_repair = vec![];
-        for (id, stored) in ProgressIter::new("checking bundles", self.remote_bundles.len(), self.remote_bundles.iter()) {
+        for (id, stored) in ProgressIter::new(
+            "checking bundles",
+            self.remote_bundles.len(),
+            self.remote_bundles.iter()
+        )
+        {
             let mut bundle = match self.get_bundle(stored) {
                 Ok(bundle) => bundle,
                 Err(err) => {
                     if repair {
                         to_repair.push(id.clone());
-                        continue
+                        continue;
                     } else {
-                        return Err(err)
+                        return Err(err);
                     }
                 }
             };
             if let Err(err) = bundle.check(full) {
                 if repair {
                     to_repair.push(id.clone());
-                    continue
+                    continue;
                 } else {
-                    return Err(err.into())
+                    return Err(err.into());
                 }
             }
         }
@@ -371,35 +458,52 @@ impl BundleDb {
         let mut bundle = match self.get_bundle(&stored) {
             Ok(bundle) => bundle,
             Err(err) => {
-                warn!("Problem detected: failed to read bundle header: {}\n\tcaused by: {}", id, err);
+                warn!(
+                    "Problem detected: failed to read bundle header: {}\n\tcaused by: {}",
+                    id,
+                    err
+                );
                 return self.evacuate_broken_bundle(stored);
             }
         };
         let chunks = match bundle.get_chunk_list() {
             Ok(chunks) => chunks.clone(),
             Err(err) => {
-                warn!("Problem detected: failed to read bundle chunks: {}\n\tcaused by: {}", id, err);
+                warn!(
+                    "Problem detected: failed to read bundle chunks: {}\n\tcaused by: {}",
+                    id,
+                    err
+                );
                 return self.evacuate_broken_bundle(stored);
             }
         };
         let data = match bundle.load_contents() {
             Ok(data) => data,
             Err(err) => {
-                warn!("Problem detected: failed to read bundle data: {}\n\tcaused by: {}", id, err);
+                warn!(
+                    "Problem detected: failed to read bundle data: {}\n\tcaused by: {}",
+                    id,
+                    err
+                );
                 return self.evacuate_broken_bundle(stored);
             }
         };
         warn!("Problem detected: bundle data was truncated: {}", id);
         info!("Copying readable data into new bundle");
         let info = stored.info.clone();
-        let mut new_bundle = try!(self.create_bundle(info.mode, info.hash_method, info.compression, info.encryption));
+        let mut new_bundle = try!(self.create_bundle(
+            info.mode,
+            info.hash_method,
+            info.compression,
+            info.encryption
+        ));
         let mut pos = 0;
         for (hash, mut len) in chunks.into_inner() {
             if pos >= data.len() {
-                break
+                break;
             }
             len = min(len, (data.len() - pos) as u32);
-            try!(new_bundle.add(&data[pos..pos+len as usize], hash));
+            try!(new_bundle.add(&data[pos..pos + len as usize], hash));
             pos += len as usize;
         }
         let bundle = try!(self.add_bundle(new_bundle));
@@ -411,5 +515,4 @@ impl BundleDb {
     pub fn len(&self) -> usize {
         self.remote_bundles.len()
     }
-
 }

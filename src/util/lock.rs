@@ -1,4 +1,4 @@
-use ::prelude::*;
+use prelude::*;
 
 use serde_yaml;
 use chrono::prelude::*;
@@ -121,12 +121,14 @@ impl LockFolder {
         for lock in try!(self.get_locks()) {
             if lock.exclusive {
                 if level == LockLevel::Exclusive {
-                    return Err(LockError::InvalidLockState("multiple exclusive locks"))
+                    return Err(LockError::InvalidLockState("multiple exclusive locks"));
                 } else {
                     level = LockLevel::Exclusive
                 }
             } else if level == LockLevel::Exclusive {
-                return Err(LockError::InvalidLockState("exclusive lock and shared locks"))
+                return Err(LockError::InvalidLockState(
+                    "exclusive lock and shared locks"
+                ));
             } else {
                 level = LockLevel::Shared
             }
@@ -137,7 +139,7 @@ impl LockFolder {
     pub fn lock(&self, exclusive: bool) -> Result<LockHandle, LockError> {
         let level = try!(self.get_lock_level());
         if level == LockLevel::Exclusive || level == LockLevel::Shared && exclusive {
-            return Err(LockError::Locked)
+            return Err(LockError::Locked);
         }
         let lockfile = LockFile {
             hostname: get_hostname().unwrap(),
@@ -145,12 +147,19 @@ impl LockFolder {
             date: Utc::now().timestamp(),
             exclusive: exclusive
         };
-        let path = self.path.join(format!("{}-{}.lock", &lockfile.hostname, lockfile.processid));
+        let path = self.path.join(format!(
+            "{}-{}.lock",
+            &lockfile.hostname,
+            lockfile.processid
+        ));
         try!(lockfile.save(&path));
-        let handle = LockHandle{lock: lockfile, path: path};
+        let handle = LockHandle {
+            lock: lockfile,
+            path: path
+        };
         if self.get_lock_level().is_err() {
             try!(handle.release());
-            return Err(LockError::Locked)
+            return Err(LockError::Locked);
         }
         Ok(handle)
     }
@@ -158,19 +167,23 @@ impl LockFolder {
     pub fn upgrade(&self, lock: &mut LockHandle) -> Result<(), LockError> {
         let lockfile = &mut lock.lock;
         if lockfile.exclusive {
-            return Ok(())
+            return Ok(());
         }
         let level = try!(self.get_lock_level());
         if level == LockLevel::Exclusive {
-            return Err(LockError::Locked)
+            return Err(LockError::Locked);
         }
         lockfile.exclusive = true;
-        let path = self.path.join(format!("{}-{}.lock", &lockfile.hostname, lockfile.processid));
+        let path = self.path.join(format!(
+            "{}-{}.lock",
+            &lockfile.hostname,
+            lockfile.processid
+        ));
         try!(lockfile.save(&path));
         if self.get_lock_level().is_err() {
             lockfile.exclusive = false;
             try!(lockfile.save(&path));
-            return Err(LockError::Locked)
+            return Err(LockError::Locked);
         }
         Ok(())
     }
@@ -178,10 +191,14 @@ impl LockFolder {
     pub fn downgrade(&self, lock: &mut LockHandle) -> Result<(), LockError> {
         let lockfile = &mut lock.lock;
         if !lockfile.exclusive {
-            return Ok(())
+            return Ok(());
         }
         lockfile.exclusive = false;
-        let path = self.path.join(format!("{}-{}.lock", &lockfile.hostname, lockfile.processid));
+        let path = self.path.join(format!(
+            "{}-{}.lock",
+            &lockfile.hostname,
+            lockfile.processid
+        ));
         lockfile.save(&path)
     }
 }

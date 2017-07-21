@@ -8,7 +8,7 @@ pub struct Bitmap {
 impl Bitmap {
     /// Creates a new bitmap
     pub fn new(len: usize) -> Self {
-        let len = (len+7)/8;
+        let len = (len + 7) / 8;
         let mut bytes = Vec::with_capacity(len);
         bytes.resize(len, 0);
         Self { bytes: bytes }
@@ -28,7 +28,7 @@ impl Bitmap {
 
     #[inline]
     fn convert_index(&self, index: usize) -> (usize, u8) {
-        (index/8, 1u8<<(index%8))
+        (index / 8, 1u8 << (index % 8))
     }
 
     #[inline]

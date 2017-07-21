@@ -1,4 +1,4 @@
-use ::prelude::*;
+use prelude::*;
 use super::*;
 
 use std::path::{Path, PathBuf};
@@ -67,7 +67,13 @@ pub struct BundleReader {
 }
 
 impl BundleReader {
-    pub fn new(path: PathBuf, version: u8, content_start: usize, crypto: Arc<Mutex<Crypto>>, info: BundleInfo) -> Self {
+    pub fn new(
+        path: PathBuf,
+        version: u8,
+        content_start: usize,
+        crypto: Arc<Mutex<Crypto>>,
+        info: BundleInfo,
+    ) -> Self {
         BundleReader {
             info: info,
             chunks: None,
@@ -84,54 +90,90 @@ impl BundleReader {
         self.info.id.clone()
     }
 
-    fn load_header<P: AsRef<Path>>(path: P, crypto: Arc<Mutex<Crypto>>) -> Result<(BundleInfo, u8, usize), BundleReaderError> {
+    fn load_header<P: AsRef<Path>>(
+        path: P,
+        crypto: Arc<Mutex<Crypto>>,
+    ) -> Result<(BundleInfo, u8, usize), BundleReaderError> {
         let path = path.as_ref();
         let mut file = BufReader::new(try!(File::open(path).context(path)));
         let mut header = [0u8; 8];
         try!(file.read_exact(&mut header).context(path));
         if header[..HEADER_STRING.len()] != HEADER_STRING {
-            return Err(BundleReaderError::WrongHeader(path.to_path_buf()))
+            return Err(BundleReaderError::WrongHeader(path.to_path_buf()));
         }
         let version = header[HEADER_STRING.len()];
         if version != HEADER_VERSION {
-            return Err(BundleReaderError::UnsupportedVersion(path.to_path_buf(), version))
+            return Err(BundleReaderError::UnsupportedVersion(
+                path.to_path_buf(),
+                version
+            ));
         }
         let header: BundleHeader = try!(msgpack::decode_from_stream(&mut file).context(path));
         let mut info_data = Vec::with_capacity(header.info_size);
         info_data.resize(header.info_size, 0);
         try!(file.read_exact(&mut info_data).context(path));
         if let Some(ref encryption) = header.encryption {
-            info_data = try!(crypto.lock().unwrap().decrypt(encryption, &info_data).context(path));
+            info_data = try!(
+                crypto
+                    .lock()
+                    .unwrap()
+                    .decrypt(encryption, &info_data)
+                    .context(path)
+            );
         }
         let mut info: BundleInfo = try!(msgpack::decode(&info_data).context(path));
         info.encryption = header.encryption;
         debug!("Load bundle {}", info.id);
-        let content_start = file.seek(SeekFrom::Current(0)).unwrap() as usize + info.chunk_list_size;
+        let content_start = file.seek(SeekFrom::Current(0)).unwrap() as usize +
+            info.chunk_list_size;
         Ok((info, version, content_start))
     }
 
     #[inline]
-    pub fn load_info<P: AsRef<Path>>(path: P, crypto: Arc<Mutex<Crypto>>) -> Result<BundleInfo, BundleReaderError> {
+    pub fn load_info<P: AsRef<Path>>(
+        path: P,
+        crypto: Arc<Mutex<Crypto>>,
+    ) -> Result<BundleInfo, BundleReaderError> {
         Self::load_header(path, crypto).map(|b| b.0)
     }
 
     #[inline]
     pub fn load(path: PathBuf, crypto: Arc<Mutex<Crypto>>) -> Result<Self, BundleReaderError> {
         let (header, version, content_start) = try!(Self::load_header(&path, crypto.clone()));
-        Ok(BundleReader::new(path, version, content_start, crypto, header))
+        Ok(BundleReader::new(
+            path,
+            version,
+            content_start,
+            crypto,
+            header
+        ))
     }
 
     fn load_chunklist(&mut self) -> Result<(), BundleReaderError> {
-        debug!("Load bundle chunklist {} ({:?})", self.info.id, self.info.mode);
+        debug!(
+            "Load bundle chunklist {} ({:?})",
+            self.info.id,
+            self.info.mode
+        );
         let mut file = BufReader::new(try!(File::open(&self.path).context(&self.path as &Path)));
         let len = self.info.chunk_list_size;
         let start = self.content_start - len;
-        try!(file.seek(SeekFrom::Start(start as u64)).context(&self.path as &Path));
+        try!(file.seek(SeekFrom::Start(start as u64)).context(
+            &self.path as &Path
+        ));
         let mut chunk_data = Vec::with_capacity(len);
         chunk_data.resize(self.info.chunk_list_size, 0);
-        try!(file.read_exact(&mut chunk_data).context(&self.path as &Path));
+        try!(file.read_exact(&mut chunk_data).context(
+            &self.path as &Path
+        ));
         if let Some(ref encryption) = self.info.encryption {
-            chunk_data = try!(self.crypto.lock().unwrap().decrypt(encryption, &chunk_data).context(&self.path as &Path));
+            chunk_data = try!(
+                self.crypto
+                    .lock()
+                    .unwrap()
+                    .decrypt(encryption, &chunk_data)
+                    .context(&self.path as &Path)
+            );
         }
         let chunks = ChunkList::read_from(&chunk_data);
         let mut chunk_positions = Vec::with_capacity(chunks.len());
@@ -156,20 +198,31 @@ impl BundleReader {
     fn load_encoded_contents(&self) -> Result<Vec<u8>, BundleReaderError> {
         debug!("Load bundle data {} ({:?})", self.info.id, self.info.mode);
         let mut file = BufReader::new(try!(File::open(&self.path).context(&self.path as &Path)));
-        try!(file.seek(SeekFrom::Start(self.content_start as u64)).context(&self.path as &Path));
-        let mut data = Vec::with_capacity(max(self.info.encoded_size, self.info.raw_size)+1024);
+        try!(
+            file.seek(SeekFrom::Start(self.content_start as u64))
+                .context(&self.path as &Path)
+        );
+        let mut data = Vec::with_capacity(max(self.info.encoded_size, self.info.raw_size) + 1024);
         try!(file.read_to_end(&mut data).context(&self.path as &Path));
         Ok(data)
     }
 
     fn decode_contents(&self, mut data: Vec<u8>) -> Result<Vec<u8>, BundleReaderError> {
         if let Some(ref encryption) = self.info.encryption {
-            data = try!(self.crypto.lock().unwrap().decrypt(encryption, &data).context(&self.path as &Path));
+            data = try!(
+                self.crypto
+                    .lock()
+                    .unwrap()
+                    .decrypt(encryption, &data)
+                    .context(&self.path as &Path)
+            );
         }
         if let Some(ref compression) = self.info.compression {
             let mut stream = try!(compression.decompress_stream().context(&self.path as &Path));
             let mut buffer = Vec::with_capacity(self.info.raw_size);
-            try!(stream.process(&data, &mut buffer).context(&self.path as &Path));
+            try!(stream.process(&data, &mut buffer).context(
+                &self.path as &Path
+            ));
             try!(stream.finish(&mut buffer).context(&self.path as &Path));
             data = buffer;
         }
@@ -178,12 +231,14 @@ impl BundleReader {
 
     #[inline]
     pub fn load_contents(&self) -> Result<Vec<u8>, BundleReaderError> {
-        self.load_encoded_contents().and_then(|data| self.decode_contents(data))
+        self.load_encoded_contents().and_then(|data| {
+            self.decode_contents(data)
+        })
     }
 
     pub fn get_chunk_position(&mut self, id: usize) -> Result<(usize, usize), BundleReaderError> {
         if id >= self.info.chunk_count {
-            return Err(BundleReaderError::NoSuchChunk(self.id(), id))
+            return Err(BundleReaderError::NoSuchChunk(self.id(), id));
         }
         if self.chunks.is_none() || self.chunk_positions.is_none() {
             try!(self.load_chunklist());
@@ -198,30 +253,46 @@ impl BundleReader {
             try!(self.load_chunklist());
         }
         if self.info.chunk_count != self.chunks.as_ref().unwrap().len() {
-            return Err(BundleReaderError::Integrity(self.id(),
-                "Chunk list size does not match chunk count"))
+            return Err(BundleReaderError::Integrity(
+                self.id(),
+                "Chunk list size does not match chunk count"
+            ));
         }
-        if self.chunks.as_ref().unwrap().iter().map(|c| c.1 as usize).sum::<usize>() != self.info.raw_size {
-            return Err(BundleReaderError::Integrity(self.id(),
-                "Individual chunk sizes do not add up to total size"))
+        if self.chunks
+            .as_ref()
+            .unwrap()
+            .iter()
+            .map(|c| c.1 as usize)
+            .sum::<usize>() != self.info.raw_size
+        {
+            return Err(BundleReaderError::Integrity(
+                self.id(),
+                "Individual chunk sizes do not add up to total size"
+            ));
         }
         if !full {
             let size = try!(fs::metadata(&self.path).context(&self.path as &Path)).len();
             if size as usize != self.info.encoded_size + self.content_start {
-                return Err(BundleReaderError::Integrity(self.id(),
-                    "File size does not match size in header, truncated file"))
+                return Err(BundleReaderError::Integrity(
+                    self.id(),
+                    "File size does not match size in header, truncated file"
+                ));
             }
-            return Ok(())
+            return Ok(());
         }
         let encoded_contents = try!(self.load_encoded_contents());
         if self.info.encoded_size != encoded_contents.len() {
-            return Err(BundleReaderError::Integrity(self.id(),
-                "Encoded data size does not match size in header, truncated bundle"))
+            return Err(BundleReaderError::Integrity(
+                self.id(),
+                "Encoded data size does not match size in header, truncated bundle"
+            ));
         }
         let contents = try!(self.decode_contents(encoded_contents));
         if self.info.raw_size != contents.len() {
-            return Err(BundleReaderError::Integrity(self.id(),
-                "Raw data size does not match size in header, truncated bundle"))
+            return Err(BundleReaderError::Integrity(
+                self.id(),
+                "Raw data size does not match size in header, truncated bundle"
+            ));
         }
         //TODO: verify checksum
         Ok(())
@@ -230,8 +301,15 @@ impl BundleReader {
 
 impl Debug for BundleReader {
     fn fmt(&self, fmt: &mut fmt::Formatter) -> Result<(), fmt::Error> {
-        write!(fmt, "Bundle(\n\tid: {}\n\tpath: {:?}\n\tchunks: {}\n\tsize: {}, encoded: {}\n\tcompression: {:?}\n)",
-            self.info.id.to_string(), self.path, self.info.chunk_count, self.info.raw_size,
-            self.info.encoded_size, self.info.compression)
+        write!(
+            fmt,
+            "Bundle(\n\tid: {}\n\tpath: {:?}\n\tchunks: {}\n\tsize: {}, encoded: {}\n\tcompression: {:?}\n)",
+            self.info.id.to_string(),
+            self.path,
+            self.info.chunk_count,
+            self.info.raw_size,
+            self.info.encoded_size,
+            self.info.compression
+        )
     }
 }

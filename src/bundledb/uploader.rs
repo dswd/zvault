@@ -1,4 +1,4 @@
-use ::prelude::*;
+use prelude::*;
 
 use std::sync::atomic::{Ordering, AtomicBool, AtomicUsize};
 use std::sync::{Mutex, Condvar, Arc};
@@ -28,7 +28,10 @@ impl BundleUploader {
             wait: (Condvar::new(), Mutex::new(()))
         });
         let self2 = self_.clone();
-        thread::Builder::new().name("uploader".to_string()).spawn(move || self2.worker_thread()).unwrap();
+        thread::Builder::new()
+            .name("uploader".to_string())
+            .spawn(move || self2.worker_thread())
+            .unwrap();
         self_
     }
 

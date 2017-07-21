@@ -1,4 +1,4 @@
-use ::prelude::*;
+use prelude::*;
 
 use std::mem;
 use std::cmp::min;
@@ -29,22 +29,27 @@ impl<'a> Read for ChunkReader<'a> {
         let mut bpos = 0;
         loop {
             if buf.len() == bpos {
-                break
+                break;
             }
             if self.data.len() == self.pos {
                 if let Some(chunk) = self.chunks.pop_front() {
                     self.data = match self.repo.get_chunk(chunk.0) {
                         Ok(Some(data)) => data,
-                        Ok(None) => return Err(io::Error::new(io::ErrorKind::Other, IntegrityError::MissingChunk(chunk.0))),
-                        Err(err) => return Err(io::Error::new(io::ErrorKind::Other, err))
+                        Ok(None) => {
+                            return Err(io::Error::new(
+                                io::ErrorKind::Other,
+                                IntegrityError::MissingChunk(chunk.0)
+                            ))
+                        }
+                        Err(err) => return Err(io::Error::new(io::ErrorKind::Other, err)),
                     };
                     self.pos = 0;
                 } else {
-                    break
+                    break;
                 }
             }
-            let l = min(self.data.len()-self.pos, buf.len() - bpos);
-            buf[bpos..bpos+l].copy_from_slice(&self.data[self.pos..self.pos+l]);
+            let l = min(self.data.len() - self.pos, buf.len() - bpos);
+            buf[bpos..bpos + l].copy_from_slice(&self.data[self.pos..self.pos + l]);
             bpos += l;
             self.pos += l;
         }
@@ -56,7 +61,9 @@ impl<'a> Read for ChunkReader<'a> {
 impl Repository {
     #[inline]
     pub fn get_bundle_id(&self, id: u32) -> Result<BundleId, RepositoryError> {
-        self.bundle_map.get(id).ok_or_else(|| IntegrityError::MissingBundleId(id).into())
+        self.bundle_map.get(id).ok_or_else(|| {
+            IntegrityError::MissingBundleId(id).into()
+        })
     }
 
     pub fn get_chunk(&mut self, hash: Hash) -> Result<Option<Vec<u8>>, RepositoryError> {
@@ -64,27 +71,39 @@ impl Repository {
         let found = if let Some(found) = self.index.get(&hash) {
             found
         } else {
-            return Ok(None)
+            return Ok(None);
         };
         // Lookup bundle id from map
         let bundle_id = try!(self.get_bundle_id(found.bundle));
         // Get chunk from bundle
-        Ok(Some(try!(self.bundles.get_chunk(&bundle_id, found.chunk as usize))))
+        Ok(Some(try!(
+            self.bundles.get_chunk(&bundle_id, found.chunk as usize)
+        )))
     }
 
     #[inline]
-    pub fn put_chunk(&mut self, mode: BundleMode, hash: Hash, data: &[u8]) -> Result<(), RepositoryError> {
+    pub fn put_chunk(
+        &mut self,
+        mode: BundleMode,
+        hash: Hash,
+        data: &[u8],
+    ) -> Result<(), RepositoryError> {
         // If this chunk is in the index, ignore it
         if self.index.contains(&hash) {
-            return Ok(())
+            return Ok(());
         }
         self.put_chunk_override(mode, hash, data)
     }
 
-    fn write_chunk_to_bundle_and_index(&mut self, mode: BundleMode, hash: Hash, data: &[u8]) -> Result<(), RepositoryError> {
+    fn write_chunk_to_bundle_and_index(
+        &mut self,
+        mode: BundleMode,
+        hash: Hash,
+        data: &[u8],
+    ) -> Result<(), RepositoryError> {
         let writer = match mode {
             BundleMode::Data => &mut self.data_bundle,
-            BundleMode::Meta => &mut self.meta_bundle
+            BundleMode::Meta => &mut self.meta_bundle,
         };
         // ...alocate one if needed
         if writer.is_none() {
@@ -101,10 +120,13 @@ impl Repository {
         let chunk_id = try!(writer_obj.add(data, hash));
         let bundle_id = match mode {
             BundleMode::Data => self.next_data_bundle,
-            BundleMode::Meta => self.next_meta_bundle
+            BundleMode::Meta => self.next_meta_bundle,
         };
         // Add location to the index
-        try!(self.index.set(&hash, &Location::new(bundle_id, chunk_id as u32)));
+        try!(self.index.set(
+            &hash,
+            &Location::new(bundle_id, chunk_id as u32)
+        ));
         Ok(())
     }
 
@@ -113,14 +135,14 @@ impl Repository {
         let next_free_bundle_id = self.next_free_bundle_id();
         let writer = match mode {
             BundleMode::Data => &mut self.data_bundle,
-            BundleMode::Meta => &mut self.meta_bundle
+            BundleMode::Meta => &mut self.meta_bundle,
         };
         if writer.is_none() {
-            return Ok(())
+            return Ok(());
         }
         let bundle_id = match mode {
             BundleMode::Data => self.next_data_bundle,
-            BundleMode::Meta => self.next_meta_bundle
+            BundleMode::Meta => self.next_meta_bundle,
         };
         let mut finished = None;
         mem::swap(writer, &mut finished);
@@ -139,12 +161,12 @@ impl Repository {
         let (size, raw_size) = {
             let writer = match mode {
                 BundleMode::Data => &mut self.data_bundle,
-                BundleMode::Meta => &mut self.meta_bundle
+                BundleMode::Meta => &mut self.meta_bundle,
             };
             if let Some(ref writer) = *writer {
                 (writer.estimate_final_size(), writer.raw_size())
             } else {
-                return Ok(())
+                return Ok(());
             }
         };
         if size >= self.config.bundle_size || raw_size >= 4 * self.config.bundle_size {
@@ -158,18 +180,31 @@ impl Repository {
     }
 
     #[inline]
-    pub fn put_chunk_override(&mut self, mode: BundleMode, hash: Hash, data: &[u8]) -> Result<(), RepositoryError> {
+    pub fn put_chunk_override(
+        &mut self,
+        mode: BundleMode,
+        hash: Hash,
+        data: &[u8],
+    ) -> Result<(), RepositoryError> {
         try!(self.write_chunk_to_bundle_and_index(mode, hash, data));
         self.finish_bundle_if_needed(mode)
     }
 
     #[inline]
-    pub fn put_data(&mut self, mode: BundleMode, data: &[u8]) -> Result<ChunkList, RepositoryError> {
+    pub fn put_data(
+        &mut self,
+        mode: BundleMode,
+        data: &[u8],
+    ) -> Result<ChunkList, RepositoryError> {
         let mut input = Cursor::new(data);
         self.put_stream(mode, &mut input)
     }
 
-    pub fn put_stream<R: Read>(&mut self, mode: BundleMode, data: &mut R) -> Result<ChunkList, RepositoryError> {
+    pub fn put_stream<R: Read>(
+        &mut self,
+        mode: BundleMode,
+        data: &mut R,
+    ) -> Result<ChunkList, RepositoryError> {
         let avg_size = self.config.chunker.avg_size();
         let mut chunks = Vec::new();
         let mut chunk = Vec::with_capacity(avg_size * 2);
@@ -182,14 +217,15 @@ impl Repository {
             try!(self.put_chunk(mode, hash, &chunk));
             chunks.push((hash, chunk.len() as u32));
             if res == ChunkerStatus::Finished {
-                break
+                break;
             }
         }
         Ok(chunks.into())
     }
 
     pub fn get_data(&mut self, chunks: &[Chunk]) -> Result<Vec<u8>, RepositoryError> {
-        let mut data = Vec::with_capacity(chunks.iter().map(|&(_, size)| size).sum::<u32>() as usize);
+        let mut data =
+            Vec::with_capacity(chunks.iter().map(|&(_, size)| size).sum::<u32>() as usize);
         try!(self.get_stream(chunks, &mut data));
         Ok(data)
     }
@@ -199,9 +235,15 @@ impl Repository {
         ChunkReader::new(self, chunks)
     }
 
-    pub fn get_stream<W: Write>(&mut self, chunks: &[Chunk], w: &mut W) -> Result<(), RepositoryError> {
+    pub fn get_stream<W: Write>(
+        &mut self,
+        chunks: &[Chunk],
+        w: &mut W,
+    ) -> Result<(), RepositoryError> {
         for &(ref hash, len) in chunks {
-            let data = try!(try!(self.get_chunk(*hash)).ok_or_else(|| IntegrityError::MissingChunk(*hash)));
+            let data = try!(try!(self.get_chunk(*hash)).ok_or_else(|| {
+                IntegrityError::MissingChunk(*hash)
+            }));
             debug_assert_eq!(data.len() as u32, len);
             try!(w.write_all(&data));
         }

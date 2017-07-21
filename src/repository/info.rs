@@ -1,4 +1,4 @@
-use ::prelude::*;
+use prelude::*;
 
 use std::collections::{HashMap, VecDeque};
 
@@ -40,7 +40,11 @@ pub struct RepositoryInfo {
 
 
 impl Repository {
-    fn mark_used(&self, bundles: &mut HashMap<u32, BundleAnalysis>, chunks: &[Chunk]) -> Result<bool, RepositoryError> {
+    fn mark_used(
+        &self,
+        bundles: &mut HashMap<u32, BundleAnalysis>,
+        chunks: &[Chunk],
+    ) -> Result<bool, RepositoryError> {
         let mut new = false;
         for &(hash, len) in chunks {
             if let Some(pos) = self.index.get(&hash) {
@@ -62,17 +66,22 @@ impl Repository {
 
     pub fn analyze_usage(&mut self) -> Result<HashMap<u32, BundleAnalysis>, RepositoryError> {
         if self.dirty {
-            return Err(RepositoryError::Dirty)
+            return Err(RepositoryError::Dirty);
         }
         try!(self.set_dirty());
         let mut usage = HashMap::new();
         for (id, bundle) in self.bundle_map.bundles() {
-            let bundle = try!(self.bundles.get_bundle_info(&bundle).ok_or_else(|| IntegrityError::MissingBundle(bundle)));
-            usage.insert(id, BundleAnalysis {
-                chunk_usage: Bitmap::new(bundle.info.chunk_count),
-                info: bundle.info.clone(),
-                used_raw_size: 0
-            });
+            let bundle = try!(self.bundles.get_bundle_info(&bundle).ok_or_else(|| {
+                IntegrityError::MissingBundle(bundle)
+            }));
+            usage.insert(
+                id,
+                BundleAnalysis {
+                    chunk_usage: Bitmap::new(bundle.info.chunk_count),
+                    info: bundle.info.clone(),
+                    used_raw_size: 0
+                }
+            );
         }
         let backups = try!(self.get_all_backups());
         let mut todo = VecDeque::new();
@@ -81,15 +90,16 @@ impl Repository {
         }
         while let Some(chunks) = todo.pop_back() {
             if !try!(self.mark_used(&mut usage, &chunks)) {
-                continue
+                continue;
             }
             let inode = try!(self.get_inode(&chunks));
             // Mark the content chunks as used
             match inode.data {
-                None | Some(FileData::Inline(_)) => (),
+                None |
+                Some(FileData::Inline(_)) => (),
                 Some(FileData::ChunkedDirect(chunks)) => {
                     try!(self.mark_used(&mut usage, &chunks));
-                },
+                }
                 Some(FileData::ChunkedIndirect(chunks)) => {
                     if try!(self.mark_used(&mut usage, &chunks)) {
                         let chunk_data = try!(self.get_data(&chunks));

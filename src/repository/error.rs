@@ -1,4 +1,4 @@
-use ::prelude::*;
+use prelude::*;
 
 use std::io;
 use std::path::PathBuf;

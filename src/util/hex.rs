@@ -1,5 +1,8 @@
 pub fn to_hex(data: &[u8]) -> String {
-    data.iter().map(|b| format!("{:02x}", b)).collect::<Vec<String>>().join("")
+    data.iter()
+        .map(|b| format!("{:02x}", b))
+        .collect::<Vec<String>>()
+        .join("")
 }
 
 pub fn parse_hex(hex: &str) -> Result<Vec<u8>, ()> {
@@ -12,9 +15,9 @@ pub fn parse_hex(hex: &str) -> Result<Vec<u8>, ()> {
             b'A'...b'F' => buf |= byte - b'A' + 10,
             b'a'...b'f' => buf |= byte - b'a' + 10,
             b'0'...b'9' => buf |= byte - b'0',
-            b' '|b'\r'|b'\n'|b'\t' => {
+            b' ' | b'\r' | b'\n' | b'\t' => {
                 buf >>= 4;
-                continue
+                continue;
             }
             _ => return Err(()),
         }
@@ -45,7 +48,7 @@ mod tests {
         assert_eq!(to_hex(&[15]), "0f");
         assert_eq!(to_hex(&[16]), "10");
         assert_eq!(to_hex(&[255]), "ff");
-        assert_eq!(to_hex(&[5,255]), "05ff");
+        assert_eq!(to_hex(&[5, 255]), "05ff");
     }
 
     #[test]
@@ -53,9 +56,9 @@ mod tests {
         assert_eq!(parse_hex("00"), Ok(vec![0]));
         assert_eq!(parse_hex("01"), Ok(vec![1]));
         assert_eq!(parse_hex("0f"), Ok(vec![15]));
-        assert_eq!(parse_hex("0fff"), Ok(vec![15,255]));
+        assert_eq!(parse_hex("0fff"), Ok(vec![15, 255]));
         assert_eq!(parse_hex("0F"), Ok(vec![15]));
-        assert_eq!(parse_hex("01 02\n03\t04"), Ok(vec![1,2,3,4]));
+        assert_eq!(parse_hex("01 02\n03\t04"), Ok(vec![1, 2, 3, 4]));
     }
 
 }

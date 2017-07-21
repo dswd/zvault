@@ -10,7 +10,7 @@ pub struct LruCache<K, V> {
 }
 
 
-impl<K: Eq+Hash, V> LruCache<K, V> {
+impl<K: Eq + Hash, V> LruCache<K, V> {
     #[inline]
     pub fn new(min_size: usize, max_size: usize) -> Self {
         LruCache {
@@ -55,9 +55,9 @@ impl<K: Eq+Hash, V> LruCache<K, V> {
     fn shrink(&mut self) {
         let mut tags: Vec<u64> = self.items.values().map(|&(_, n)| n).collect();
         tags.sort();
-        let min = tags[tags.len()-self.min_size];
+        let min = tags[tags.len() - self.min_size];
         let mut new = HashMap::with_capacity(self.min_size);
-        new.extend(self.items.drain().filter(|&(_,(_, n))| n>=min));
+        new.extend(self.items.drain().filter(|&(_, (_, n))| n >= min));
         self.items = new;
     }
 }

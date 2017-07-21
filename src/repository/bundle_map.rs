@@ -1,4 +1,4 @@
-use ::prelude::*;
+use prelude::*;
 
 use std::collections::HashMap;
 use std::path::Path;
@@ -51,11 +51,11 @@ impl BundleMap {
         let mut header = [0u8; 8];
         try!(file.read_exact(&mut header));
         if header[..HEADER_STRING.len()] != HEADER_STRING {
-            return Err(BundleMapError::WrongHeader)
+            return Err(BundleMapError::WrongHeader);
         }
         let version = header[HEADER_STRING.len()];
         if version != HEADER_VERSION {
-            return Err(BundleMapError::WrongVersion(version))
+            return Err(BundleMapError::WrongVersion(version));
         }
         Ok(BundleMap(try!(msgpack::decode_from_stream(&mut file))))
     }
@@ -80,7 +80,7 @@ impl BundleMap {
     pub fn find(&self, bundle: &BundleId) -> Option<u32> {
         for (id, bundle_id) in &self.0 {
             if bundle == bundle_id {
-                return Some(*id)
+                return Some(*id);
             }
         }
         None
@@ -92,7 +92,10 @@ impl BundleMap {
     }
 
     pub fn bundles(&self) -> Vec<(u32, BundleId)> {
-        self.0.iter().map(|(id, bundle)| (*id, bundle.clone())).collect()
+        self.0
+            .iter()
+            .map(|(id, bundle)| (*id, bundle.clone()))
+            .collect()
     }
 
     #[inline]

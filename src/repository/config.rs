@@ -1,4 +1,4 @@
-use ::prelude::*;
+use prelude::*;
 
 use serde_yaml;
 
@@ -49,7 +49,7 @@ impl Default for ChunkerYaml {
     fn default() -> Self {
         ChunkerYaml {
             method: "fastcdc".to_string(),
-            avg_size: 16*1024,
+            avg_size: 16 * 1024,
             seed: 0
         }
     }
@@ -126,14 +126,14 @@ struct ConfigYaml {
     encryption: Option<EncryptionYaml>,
     bundle_size: usize,
     chunker: ChunkerYaml,
-    hash: String,
+    hash: String
 }
 impl Default for ConfigYaml {
     fn default() -> Self {
         ConfigYaml {
             compression: Some("brotli/5".to_string()),
             encryption: None,
-            bundle_size: 25*1024*1024,
+            bundle_size: 25 * 1024 * 1024,
             chunker: ChunkerYaml::default(),
             hash: "blake2".to_string()
         }
@@ -162,7 +162,7 @@ impl Default for Config {
         Config {
             compression: Some(Compression::from_string("brotli/3").unwrap()),
             encryption: None,
-            bundle_size: 25*1024*1024,
+            bundle_size: 25 * 1024 * 1024,
             chunker: ChunkerType::from_string("fastcdc/16").unwrap(),
             hash: HashMethod::Blake2
         }
@@ -185,12 +185,14 @@ impl Config {
         };
         let encryption = if let Some(e) = yaml.encryption {
             let method = try!(EncryptionMethod::from_yaml(e.method));
-            let key = try!(parse_hex(&e.key).map_err(|_| ConfigError::Parse("Invalid public key")));
+            let key = try!(parse_hex(&e.key).map_err(|_| {
+                ConfigError::Parse("Invalid public key")
+            }));
             Some((method, key.into()))
         } else {
             None
         };
-        Ok(Config{
+        Ok(Config {
             compression: compression,
             encryption: encryption,
             bundle_size: yaml.bundle_size,
@@ -202,7 +204,12 @@ impl Config {
     fn to_yaml(&self) -> ConfigYaml {
         ConfigYaml {
             compression: self.compression.as_ref().map(|c| c.to_yaml()),
-            encryption: self.encryption.as_ref().map(|e| EncryptionYaml{method: e.0.to_yaml(), key: to_hex(&e.1[..])}),
+            encryption: self.encryption.as_ref().map(|e| {
+                EncryptionYaml {
+                    method: e.0.to_yaml(),
+                    key: to_hex(&e.1[..])
+                }
+            }),
             bundle_size: self.bundle_size,
             chunker: self.chunker.to_yaml(),
             hash: self.hash.to_yaml()

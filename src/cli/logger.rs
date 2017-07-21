@@ -22,11 +22,23 @@ impl log::Log for Logger {
     fn log(&self, record: &LogRecord) {
         if self.enabled(record.metadata()) {
             match record.level() {
-                LogLevel::Error => println_stderr!("{}: {}", Color::Red.bold().paint("error"), record.args()),
-                LogLevel::Warn => println_stderr!("{}: {}", Color::Yellow.bold().paint("warning"), record.args()),
-                LogLevel::Info => println_stderr!("{}: {}", Color::Green.bold().paint("info"), record.args()),
-                LogLevel::Debug => println_stderr!("{}: {}", Style::new().bold().paint("debug"), record.args()),
-                LogLevel::Trace => println_stderr!("{}: {}", "trace", record.args())
+                LogLevel::Error => {
+                    println_stderr!("{}: {}", Color::Red.bold().paint("error"), record.args())
+                }
+                LogLevel::Warn => {
+                    println_stderr!(
+                        "{}: {}",
+                        Color::Yellow.bold().paint("warning"),
+                        record.args()
+                    )
+                }
+                LogLevel::Info => {
+                    println_stderr!("{}: {}", Color::Green.bold().paint("info"), record.args())
+                }
+                LogLevel::Debug => {
+                    println_stderr!("{}: {}", Style::new().bold().paint("debug"), record.args())
+                }
+                LogLevel::Trace => println_stderr!("{}: {}", "trace", record.args()),
             }
         }
     }

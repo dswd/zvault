@@ -1,4 +1,4 @@
-use ::prelude::*;
+use prelude::*;
 
 use super::*;
 
@@ -51,7 +51,7 @@ impl Repository {
         let mut progress = ProgressBar::new(self.index.len() as u64);
         progress.message("checking index: ");
         progress.set_max_refresh_rate(Some(Duration::from_millis(100)));
-        for (count,(_hash, location)) in self.index.iter().enumerate() {
+        for (count, (_hash, location)) in self.index.iter().enumerate() {
             // Lookup bundle id from map
             let bundle_id = try!(self.get_bundle_id(location.bundle));
             // Get bundle object from bundledb
@@ -59,12 +59,14 @@ impl Repository {
                 bundle
             } else {
                 progress.finish_print("checking index: done.");
-                return Err(IntegrityError::MissingBundle(bundle_id.clone()).into())
+                return Err(IntegrityError::MissingBundle(bundle_id.clone()).into());
             };
             // Get chunk from bundle
             if bundle.info.chunk_count <= location.chunk as usize {
                 progress.finish_print("checking index: done.");
-                return Err(IntegrityError::NoSuchChunk(bundle_id.clone(), location.chunk).into())
+                return Err(
+                    IntegrityError::NoSuchChunk(bundle_id.clone(), location.chunk).into()
+                );
             }
             if count % 1000 == 0 {
                 progress.set(count as u64);
@@ -74,7 +76,12 @@ impl Repository {
         Ok(())
     }
 
-    fn check_chunks(&self, checked: &mut Bitmap, chunks: &[Chunk], mark: bool) -> Result<bool, RepositoryError> {
+    fn check_chunks(
+        &self,
+        checked: &mut Bitmap,
+        chunks: &[Chunk],
+        mark: bool,
+    ) -> Result<bool, RepositoryError> {
         let mut new = false;
         for &(hash, _len) in chunks {
             if let Some(pos) = self.index.pos(&hash) {
@@ -83,18 +90,23 @@ impl Repository {
                     checked.set(pos);
                 }
             } else {
-                return Err(IntegrityError::MissingChunk(hash).into())
+                return Err(IntegrityError::MissingChunk(hash).into());
             }
         }
         Ok(new)
     }
 
-    fn check_inode_contents(&mut self, inode: &Inode, checked: &mut Bitmap) -> Result<(), RepositoryError> {
+    fn check_inode_contents(
+        &mut self,
+        inode: &Inode,
+        checked: &mut Bitmap,
+    ) -> Result<(), RepositoryError> {
         match inode.data {
-            None | Some(FileData::Inline(_)) => (),
+            None |
+            Some(FileData::Inline(_)) => (),
             Some(FileData::ChunkedDirect(ref chunks)) => {
                 try!(self.check_chunks(checked, chunks, true));
-            },
+            }
             Some(FileData::ChunkedIndirect(ref chunks)) => {
                 if try!(self.check_chunks(checked, chunks, true)) {
                     let chunk_data = try!(self.get_data(chunks));
@@ -106,24 +118,34 @@ impl Repository {
         Ok(())
     }
 
-    fn check_subtree(&mut self, path: PathBuf, chunks: &[Chunk], checked: &mut Bitmap, repair: bool) -> Result<Option<ChunkList>, RepositoryError> {
+    fn check_subtree(
+        &mut self,
+        path: PathBuf,
+        chunks: &[Chunk],
+        checked: &mut Bitmap,
+        repair: bool,
+    ) -> Result<Option<ChunkList>, RepositoryError> {
         let mut modified = false;
         match self.check_chunks(checked, chunks, false) {
             Ok(false) => return Ok(None),
             Ok(true) => (),
-            Err(err) => return Err(IntegrityError::BrokenInode(path, Box::new(err)).into())
+            Err(err) => return Err(IntegrityError::BrokenInode(path, Box::new(err)).into()),
         }
         let mut inode = try!(self.get_inode(chunks));
         // Mark the content chunks as used
         if let Err(err) = self.check_inode_contents(&inode, checked) {
             if repair {
-                warn!("Problem detected: data of {:?} is corrupt\n\tcaused by: {}", path, err);
+                warn!(
+                    "Problem detected: data of {:?} is corrupt\n\tcaused by: {}",
+                    path,
+                    err
+                );
                 info!("Removing inode data");
                 inode.data = Some(FileData::Inline(vec![].into()));
                 inode.size = 0;
                 modified = true;
             } else {
-                return Err(IntegrityError::MissingInodeData(path, Box::new(err)).into())
+                return Err(IntegrityError::MissingInodeData(path, Box::new(err)).into());
             }
         }
         // Put children in todo
@@ -135,14 +157,20 @@ impl Repository {
                     Ok(Some(c)) => {
                         *chunks = c;
                         modified = true;
-                    },
-                    Err(err) => if repair {
-                        warn!("Problem detected: inode {:?} is corrupt\n\tcaused by: {}", path.join(name), err);
-                        info!("Removing broken inode from backup");
-                        removed.push(name.to_string());
-                        modified = true;
-                    } else {
-                        return Err(err)
+                    }
+                    Err(err) => {
+                        if repair {
+                            warn!(
+                                "Problem detected: inode {:?} is corrupt\n\tcaused by: {}",
+                                path.join(name),
+                                err
+                            );
+                            info!("Removing broken inode from backup");
+                            removed.push(name.to_string());
+                            modified = true;
+                        } else {
+                            return Err(err);
+                        }
                     }
                 }
             }
@@ -159,7 +187,10 @@ impl Repository {
     }
 
     fn evacuate_broken_backup(&self, name: &str) -> Result<(), RepositoryError> {
-        warn!("The backup {} was corrupted and needed to be modified.", name);
+        warn!(
+            "The backup {} was corrupted and needed to be modified.",
+            name
+        );
         let src = self.layout.backup_path(name);
         let mut dst = src.with_extension("backup.broken");
         let mut num = 1;
@@ -176,7 +207,12 @@ impl Repository {
     }
 
     #[inline]
-    pub fn check_backup(&mut self, name: &str, backup: &mut Backup, repair: bool) -> Result<(), RepositoryError> {
+    pub fn check_backup(
+        &mut self,
+        name: &str,
+        backup: &mut Backup,
+        repair: bool,
+    ) -> Result<(), RepositoryError> {
         let _lock = if repair {
             try!(self.write_mode());
             Some(self.lock(false))
@@ -185,7 +221,12 @@ impl Repository {
         };
         info!("Checking backup...");
         let mut checked = Bitmap::new(self.index.capacity());
-        match self.check_subtree(Path::new("").to_path_buf(), &backup.root, &mut checked, repair) {
+        match self.check_subtree(
+            Path::new("").to_path_buf(),
+            &backup.root,
+            &mut checked,
+            repair
+        ) {
             Ok(None) => (),
             Ok(Some(chunks)) => {
                 try!(self.flush());
@@ -193,18 +234,30 @@ impl Repository {
                 backup.modified = true;
                 try!(self.evacuate_broken_backup(name));
                 try!(self.save_backup(backup, name));
-            },
-            Err(err) => if repair {
-                warn!("The root of the backup {} has been corrupted\n\tcaused by: {}", name, err);
-                try!(self.evacuate_broken_backup(name));
-            } else {
-                return Err(err)
+            }
+            Err(err) => {
+                if repair {
+                    warn!(
+                        "The root of the backup {} has been corrupted\n\tcaused by: {}",
+                        name,
+                        err
+                    );
+                    try!(self.evacuate_broken_backup(name));
+                } else {
+                    return Err(err);
+                }
             }
         }
         Ok(())
     }
 
-    pub fn check_backup_inode(&mut self, name: &str, backup: &mut Backup, path: &Path, repair: bool) -> Result<(), RepositoryError> {
+    pub fn check_backup_inode(
+        &mut self,
+        name: &str,
+        backup: &mut Backup,
+        path: &Path,
+        repair: bool,
+    ) -> Result<(), RepositoryError> {
         let _lock = if repair {
             try!(self.write_mode());
             Some(self.lock(false))
@@ -218,13 +271,19 @@ impl Repository {
         let mut modified = false;
         if let Err(err) = self.check_inode_contents(&inode, &mut checked) {
             if repair {
-                warn!("Problem detected: data of {:?} is corrupt\n\tcaused by: {}", path, err);
+                warn!(
+                    "Problem detected: data of {:?} is corrupt\n\tcaused by: {}",
+                    path,
+                    err
+                );
                 info!("Removing inode data");
                 inode.data = Some(FileData::Inline(vec![].into()));
                 inode.size = 0;
                 modified = true;
             } else {
-                return Err(IntegrityError::MissingInodeData(path.to_path_buf(), Box::new(err)).into())
+                return Err(
+                    IntegrityError::MissingInodeData(path.to_path_buf(), Box::new(err)).into()
+                );
             }
         }
         if let Some(ref mut children) = inode.children {
@@ -235,14 +294,20 @@ impl Repository {
                     Ok(Some(c)) => {
                         *chunks = c;
                         modified = true;
-                    },
-                    Err(err) => if repair {
-                        warn!("Problem detected: inode {:?} is corrupt\n\tcaused by: {}", path.join(name), err);
-                        info!("Removing broken inode from backup");
-                        removed.push(name.to_string());
-                        modified = true;
-                    } else {
-                        return Err(err)
+                    }
+                    Err(err) => {
+                        if repair {
+                            warn!(
+                                "Problem detected: inode {:?} is corrupt\n\tcaused by: {}",
+                                path.join(name),
+                                err
+                            );
+                            info!("Removing broken inode from backup");
+                            removed.push(name.to_string());
+                            modified = true;
+                        } else {
+                            return Err(err);
+                        }
                     }
                 }
             }
@@ -277,15 +342,23 @@ impl Repository {
         let mut checked = Bitmap::new(self.index.capacity());
         let backup_map = match self.get_all_backups() {
             Ok(backup_map) => backup_map,
-            Err(RepositoryError::BackupFile(BackupFileError::PartialBackupsList(backup_map, _failed))) => {
+            Err(RepositoryError::BackupFile(BackupFileError::PartialBackupsList(backup_map,
+                                                                                _failed))) => {
                 warn!("Some backups could not be read, ignoring them");
                 backup_map
-            },
-            Err(err) => return Err(err)
+            }
+            Err(err) => return Err(err),
         };
-        for (name, mut backup) in ProgressIter::new("checking backups", backup_map.len(), backup_map.into_iter()) {
+        for (name, mut backup) in
+            ProgressIter::new("checking backups", backup_map.len(), backup_map.into_iter())
+        {
             let path = format!("{}::", name);
-            match self.check_subtree(Path::new(&path).to_path_buf(), &backup.root, &mut checked, repair) {
+            match self.check_subtree(
+                Path::new(&path).to_path_buf(),
+                &backup.root,
+                &mut checked,
+                repair
+            ) {
                 Ok(None) => (),
                 Ok(Some(chunks)) => {
                     try!(self.flush());
@@ -293,12 +366,18 @@ impl Repository {
                     backup.modified = true;
                     try!(self.evacuate_broken_backup(&name));
                     try!(self.save_backup(&backup, &name));
-                },
-                Err(err) => if repair {
-                    warn!("The root of the backup {} has been corrupted\n\tcaused by: {}", name, err);
-                    try!(self.evacuate_broken_backup(&name));
-                } else {
-                    return Err(err)
+                }
+                Err(err) => {
+                    if repair {
+                        warn!(
+                            "The root of the backup {} has been corrupted\n\tcaused by: {}",
+                            name,
+                            err
+                        );
+                        try!(self.evacuate_broken_backup(&name));
+                    } else {
+                        return Err(err);
+                    }
                 }
             }
         }
@@ -311,10 +390,13 @@ impl Repository {
         for (_id, bundle_id) in self.bundle_map.bundles() {
             if self.bundles.get_bundle_info(&bundle_id).is_none() {
                 if repair {
-                    warn!("Problem detected: bundle map contains unknown bundle {}", bundle_id);
+                    warn!(
+                        "Problem detected: bundle map contains unknown bundle {}",
+                        bundle_id
+                    );
                     rebuild = true;
                 } else {
-                    return Err(IntegrityError::MissingBundle(bundle_id).into())
+                    return Err(IntegrityError::MissingBundle(bundle_id).into());
                 }
             }
         }
@@ -323,7 +405,7 @@ impl Repository {
                 warn!("Problem detected: bundle map does not contain all remote bundles");
                 rebuild = true;
             } else {
-                return Err(IntegrityError::RemoteBundlesNotInMap.into())
+                return Err(IntegrityError::RemoteBundlesNotInMap.into());
             }
         }
         if self.bundle_map.len() > self.bundles.len() {
@@ -331,7 +413,7 @@ impl Repository {
                 warn!("Problem detected: bundle map contains bundles multiple times");
                 rebuild = true;
             } else {
-                return Err(IntegrityError::MapContainsDuplicates.into())
+                return Err(IntegrityError::MapContainsDuplicates.into());
             }
         }
         if rebuild {
@@ -347,7 +429,7 @@ impl Repository {
         for bundle in self.bundles.list_bundles() {
             let bundle_id = match bundle.mode {
                 BundleMode::Data => self.next_data_bundle,
-                BundleMode::Meta => self.next_meta_bundle
+                BundleMode::Meta => self.next_meta_bundle,
             };
             self.bundle_map.set(bundle_id, bundle.id.clone());
             if self.next_meta_bundle == bundle_id {
@@ -368,7 +450,13 @@ impl Repository {
         for (num, id) in bundles {
             let chunks = try!(self.bundles.get_chunk_list(&id));
             for (i, (hash, _len)) in chunks.into_inner().into_iter().enumerate() {
-                try!(self.index.set(&hash, &Location{bundle: num as u32, chunk: i as u32}));
+                try!(self.index.set(
+                    &hash,
+                    &Location {
+                        bundle: num as u32,
+                        chunk: i as u32
+                    }
+                ));
             }
         }
         Ok(())
@@ -382,19 +470,25 @@ impl Repository {
         info!("Checking index integrity...");
         if let Err(err) = self.index.check() {
             if repair {
-                warn!("Problem detected: index was corrupted\n\tcaused by: {}", err);
+                warn!(
+                    "Problem detected: index was corrupted\n\tcaused by: {}",
+                    err
+                );
                 return self.rebuild_index();
             } else {
-                return Err(err.into())
+                return Err(err.into());
             }
         }
         info!("Checking index entries...");
         if let Err(err) = self.check_index_chunks() {
             if repair {
-                warn!("Problem detected: index entries were inconsistent\n\tcaused by: {}", err);
+                warn!(
+                    "Problem detected: index entries were inconsistent\n\tcaused by: {}",
+                    err
+                );
                 return self.rebuild_index();
             } else {
-                return Err(err.into())
+                return Err(err.into());
             }
         }
         Ok(())

@@ -1,4 +1,4 @@
-use ::prelude::*;
+use prelude::*;
 
 use std::path::Path;
 use std::ffi::OsStr;
@@ -71,7 +71,7 @@ fn convert_file_type(kind: FileType) -> fuse::FileType {
         FileType::Symlink => fuse::FileType::Symlink,
         FileType::BlockDevice => fuse::FileType::BlockDevice,
         FileType::CharDevice => fuse::FileType::CharDevice,
-        FileType::NamedPipe => fuse::FileType::NamedPipe
+        FileType::NamedPipe => fuse::FileType::NamedPipe,
     }
 }
 
@@ -115,16 +115,19 @@ impl FuseInode {
             nlink: 1,
             uid: uid,
             gid: gid,
-            rdev: self.inode.device.map_or(0, |(major, minor)| (major << 8) + minor),
+            rdev: self.inode.device.map_or(
+                0,
+                |(major, minor)| (major << 8) + minor
+            ),
             flags: 0
         }
     }
 
     pub fn dir_list(&self) -> Option<Vec<(u64, fuse::FileType, String)>> {
         if self.inode.file_type != FileType::Directory {
-            return None
+            return None;
         }
-        let mut list = Vec::with_capacity(self.children.len()+2);
+        let mut list = Vec::with_capacity(self.children.len() + 2);
         list.push((self.num, fuse::FileType::Directory, ".".to_string()));
         if let Some(ref parent) = self.parent {
             let parent = parent.borrow();
@@ -134,7 +137,11 @@ impl FuseInode {
         }
         for ch in self.children.values() {
             let child = ch.borrow();
-            list.push((child.num, convert_file_type(child.inode.file_type), child.inode.name.clone()));
+            list.push((
+                child.num,
+                convert_file_type(child.inode.file_type),
+                child.inode.name.clone()
+            ));
         }
         Some(list)
     }
@@ -156,11 +163,14 @@ impl<'a> FuseFilesystem<'a> {
         })
     }
 
-    pub fn from_repository(repository: &'a mut Repository, path: Option<&str>) -> Result<Self, RepositoryError> {
+    pub fn from_repository(
+        repository: &'a mut Repository,
+        path: Option<&str>,
+    ) -> Result<Self, RepositoryError> {
         let mut backups = vec![];
         let backup_map = match path {
             Some(path) => try!(repository.get_backups(path)),
-            None => try!(repository.get_all_backups())
+            None => try!(repository.get_all_backups()),
         };
         for (name, backup) in backup_map {
             let inode = try!(repository.get_inode(&backup.root));
@@ -173,7 +183,7 @@ impl<'a> FuseFilesystem<'a> {
             for part in name.split('/') {
                 parent = match fs.get_child(&parent, part).unwrap() {
                     Some(child) => child,
-                    None => fs.add_virtual_directory(part.to_string(), Some(parent))
+                    None => fs.add_virtual_directory(part.to_string(), Some(parent)),
                 };
             }
             let mut parent_mut = parent.borrow_mut();
@@ -185,28 +195,50 @@ impl<'a> FuseFilesystem<'a> {
         Ok(fs)
     }
 
-    pub fn from_backup(repository: &'a mut Repository, backup: Backup) -> Result<Self, RepositoryError> {
+    pub fn from_backup(
+        repository: &'a mut Repository,
+        backup: Backup,
+    ) -> Result<Self, RepositoryError> {
         let inode = try!(repository.get_inode(&backup.root));
         let mut fs = try!(FuseFilesystem::new(repository));
         fs.add_inode(inode, None, backup.user_names, backup.group_names);
         Ok(fs)
     }
 
-    pub fn from_inode(repository: &'a mut Repository, backup: Backup, inode: Inode) -> Result<Self, RepositoryError> {
+    pub fn from_inode(
+        repository: &'a mut Repository,
+        backup: Backup,
+        inode: Inode,
+    ) -> Result<Self, RepositoryError> {
         let mut fs = try!(FuseFilesystem::new(repository));
         fs.add_inode(inode, None, backup.user_names, backup.group_names);
         Ok(fs)
     }
 
-    pub fn add_virtual_directory(&mut self, name: String, parent: Option<FuseInodeRef>) -> FuseInodeRef {
-        self.add_inode(Inode {
-            name: name,
-            file_type: FileType::Directory,
-            ..Default::default()
-        }, parent, HashMap::default(), HashMap::default())
+    pub fn add_virtual_directory(
+        &mut self,
+        name: String,
+        parent: Option<FuseInodeRef>,
+    ) -> FuseInodeRef {
+        self.add_inode(
+            Inode {
+                name: name,
+                file_type: FileType::Directory,
+                ..Default::default()
+            },
+            parent,
+            HashMap::default(),
+            HashMap::default()
+        )
     }
 
-    pub fn add_inode(&mut self, inode: Inode, parent: Option<FuseInodeRef>, user_names: HashMap<u32, String>, group_names: HashMap<u32, String>) -> FuseInodeRef {
+    pub fn add_inode(
+        &mut self,
+        inode: Inode,
+        parent: Option<FuseInodeRef>,
+        user_names: HashMap<u32, String>,
+        group_names: HashMap<u32, String>,
+    ) -> FuseInodeRef {
         let inode = FuseInode {
             inode: inode,
             num: self.next_id,
@@ -228,22 +260,30 @@ impl<'a> FuseFilesystem<'a> {
     }
 
     pub fn mount<P: AsRef<Path>>(self, mountpoint: P) -> Result<(), RepositoryError> {
-        Ok(try!(fuse::mount(self, &mountpoint, &[
-            OsStr::new("default_permissions"),
-            OsStr::new("kernel_cache"),
-            OsStr::new("auto_cache"),
-            OsStr::new("readonly")
-        ])))
+        Ok(try!(fuse::mount(
+            self,
+            &mountpoint,
+            &[
+                OsStr::new("default_permissions"),
+                OsStr::new("kernel_cache"),
+                OsStr::new("auto_cache"),
+                OsStr::new("readonly"),
+            ]
+        )))
     }
 
     pub fn get_inode(&mut self, num: u64) -> Option<FuseInodeRef> {
         self.inodes.get(&num).cloned()
     }
 
-    pub fn get_child(&mut self, parent: &FuseInodeRef, name: &str) -> Result<Option<FuseInodeRef>, RepositoryError> {
+    pub fn get_child(
+        &mut self,
+        parent: &FuseInodeRef,
+        name: &str,
+    ) -> Result<Option<FuseInodeRef>, RepositoryError> {
         let mut parent_mut = parent.borrow_mut();
         if let Some(child) = parent_mut.children.get(name) {
-            return Ok(Some(child.clone()))
+            return Ok(Some(child.clone()));
         }
         let child;
         if let Some(chunks) = parent_mut.inode.children.as_ref().and_then(|c| c.get(name)) {
@@ -258,9 +298,9 @@ impl<'a> FuseFilesystem<'a> {
                 name_cache: parent_mut.name_cache.clone()
             }));
             self.inodes.insert(self.next_id, child.clone());
-            self.next_id +=1;
+            self.next_id += 1;
         } else {
-            return Ok(None)
+            return Ok(None);
         }
         parent_mut.children.insert(name.to_string(), child.clone());
         Ok(Some(child))
@@ -284,7 +324,7 @@ impl<'a> FuseFilesystem<'a> {
                         name_cache: parent_mut.name_cache.clone()
                     }));
                     self.inodes.insert(self.next_id, child.clone());
-                    self.next_id +=1;
+                    self.next_id += 1;
                     parent_children.insert(name.clone(), child);
                 }
             }
@@ -297,10 +337,11 @@ impl<'a> FuseFilesystem<'a> {
         let mut inode = inode.borrow_mut();
         let mut chunks = None;
         match inode.inode.data {
-            None | Some(FileData::Inline(_)) => (),
+            None |
+            Some(FileData::Inline(_)) => (),
             Some(FileData::ChunkedDirect(ref c)) => {
                 chunks = Some(c.clone());
-            },
+            }
             Some(FileData::ChunkedIndirect(ref c)) => {
                 let chunk_data = try!(self.repository.get_data(c));
                 chunks = Some(ChunkList::read_from(&chunk_data));
@@ -313,9 +354,8 @@ impl<'a> FuseFilesystem<'a> {
 
 
 impl<'a> fuse::Filesystem for FuseFilesystem<'a> {
-
     /// Look up a directory entry by name and get its attributes.
-    fn lookup (&mut self, _req: &fuse::Request, parent: u64, name: &OsStr, reply: fuse::ReplyEntry) {
+    fn lookup(&mut self, _req: &fuse::Request, parent: u64, name: &OsStr, reply: fuse::ReplyEntry) {
         let sname = str!(name, reply);
         let parent = inode!(self, parent, reply);
         let child = lookup!(self, &parent, sname, reply);
@@ -324,7 +364,7 @@ impl<'a> fuse::Filesystem for FuseFilesystem<'a> {
         reply.entry(&ttl, &attrs, 0)
     }
 
-    fn destroy (&mut self, _req: &fuse::Request) {
+    fn destroy(&mut self, _req: &fuse::Request) {
         info!("destroy");
     }
 
@@ -335,66 +375,131 @@ impl<'a> fuse::Filesystem for FuseFilesystem<'a> {
     /// each forget. The filesystem may ignore forget calls, if the inodes don't need to
     /// have a limited lifetime. On unmount it is not guaranteed, that all referenced
     /// inodes will receive a forget message.
-    fn forget (&mut self, _req: &fuse::Request, ino: u64, _nlookup: u64) {
+    fn forget(&mut self, _req: &fuse::Request, ino: u64, _nlookup: u64) {
         info!("forget {:?}", ino);
         //self.fs.forget(ino).unwrap();
     }
 
     /// Get file attributes
-    fn getattr (&mut self, _req: &fuse::Request, ino: u64, reply: fuse::ReplyAttr) {
+    fn getattr(&mut self, _req: &fuse::Request, ino: u64, reply: fuse::ReplyAttr) {
         let inode = inode!(self, ino, reply);
         let ttl = Timespec::new(60, 0);
         reply.attr(&ttl, &inode.borrow().to_attrs());
     }
 
     /// Set file attributes
-    fn setattr (&mut self, _req: &fuse::Request, _ino: u64, _mode: Option<u32>, _uid: Option<u32>, _gid: Option<u32>, _size: Option<u64>, _atime: Option<Timespec>, _mtime: Option<Timespec>, _fh: Option<u64>, _crtime: Option<Timespec>, _chgtime: Option<Timespec>, _bkuptime: Option<Timespec>, _flags: Option<u32>, reply: fuse::ReplyAttr) {
+    fn setattr(
+        &mut self,
+        _req: &fuse::Request,
+        _ino: u64,
+        _mode: Option<u32>,
+        _uid: Option<u32>,
+        _gid: Option<u32>,
+        _size: Option<u64>,
+        _atime: Option<Timespec>,
+        _mtime: Option<Timespec>,
+        _fh: Option<u64>,
+        _crtime: Option<Timespec>,
+        _chgtime: Option<Timespec>,
+        _bkuptime: Option<Timespec>,
+        _flags: Option<u32>,
+        reply: fuse::ReplyAttr,
+    ) {
         reply.error(libc::EROFS)
     }
 
     /// Read symbolic link
-    fn readlink (&mut self, _req: &fuse::Request, ino: u64, reply: fuse::ReplyData) {
+    fn readlink(&mut self, _req: &fuse::Request, ino: u64, reply: fuse::ReplyData) {
         let inode = inode!(self, ino, reply);
         let inode = inode.borrow();
         match inode.inode.symlink_target {
             None => reply.error(libc::EINVAL),
-            Some(ref link) => reply.data(link.as_bytes())
+            Some(ref link) => reply.data(link.as_bytes()),
         }
     }
 
     /// Create a hard link
-    fn link (&mut self, _req: &fuse::Request, _ino: u64, _newparent: u64, _newname: &OsStr, reply: fuse::ReplyEntry) {
+    fn link(
+        &mut self,
+        _req: &fuse::Request,
+        _ino: u64,
+        _newparent: u64,
+        _newname: &OsStr,
+        reply: fuse::ReplyEntry,
+    ) {
         reply.error(libc::EROFS)
     }
 
     /// Create file node
     /// Create a regular file, character device, block device, fifo or socket node.
-    fn mknod (&mut self, _req: &fuse::Request, _parent: u64, _name: &OsStr, _mode: u32, _rdev: u32, reply: fuse::ReplyEntry) {
+    fn mknod(
+        &mut self,
+        _req: &fuse::Request,
+        _parent: u64,
+        _name: &OsStr,
+        _mode: u32,
+        _rdev: u32,
+        reply: fuse::ReplyEntry,
+    ) {
         reply.error(libc::EROFS)
     }
 
     /// Create a directory
-    fn mkdir (&mut self, _req: &fuse::Request, _parent: u64, _name: &OsStr, _mode: u32, reply: fuse::ReplyEntry) {
+    fn mkdir(
+        &mut self,
+        _req: &fuse::Request,
+        _parent: u64,
+        _name: &OsStr,
+        _mode: u32,
+        reply: fuse::ReplyEntry,
+    ) {
         reply.error(libc::EROFS)
     }
 
     /// Remove a file
-    fn unlink (&mut self, _req: &fuse::Request, _parent: u64, _name: &OsStr, reply: fuse::ReplyEmpty) {
+    fn unlink(
+        &mut self,
+        _req: &fuse::Request,
+        _parent: u64,
+        _name: &OsStr,
+        reply: fuse::ReplyEmpty,
+    ) {
         reply.error(libc::EROFS)
     }
 
     /// Remove a directory
-    fn rmdir (&mut self, _req: &fuse::Request, _parent: u64, _name: &OsStr, reply: fuse::ReplyEmpty) {
+    fn rmdir(
+        &mut self,
+        _req: &fuse::Request,
+        _parent: u64,
+        _name: &OsStr,
+        reply: fuse::ReplyEmpty,
+    ) {
         reply.error(libc::EROFS)
     }
 
     /// Create a symbolic link
-    fn symlink (&mut self, _req: &fuse::Request, _parent: u64, _name: &OsStr, _link: &Path, reply: fuse::ReplyEntry) {
+    fn symlink(
+        &mut self,
+        _req: &fuse::Request,
+        _parent: u64,
+        _name: &OsStr,
+        _link: &Path,
+        reply: fuse::ReplyEntry,
+    ) {
         reply.error(libc::EROFS)
     }
 
     /// Rename a file
-    fn rename (&mut self, _req: &fuse::Request, _parent: u64, _name: &OsStr, _newparent: u64, _newname: &OsStr, reply: fuse::ReplyEmpty) {
+    fn rename(
+        &mut self,
+        _req: &fuse::Request,
+        _parent: u64,
+        _name: &OsStr,
+        _newparent: u64,
+        _newname: &OsStr,
+        reply: fuse::ReplyEmpty,
+    ) {
         reply.error(libc::EROFS)
     }
 
@@ -406,7 +511,7 @@ impl<'a> fuse::Filesystem for FuseFilesystem<'a> {
     /// anything in fh. There are also some flags (direct_io, keep_cache) which the
     /// filesystem may set, to change the way the file is opened. See fuse_file_info
     /// structure in <fuse_common.h> for more details.
-    fn open (&mut self, _req: &fuse::Request, ino: u64, flags: u32, reply: fuse::ReplyOpen) {
+    fn open(&mut self, _req: &fuse::Request, ino: u64, flags: u32, reply: fuse::ReplyOpen) {
         if (flags & (libc::O_WRONLY | libc::O_RDWR | libc::O_TRUNC) as u32) != 0 {
             return reply.error(libc::EROFS);
         }
@@ -422,29 +527,44 @@ impl<'a> fuse::Filesystem for FuseFilesystem<'a> {
     /// return value of the read system call will reflect the return value of this
     /// operation. fh will contain the value set by the open method, or will be undefined
     /// if the open method didn't set any value.
-    fn read (&mut self, _req: &fuse::Request, ino: u64, _fh: u64, mut offset: u64, mut size: u32, reply: fuse::ReplyData) {
+    fn read(
+        &mut self,
+        _req: &fuse::Request,
+        ino: u64,
+        _fh: u64,
+        mut offset: u64,
+        mut size: u32,
+        reply: fuse::ReplyData,
+    ) {
         let inode = inode!(self, ino, reply);
         let inode = inode.borrow();
         match inode.inode.data {
             None => return reply.data(&[]),
-            Some(FileData::Inline(ref data)) => return reply.data(&data[min(offset as usize, data.len())..min(offset as usize+size as usize, data.len())]),
-            _ => ()
+            Some(FileData::Inline(ref data)) => {
+                return reply.data(
+                    &data[min(offset as usize, data.len())..
+                              min(offset as usize + size as usize, data.len())]
+                )
+            }
+            _ => (),
         }
         if let Some(ref chunks) = inode.chunks {
             let mut data = Vec::with_capacity(size as usize);
             for &(hash, len) in chunks.iter() {
                 if len as u64 <= offset {
                     offset -= len as u64;
-                    continue
+                    continue;
                 }
                 let chunk = match fuse_try!(self.repository.get_chunk(hash), reply) {
                     Some(chunk) => chunk,
-                    None => return reply.error(libc::EIO)
+                    None => return reply.error(libc::EIO),
                 };
                 assert_eq!(chunk.len() as u32, len);
-                data.extend_from_slice(&chunk[offset as usize..min(offset as usize + size as usize, len as usize)]);
+                data.extend_from_slice(
+                    &chunk[offset as usize..min(offset as usize + size as usize, len as usize)]
+                );
                 if len - offset as u32 >= size {
-                    break
+                    break;
                 }
                 size -= len - offset as u32;
                 offset = 0;
@@ -456,12 +576,28 @@ impl<'a> fuse::Filesystem for FuseFilesystem<'a> {
     }
 
     /// Write data
-    fn write (&mut self, _req: &fuse::Request, _ino: u64, _fh: u64, _offset: u64, _data: &[u8], _flags: u32, reply: fuse::ReplyWrite) {
+    fn write(
+        &mut self,
+        _req: &fuse::Request,
+        _ino: u64,
+        _fh: u64,
+        _offset: u64,
+        _data: &[u8],
+        _flags: u32,
+        reply: fuse::ReplyWrite,
+    ) {
         reply.error(libc::EROFS)
     }
 
     /// Flush method
-    fn flush (&mut self, _req: &fuse::Request, _ino: u64, _fh: u64, _lock_owner: u64, reply: fuse::ReplyEmpty) {
+    fn flush(
+        &mut self,
+        _req: &fuse::Request,
+        _ino: u64,
+        _fh: u64,
+        _lock_owner: u64,
+        reply: fuse::ReplyEmpty,
+    ) {
         reply.ok()
     }
 
@@ -473,7 +609,16 @@ impl<'a> fuse::Filesystem for FuseFilesystem<'a> {
     /// the release. fh will contain the value set by the open method, or will be undefined
     /// if the open method didn't set any value. flags will contain the same flags as for
     /// open.
-    fn release (&mut self, _req: &fuse::Request, _ino: u64, _fh: u64, _flags: u32, _lock_owner: u64, _flush: bool, reply: fuse::ReplyEmpty) {
+    fn release(
+        &mut self,
+        _req: &fuse::Request,
+        _ino: u64,
+        _fh: u64,
+        _flags: u32,
+        _lock_owner: u64,
+        _flush: bool,
+        reply: fuse::ReplyEmpty,
+    ) {
         /*if self.read_fds.remove(&fh).is_some() || self.write_fds.remove(&fh).is_some() {
             reply.ok();
         } else {
@@ -483,28 +628,42 @@ impl<'a> fuse::Filesystem for FuseFilesystem<'a> {
     }
 
     /// Synchronize file contents
-    fn fsync (&mut self, _req: &fuse::Request, _ino: u64, _fh: u64, _datasync: bool, reply: fuse::ReplyEmpty) {
+    fn fsync(
+        &mut self,
+        _req: &fuse::Request,
+        _ino: u64,
+        _fh: u64,
+        _datasync: bool,
+        reply: fuse::ReplyEmpty,
+    ) {
         reply.ok()
     }
 
     /// Open a directory, finished
-    fn opendir (&mut self, _req: &fuse::Request, ino: u64, _flags: u32, reply: fuse::ReplyOpen) {
+    fn opendir(&mut self, _req: &fuse::Request, ino: u64, _flags: u32, reply: fuse::ReplyOpen) {
         let dir = inode!(self, ino, reply);
         fuse_try!(self.fetch_children(&dir), reply);
         reply.opened(ino, 0);
     }
 
     /// Read directory, finished
-    fn readdir (&mut self, _req: &fuse::Request, ino: u64, _fh: u64, offset: u64, mut reply: fuse::ReplyDirectory) {
+    fn readdir(
+        &mut self,
+        _req: &fuse::Request,
+        ino: u64,
+        _fh: u64,
+        offset: u64,
+        mut reply: fuse::ReplyDirectory,
+    ) {
         let dir = inode!(self, ino, reply);
         let dir = dir.borrow();
         if let Some(entries) = dir.dir_list() {
             for (i, (num, file_type, name)) in entries.into_iter().enumerate() {
                 if i < offset as usize {
-                    continue
+                    continue;
                 }
-                if reply.add(num, i as u64 +1, file_type, &Path::new(&name)) {
-                    break
+                if reply.add(num, i as u64 + 1, file_type, &Path::new(&name)) {
+                    break;
                 }
             }
             reply.ok()
@@ -514,20 +673,34 @@ impl<'a> fuse::Filesystem for FuseFilesystem<'a> {
     }
 
     /// Release an open directory, finished
-    fn releasedir (&mut self, _req: &fuse::Request, _ino: u64, _fh: u64, _flags: u32, reply: fuse::ReplyEmpty) {
+    fn releasedir(
+        &mut self,
+        _req: &fuse::Request,
+        _ino: u64,
+        _fh: u64,
+        _flags: u32,
+        reply: fuse::ReplyEmpty,
+    ) {
         reply.ok()
     }
 
     /// Synchronize directory contents, finished
-    fn fsyncdir (&mut self, _req: &fuse::Request, _ino: u64, _fh: u64, _datasync: bool, reply: fuse::ReplyEmpty) {
+    fn fsyncdir(
+        &mut self,
+        _req: &fuse::Request,
+        _ino: u64,
+        _fh: u64,
+        _datasync: bool,
+        reply: fuse::ReplyEmpty,
+    ) {
         reply.ok()
     }
 
     /// Get file system statistics
-    fn statfs (&mut self, _req: &fuse::Request, _ino: u64, reply: fuse::ReplyStatfs) {
+    fn statfs(&mut self, _req: &fuse::Request, _ino: u64, reply: fuse::ReplyStatfs) {
         let info = self.repository.info();
         reply.statfs(
-            info.raw_data_size/512 as u64, //total blocks
+            info.raw_data_size / 512 as u64, //total blocks
             0, //free blocks for admin
             0, //free blocks for users
             0,
@@ -539,12 +712,28 @@ impl<'a> fuse::Filesystem for FuseFilesystem<'a> {
     }
 
     /// Set an extended attribute
-    fn setxattr (&mut self, _req: &fuse::Request, _ino: u64, _name: &OsStr, _value: &[u8], _flags: u32, _position: u32, reply: fuse::ReplyEmpty) {
+    fn setxattr(
+        &mut self,
+        _req: &fuse::Request,
+        _ino: u64,
+        _name: &OsStr,
+        _value: &[u8],
+        _flags: u32,
+        _position: u32,
+        reply: fuse::ReplyEmpty,
+    ) {
         reply.error(libc::EROFS)
     }
 
     /// Get an extended attribute
-    fn getxattr (&mut self, _req: &fuse::Request, ino: u64, name: &OsStr, size: u32, reply: fuse::ReplyXattr) {
+    fn getxattr(
+        &mut self,
+        _req: &fuse::Request,
+        ino: u64,
+        name: &OsStr,
+        size: u32,
+        reply: fuse::ReplyXattr,
+    ) {
         let inode = inode!(self, ino, reply);
         let inode = inode.borrow();
         if let Some(val) = inode.inode.xattrs.get(&name.to_string_lossy() as &str) {
@@ -561,7 +750,7 @@ impl<'a> fuse::Filesystem for FuseFilesystem<'a> {
     }
 
     /// List extended attribute names
-    fn listxattr (&mut self, _req: &fuse::Request, ino: u64, size: u32, reply: fuse::ReplyXattr) {
+    fn listxattr(&mut self, _req: &fuse::Request, ino: u64, size: u32, reply: fuse::ReplyXattr) {
         let inode = inode!(self, ino, reply);
         let inode = inode.borrow();
         let mut names_str = String::new();
@@ -579,7 +768,13 @@ impl<'a> fuse::Filesystem for FuseFilesystem<'a> {
     }
 
     /// Remove an extended attribute
-    fn removexattr (&mut self, _req: &fuse::Request, _ino: u64, _name: &OsStr, reply: fuse::ReplyEmpty) {
+    fn removexattr(
+        &mut self,
+        _req: &fuse::Request,
+        _ino: u64,
+        _name: &OsStr,
+        reply: fuse::ReplyEmpty,
+    ) {
         reply.error(libc::EROFS)
     }
 
@@ -587,28 +782,65 @@ impl<'a> fuse::Filesystem for FuseFilesystem<'a> {
     /// This will be called for the access() system call. If the 'default_permissions'
     /// mount option is given, this method is not called. This method is not called
     /// under Linux kernel versions 2.4.x
-    fn access (&mut self, _req: &fuse::Request, _ino: u64, _mask: u32, reply: fuse::ReplyEmpty) {
+    fn access(&mut self, _req: &fuse::Request, _ino: u64, _mask: u32, reply: fuse::ReplyEmpty) {
         reply.error(libc::ENOSYS);
     }
 
     /// Create and open a file
-    fn create (&mut self, _req: &fuse::Request, _parent: u64, _name: &OsStr, _mode: u32, _flags: u32, reply: fuse::ReplyCreate) {
+    fn create(
+        &mut self,
+        _req: &fuse::Request,
+        _parent: u64,
+        _name: &OsStr,
+        _mode: u32,
+        _flags: u32,
+        reply: fuse::ReplyCreate,
+    ) {
         reply.error(libc::EROFS)
     }
 
     /// Test for a POSIX file lock
-    fn getlk (&mut self, _req: &fuse::Request, _ino: u64, _fh: u64, _lock_owner: u64, _start: u64, _end: u64, _typ: u32, _pid: u32, reply: fuse::ReplyLock) {
+    fn getlk(
+        &mut self,
+        _req: &fuse::Request,
+        _ino: u64,
+        _fh: u64,
+        _lock_owner: u64,
+        _start: u64,
+        _end: u64,
+        _typ: u32,
+        _pid: u32,
+        reply: fuse::ReplyLock,
+    ) {
         reply.error(libc::ENOSYS);
     }
 
     /// Acquire, modify or release a POSIX file lock
-    fn setlk (&mut self, _req: &fuse::Request, _ino: u64, _fh: u64, _lock_owner: u64, _start: u64, _end: u64, _typ: u32, _pid: u32, _sleep: bool, reply: fuse::ReplyEmpty) {
+    fn setlk(
+        &mut self,
+        _req: &fuse::Request,
+        _ino: u64,
+        _fh: u64,
+        _lock_owner: u64,
+        _start: u64,
+        _end: u64,
+        _typ: u32,
+        _pid: u32,
+        _sleep: bool,
+        reply: fuse::ReplyEmpty,
+    ) {
         reply.error(libc::ENOSYS);
     }
 
     /// Map block index within file to block index within device
-    fn bmap (&mut self, _req: &fuse::Request, _ino: u64, _blocksize: u32, _idx: u64, reply: fuse::ReplyBmap) {
+    fn bmap(
+        &mut self,
+        _req: &fuse::Request,
+        _ino: u64,
+        _blocksize: u32,
+        _idx: u64,
+        reply: fuse::ReplyBmap,
+    ) {
         reply.error(libc::ENOSYS);
     }
-
 }

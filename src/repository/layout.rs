@@ -1,4 +1,4 @@
-use ::prelude::*;
+use prelude::*;
 
 use std::path::{Path, PathBuf};
 
@@ -62,7 +62,8 @@ impl RepositoryLayout {
 
     #[inline]
     pub fn remote_exists(&self) -> bool {
-        self.remote_bundles_path().exists() && self.backups_path().exists() && self.remote_locks_path().exists()
+        self.remote_bundles_path().exists() && self.backups_path().exists() &&
+            self.remote_locks_path().exists()
     }
 
     #[inline]
@@ -85,13 +86,18 @@ impl RepositoryLayout {
         self.0.join("bundles/cached")
     }
 
-    fn bundle_path(&self, bundle: &BundleId, mut folder: PathBuf, mut count: usize) -> (PathBuf, PathBuf) {
+    fn bundle_path(
+        &self,
+        bundle: &BundleId,
+        mut folder: PathBuf,
+        mut count: usize,
+    ) -> (PathBuf, PathBuf) {
         let file = bundle.to_string().to_owned() + ".bundle";
         {
             let mut rest = &file as &str;
             while count >= 100 {
                 if rest.len() < 10 {
-                    break
+                    break;
                 }
                 folder = folder.join(&rest[0..2]);
                 rest = &rest[2..];
@@ -118,7 +124,10 @@ impl RepositoryLayout {
 
     #[inline]
     pub fn temp_bundle_path(&self) -> PathBuf {
-        self.temp_bundles_path().join(BundleId::random().to_string().to_owned() + ".bundle")
+        self.temp_bundles_path().join(
+            BundleId::random().to_string().to_owned() +
+                ".bundle"
+        )
     }
 
     #[inline]

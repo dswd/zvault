@@ -1,4 +1,4 @@
-use ::prelude::*;
+use prelude::*;
 
 use std::collections::HashSet;
 
@@ -13,7 +13,12 @@ impl Repository {
         }
     }
 
-    pub fn vacuum(&mut self, ratio: f32, combine: bool, force: bool) -> Result<(), RepositoryError> {
+    pub fn vacuum(
+        &mut self,
+        ratio: f32,
+        combine: bool,
+        force: bool,
+    ) -> Result<(), RepositoryError> {
         try!(self.flush());
         info!("Locking repository");
         try!(self.write_mode());
@@ -27,7 +32,12 @@ impl Repository {
             data_total += bundle.info.encoded_size;
             data_used += bundle.get_used_size();
         }
-        info!("Usage: {} of {}, {:.1}%", to_file_size(data_used as u64), to_file_size(data_total as u64), data_used as f32/data_total as f32*100.0);
+        info!(
+            "Usage: {} of {}, {:.1}%",
+            to_file_size(data_used as u64),
+            to_file_size(data_total as u64),
+            data_used as f32 / data_total as f32 * 100.0
+        );
         let mut rewrite_bundles = HashSet::new();
         let mut reclaim_space = 0;
         for (id, bundle) in &usage {
@@ -58,12 +68,21 @@ impl Repository {
                 }
             }
         }
-        info!("Reclaiming {} by rewriting {} bundles", to_file_size(reclaim_space as u64), rewrite_bundles.len());
+        info!(
+            "Reclaiming {} by rewriting {} bundles",
+            to_file_size(reclaim_space as u64),
+            rewrite_bundles.len()
+        );
         if !force {
             self.dirty = false;
-            return Ok(())
+            return Ok(());
         }
-        for id in ProgressIter::new("rewriting bundles", rewrite_bundles.len(), rewrite_bundles.iter()) {
+        for id in ProgressIter::new(
+            "rewriting bundles",
+            rewrite_bundles.len(),
+            rewrite_bundles.iter()
+        )
+        {
             let bundle = &usage[id];
             let bundle_id = self.bundle_map.get(*id).unwrap();
             let chunks = try!(self.bundles.get_chunk_list(&bundle_id));
@@ -71,7 +90,7 @@ impl Repository {
             for (chunk, &(hash, _len)) in chunks.into_iter().enumerate() {
                 if !bundle.chunk_usage.get(chunk) {
                     try!(self.index.delete(&hash));
-                    continue
+                    continue;
                 }
                 let data = try!(self.bundles.get_chunk(&bundle_id, chunk));
                 try!(self.put_chunk_override(mode, hash, &data));
@@ -81,7 +100,12 @@ impl Repository {
         info!("Checking index");
         for (hash, location) in self.index.iter() {
             if rewrite_bundles.contains(&location.bundle) {
-                panic!("Removed bundle is still referenced in index: hash:{}, bundle:{}, chunk:{}", hash, location.bundle, location.chunk);
+                panic!(
+                    "Removed bundle is still referenced in index: hash:{}, bundle:{}, chunk:{}",
+                    hash,
+                    location.bundle,
+                    location.chunk
+                );
             }
         }
         info!("Deleting {} bundles", rewrite_bundles.len());
