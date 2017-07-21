@@ -1,3 +1,18 @@
+zvault (0.4.0) stable; urgency=medium
+
+  * [added] Added `copy` subcommand
+  * [added] Added support for xattrs in fuse mount
+  * [added] Added support for block/char devices
+  * [added] Added support for fifo files
+  * [modified] Reformatted sources using rustfmt
+  * [modified] Also documenting common flags in subcommands
+  * [modified] Using repository aliases (**conversion needed**)
+  * [modified] Remote path must be absolute
+  * [modified] Not removing prefixes from bundle names anymore
+  * [fixed] Fixed tarfile import
+
+ -- Dennis Schwerdel <schwerdel@informatik.uni-kl.de>  Fri, 21 Jul 2017 11:25:32 +0200
+
 zvault (0.3.2) stable; urgency=medium
 
   * [modified] Changed order of arguments in `addkey` to match src-dst scheme

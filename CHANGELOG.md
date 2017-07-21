@@ -3,7 +3,7 @@
 This project follows [semantic versioning](http://semver.org).
 
 
-### UNRELEASED
+### v0.4.0 (2017-07-21)
 * [added] Added `copy` subcommand
 * [added] Added support for xattrs in fuse mount
 * [added] Added support for block/char devices
