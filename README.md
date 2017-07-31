@@ -1,4 +1,8 @@
 # zVault Backup Solution
+
+[![Build Status](https://travis-ci.org/dswd/zvault.svg?branch=master)](https://travis-ci.org/dswd/zvault)
+[![Coverage Status](https://coveralls.io/repos/dswd/zvault/badge.svg?branch=master&service=github)](https://coveralls.io/github/dswd/zvault?branch=master)
+
 zVault is a highly efficient deduplicating backup solution that supports
 client-side encryption, compression and remote storage of backup data.
 
