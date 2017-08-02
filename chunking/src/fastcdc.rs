@@ -1,6 +1,7 @@
 use super::*;
 
 use std::ptr;
+use std::cmp;
 
 // FastCDC
 // Paper: "FastCDC: a Fast and Efficient Content-Defined Chunking Approach for Data Deduplication"
@@ -92,26 +93,44 @@ impl Chunker for FastCdcChunker {
             if max == 0 {
                 return Ok(ChunkerStatus::Finished)
             }
-            for i in 0..max {
-                if pos >= min_size {
-                    // Hash update
+            let min_size_p = cmp::min(max, cmp::max(min_size as isize - pos as isize, 0) as usize);
+            let avg_size_p = cmp::min(max, cmp::max(avg_size as isize - pos as isize, 0) as usize);
+            let max_size_p = cmp::min(max, cmp::max(max_size as isize - pos as isize, 0) as usize);
+            if min_size > pos {
+                for i in 0..min_size_p {
                     hash = (hash << 1).wrapping_add(gear[buffer[i] as usize]);
-                    // 3 options for break point
-                    // 1) mask_short matches and chunk is smaller than average
-                    // 2) mask_long matches and chunk is longer or equal to average
-                    // 3) chunk reached max_size
-                    if pos < avg_size && hash & mask_short == 0
-                    || pos >= avg_size && hash & mask_long == 0
-                    || pos >= max_size {
-                        // Write all bytes from this chunk out to sink and store rest for next chunk
+                }
+            }
+            if avg_size > pos {
+                for i in min_size_p..avg_size_p {
+                    hash = (hash << 1).wrapping_add(gear[buffer[i] as usize]);
+                    if hash & mask_short == 0 {
                         try!(w.write_all(&buffer[..i+1]).map_err(ChunkerError::Write));
                         unsafe { ptr::copy(buffer[i+1..].as_ptr(), buffer.as_mut_ptr(), max-i-1) };
                         self.buffered = max-i-1;
                         return Ok(ChunkerStatus::Continue);
                     }
                 }
-                pos += 1;
             }
+            if max_size > pos {
+                for i in avg_size_p..max_size_p {
+                    hash = (hash << 1).wrapping_add(gear[buffer[i] as usize]);
+                    if hash & mask_long == 0 {
+                        try!(w.write_all(&buffer[..i+1]).map_err(ChunkerError::Write));
+                        unsafe { ptr::copy(buffer[i+1..].as_ptr(), buffer.as_mut_ptr(), max-i-1) };
+                        self.buffered = max-i-1;
+                        return Ok(ChunkerStatus::Continue);
+                    }
+                }
+            }
+            if max + pos >= max_size {
+                let i = max_size_p;
+                try!(w.write_all(&buffer[..i]).map_err(ChunkerError::Write));
+                unsafe { ptr::copy(buffer[i..].as_ptr(), buffer.as_mut_ptr(), max-i) };
+                self.buffered = max-i;
+                return Ok(ChunkerStatus::Continue);
+            }
+            pos += max;
             try!(w.write_all(&buffer[..max]).map_err(ChunkerError::Write));
             self.buffered = 0;
         }
