@@ -48,7 +48,7 @@ impl ChunkerType {
         match *self {
             ChunkerType::Ae(size) => Box::new(AeChunker::new(size)),
             ChunkerType::Rabin((size, seed)) => Box::new(RabinChunker::new(size, seed)),
-            ChunkerType::FastCdc((size, seed)) => Box::new(FastCdcChunker::new(size, seed)),
+            ChunkerType::FastCdc((size, seed)) => Box::new(FastCdcChunker::new(size, seed, true)),
             ChunkerType::Fixed(size) => Box::new(FixedChunker::new(size)),
         }
     }

@@ -99,7 +99,7 @@ fn test_rabin_8192(b: &mut Bencher) {
 #[bench]
 fn test_fastcdc_init(b: &mut Bencher) {
     b.iter(|| {
-        FastCdcChunker::new(8*1024, 0);
+        FastCdcChunker::new(8*1024, 0, true);
     })
 }
 
@@ -108,7 +108,7 @@ fn test_fastcdc_8192(b: &mut Bencher) {
     let data = random_data(0, 1024*1024);
     b.bytes = data.len() as u64;
     b.iter(|| {
-        let mut chunker = FastCdcChunker::new(8*1024, 0);
+        let mut chunker = FastCdcChunker::new(8*1024, 0, true);
         let mut cursor = Cursor::new(&data);
         while chunker.chunk(&mut cursor, &mut DevNull).unwrap() == ChunkerStatus::Continue {}
     })
