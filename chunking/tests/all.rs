@@ -21,7 +21,7 @@ fn random_data(seed: u64, size: usize) -> Vec<u8> {
     data
 }
 
-fn test_chunking(chunker: &mut Chunker, data: &[u8]) -> usize {
+fn test_chunking(chunker: &mut Chunker, data: &[u8], chunk_lens: Option<&[usize]>) -> usize {
     let mut cursor = Cursor::new(&data);
     let mut chunks = vec![];
     let mut chunk = vec![];
@@ -36,6 +36,12 @@ fn test_chunking(chunker: &mut Chunker, data: &[u8]) -> usize {
         assert_eq!(&data[pos..pos+chunk.len()], chunk as &[u8]);
         pos += chunk.len();
     }
+    if let Some(chunk_lens) = chunk_lens {
+        //assert_eq!(chunk_lens.len(), chunks.len());
+        for (i, chunk) in chunks.iter().enumerate() {
+            assert_eq!(chunk.len(), chunk_lens[i]);
+        }
+    }
     assert_eq!(pos, data.len());
     chunks.len()
 }
@@ -46,7 +52,7 @@ fn test_fixed() {
     let data = random_data(0, 10*1024*1024);
     for n in &[1usize,2,4,8,16,32,64,128,256,512,1024] {
         let mut chunker = FixedChunker::new(1024*n);
-        let len = test_chunking(&mut chunker, &data);
+        let len = test_chunking(&mut chunker, &data, None);
         assert!(len >= data.len()/n/1024/4);
         assert!(len <= data.len()/n/1024*4);
     }
@@ -57,7 +63,7 @@ fn test_ae() {
     let data = random_data(0, 10*1024*1024);
     for n in &[1usize,2,4,8,16,32,64,128,256,512,1024] {
         let mut chunker = AeChunker::new(1024*n);
-        let len = test_chunking(&mut chunker, &data);
+        let len = test_chunking(&mut chunker, &data, None);
         assert!(len >= data.len()/n/1024/4);
         assert!(len <= data.len()/n/1024*4);
     }
@@ -68,7 +74,7 @@ fn test_rabin() {
     let data = random_data(0, 10*1024*1024);
     for n in &[1usize,2,4,8,16,32,64,128,256,512,1024] {
         let mut chunker = RabinChunker::new(1024*n, 0);
-        let len = test_chunking(&mut chunker, &data);
+        let len = test_chunking(&mut chunker, &data, None);
         assert!(len >= data.len()/n/1024/4);
         assert!(len <= data.len()/n/1024*4);
     }
@@ -79,8 +85,11 @@ fn test_fastcdc() {
     let data = random_data(0, 10*1024*1024);
     for n in &[1usize,2,4,8,16,32,64,128,256,512,1024] {
         let mut chunker = FastCdcChunker::new(1024*n, 0);
-        let len = test_chunking(&mut chunker, &data);
+        let len = test_chunking(&mut chunker, &data, None);
         assert!(len >= data.len()/n/1024/4);
         assert!(len <= data.len()/n/1024*4);
     }
+    test_chunking(&mut FastCdcChunker::new(8192, 0), &random_data(0, 128*1024),
+        Some(&[8712, 8018, 2847, 9157, 8997, 8581, 8867, 5422, 5412, 9478,
+        11553, 9206, 4606, 8529, 3821, 11342, 6524]));
 }
