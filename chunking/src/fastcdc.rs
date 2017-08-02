@@ -56,7 +56,6 @@ pub struct FastCdcChunker {
     mask_short: u64,
 }
 
-
 impl FastCdcChunker {
     pub fn new(avg_size: usize, seed: u64) -> Self {
         let (mask_short, mask_long) = get_masks(avg_size, 2, seed);
@@ -73,65 +72,59 @@ impl FastCdcChunker {
     }
 }
 
+
+impl FastCdcChunker {
+    fn write_output(&mut self, w: &mut Write, pos: usize, max: usize) -> Result<ChunkerStatus, ChunkerError> {
+        try!(w.write_all(&self.buffer[..pos]).map_err(ChunkerError::Write));
+        unsafe { ptr::copy(self.buffer[pos..].as_ptr(), self.buffer.as_mut_ptr(), max-pos) };
+        self.buffered = max-pos;
+        Ok(ChunkerStatus::Continue)
+    }
+}
+
+
 impl Chunker for FastCdcChunker {
     #[allow(unknown_lints,explicit_counter_loop,needless_range_loop)]
     fn chunk(&mut self, r: &mut Read, mut w: &mut Write) -> Result<ChunkerStatus, ChunkerError> {
         let mut max;
         let mut hash = 0u64;
         let mut pos = 0;
-        let gear = &self.gear;
-        let buffer = &mut self.buffer;
-        let min_size = self.min_size;
-        let mask_short = self.mask_short;
-        let mask_long = self.mask_long;
-        let avg_size = self.avg_size;
-        let max_size = self.max_size;
         loop {
             // Fill the buffer, there might be some bytes still in there from last chunk
-            max = try!(r.read(&mut buffer[self.buffered..]).map_err(ChunkerError::Read)) + self.buffered;
+            max = try!(r.read(&mut self.buffer[self.buffered..]).map_err(ChunkerError::Read)) + self.buffered;
             // If nothing to do, finish
             if max == 0 {
                 return Ok(ChunkerStatus::Finished)
             }
-            let min_size_p = cmp::min(max, cmp::max(min_size as isize - pos as isize, 0) as usize);
-            let avg_size_p = cmp::min(max, cmp::max(avg_size as isize - pos as isize, 0) as usize);
-            let max_size_p = cmp::min(max, cmp::max(max_size as isize - pos as isize, 0) as usize);
-            if min_size > pos {
+            let min_size_p = cmp::min(max, cmp::max(self.min_size as isize - pos as isize, 0) as usize);
+            let avg_size_p = cmp::min(max, cmp::max(self.avg_size as isize - pos as isize, 0) as usize);
+            let max_size_p = cmp::min(max, cmp::max(self.max_size as isize - pos as isize, 0) as usize);
+            if self.min_size > pos {
                 for i in 0..min_size_p {
-                    hash = (hash << 1).wrapping_add(gear[buffer[i] as usize]);
+                    hash = (hash << 1).wrapping_add(self.gear[self.buffer[i] as usize]);
                 }
             }
-            if avg_size > pos {
+            if self.avg_size > pos {
                 for i in min_size_p..avg_size_p {
-                    hash = (hash << 1).wrapping_add(gear[buffer[i] as usize]);
-                    if hash & mask_short == 0 {
-                        try!(w.write_all(&buffer[..i+1]).map_err(ChunkerError::Write));
-                        unsafe { ptr::copy(buffer[i+1..].as_ptr(), buffer.as_mut_ptr(), max-i-1) };
-                        self.buffered = max-i-1;
-                        return Ok(ChunkerStatus::Continue);
+                    hash = (hash << 1).wrapping_add(self.gear[self.buffer[i] as usize]);
+                    if hash & self.mask_short == 0 {
+                        return self.write_output(w, i+1, max);
                     }
                 }
             }
-            if max_size > pos {
+            if self.max_size > pos {
                 for i in avg_size_p..max_size_p {
-                    hash = (hash << 1).wrapping_add(gear[buffer[i] as usize]);
-                    if hash & mask_long == 0 {
-                        try!(w.write_all(&buffer[..i+1]).map_err(ChunkerError::Write));
-                        unsafe { ptr::copy(buffer[i+1..].as_ptr(), buffer.as_mut_ptr(), max-i-1) };
-                        self.buffered = max-i-1;
-                        return Ok(ChunkerStatus::Continue);
+                    hash = (hash << 1).wrapping_add(self.gear[self.buffer[i] as usize]);
+                    if hash & self.mask_long == 0 {
+                        return self.write_output(w, i+1, max);
                     }
                 }
             }
-            if max + pos >= max_size {
-                let i = max_size_p;
-                try!(w.write_all(&buffer[..i]).map_err(ChunkerError::Write));
-                unsafe { ptr::copy(buffer[i..].as_ptr(), buffer.as_mut_ptr(), max-i) };
-                self.buffered = max-i;
-                return Ok(ChunkerStatus::Continue);
+            if max + pos >= self.max_size {
+                return self.write_output(w, max_size_p, max);
             }
             pos += max;
-            try!(w.write_all(&buffer[..max]).map_err(ChunkerError::Write));
+            try!(w.write_all(&self.buffer[..max]).map_err(ChunkerError::Write));
             self.buffered = 0;
         }
     }
