@@ -26,10 +26,22 @@ fn random_data(seed: u64, size: usize) -> Vec<u8> {
 }
 
 
-struct DevNull;
+struct CutPositions(Vec<u64>, u64);
 
-impl Write for DevNull {
+impl CutPositions {
+    pub fn new() -> Self {
+        CutPositions(vec![], 0)
+    }
+
+    pub fn positions(&self) -> &[u64] {
+        &self.0
+    }
+}
+
+impl Write for CutPositions {
     fn write(&mut self, data: &[u8]) -> Result<usize, io::Error> {
+        self.1 += data.len() as u64;
+        self.0.push(self.1);
         Ok(data.len())
     }
 
@@ -53,7 +65,9 @@ fn test_fixed_8192(b: &mut Bencher) {
     b.iter(|| {
         let mut chunker = FixedChunker::new(8*1024);
         let mut cursor = Cursor::new(&data);
-        while chunker.chunk(&mut cursor, &mut DevNull).unwrap() == ChunkerStatus::Continue {}
+        let mut sink = CutPositions::new();
+        while chunker.chunk(&mut cursor, &mut sink).unwrap() == ChunkerStatus::Continue {};
+        test::black_box(sink.positions().len())
     })
 }
 
@@ -72,7 +86,9 @@ fn test_ae_8192(b: &mut Bencher) {
     b.iter(|| {
         let mut chunker = AeChunker::new(8*1024);
         let mut cursor = Cursor::new(&data);
-        while chunker.chunk(&mut cursor, &mut DevNull).unwrap() == ChunkerStatus::Continue {}
+        let mut sink = CutPositions::new();
+        while chunker.chunk(&mut cursor, &mut sink).unwrap() == ChunkerStatus::Continue {};
+        test::black_box(sink.positions().len())
     })
 }
 
@@ -91,7 +107,9 @@ fn test_rabin_8192(b: &mut Bencher) {
     b.iter(|| {
         let mut chunker = RabinChunker::new(8*1024, 0);
         let mut cursor = Cursor::new(&data);
-        while chunker.chunk(&mut cursor, &mut DevNull).unwrap() == ChunkerStatus::Continue {}
+        let mut sink = CutPositions::new();
+        while chunker.chunk(&mut cursor, &mut sink).unwrap() == ChunkerStatus::Continue {};
+        test::black_box(sink.positions().len())
     })
 }
 
@@ -99,7 +117,7 @@ fn test_rabin_8192(b: &mut Bencher) {
 #[bench]
 fn test_fastcdc_init(b: &mut Bencher) {
     b.iter(|| {
-        FastCdcChunker::new(8*1024, 0, true);
+        FastCdcChunker::new(8*1024, 0);
     })
 }
 
@@ -108,8 +126,10 @@ fn test_fastcdc_8192(b: &mut Bencher) {
     let data = random_data(0, 1024*1024);
     b.bytes = data.len() as u64;
     b.iter(|| {
-        let mut chunker = FastCdcChunker::new(8*1024, 0, true);
+        let mut chunker = FastCdcChunker::new(8*1024, 0);
         let mut cursor = Cursor::new(&data);
-        while chunker.chunk(&mut cursor, &mut DevNull).unwrap() == ChunkerStatus::Continue {}
+        let mut sink = CutPositions::new();
+        while chunker.chunk(&mut cursor, &mut sink).unwrap() == ChunkerStatus::Continue {};
+        test::black_box(sink.positions().len())
     })
 }

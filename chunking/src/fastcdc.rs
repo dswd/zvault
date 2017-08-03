@@ -54,11 +54,10 @@ pub struct FastCdcChunker {
     avg_size: usize,
     mask_long: u64,
     mask_short: u64,
-    cut_point_skip: bool,
 }
 
 impl FastCdcChunker {
-    pub fn new(avg_size: usize, seed: u64, cut_point_skip: bool) -> Self {
+    pub fn new(avg_size: usize, seed: u64) -> Self {
         let (mask_short, mask_long) = get_masks(avg_size, 2, seed);
         FastCdcChunker {
             buffer: [0; 4096],
@@ -69,7 +68,6 @@ impl FastCdcChunker {
             avg_size: avg_size,
             mask_long: mask_long,
             mask_short: mask_short,
-            cut_point_skip: cut_point_skip,
         }
     }
 }
@@ -101,11 +99,7 @@ impl Chunker for FastCdcChunker {
             let min_size_p = cmp::min(max, cmp::max(self.min_size as isize - pos as isize, 0) as usize);
             let avg_size_p = cmp::min(max, cmp::max(self.avg_size as isize - pos as isize, 0) as usize);
             let max_size_p = cmp::min(max, cmp::max(self.max_size as isize - pos as isize, 0) as usize);
-            if !self.cut_point_skip && self.min_size > pos {
-                for i in 0..min_size_p {
-                    hash = (hash << 1).wrapping_add(self.gear[self.buffer[i] as usize]);
-                }
-            }
+            // Skipping first min_size bytes. This is ok as same data still results in same hash.
             if self.avg_size > pos {
                 for i in min_size_p..avg_size_p {
                     hash = (hash << 1).wrapping_add(self.gear[self.buffer[i] as usize]);
