@@ -1,4 +1,4 @@
-# ZVault repository
+# zVault repository
 
 This folder is a zVault remote repository and contains backup data.
 
@@ -181,11 +181,13 @@ The inode entries are encoded as defined in the appendix as `Inode`. The inode
 structure contains all meta information on an inode entry, e.g. its file type,
 the data size, modification time, permissions and ownership, etc. Also, the
 structure contains optional information that is specific to the file type.
+
 For regular files, the inode structure contains the data of that file either
 inline (for very small files) or as a reference via a chunk list.
 For directories, the inode structure contains a mapping of child inode entries
 with their name as key and a chunk list referring their encoded `Inode`
 structure as value.
+
 For symlinks, the inode structure contains the target in the field
 `symlink_target`.
 
@@ -251,10 +253,12 @@ The `BundleMode` describes the contents of the chunks of a bundle.
 - `Meta` means that the chunks either contain encoded chunk lists or encoded
   inode metadata
 
-    BundleMode {
-        Data => 0,
-        Meta => 1
-    }
+```
+BundleMode {
+    Data => 0,
+    Meta => 1
+}
+```
 
 
 #### `HashMethod`
@@ -266,10 +270,12 @@ chunk data. This is not relevant for reading backups.
   https://en.wikipedia.org/wiki/MurmurHash for the x64 architecture and with the
   hash length set to 128 bits.
 
-    HashMethod {
-        Blake2 => 1,
-        Murmur3 => 2
-    }
+```
+HashMethod {
+    Blake2 => 1,
+    Murmur3 => 2
+}
+```
 
 
 #### `EncryptionMethod`
@@ -278,9 +284,11 @@ decrypt) data.
 - `Sodium` means the `crypto_box_seal` method of `libsodium` as specified at
   http://www.libsodium.org as a combination of `X25519` and `XSalsa20-Poly1305`.
 
-    EncryptionMethod {
-        Sodium => 0
-    }
+```
+EncryptionMethod {
+    Sodium => 0
+}
+```
 
 
 #### `CompressionMethod`
@@ -292,12 +300,14 @@ thus also decompress) data.
   http://tukaani.org/xz/
 - `Lz4` means the LZ4 method as described at http://www.lz4.org
 
-    CompressionMethod {
-        Deflate => 0,
-        Brotli => 1,
-        Lzma => 2,
-        Lz4 => 3
-    }
+```
+CompressionMethod {
+    Deflate => 0,
+    Brotli => 1,
+    Lzma => 2,
+    Lz4 => 3
+}
+```
 
 
 #### `FileType`
@@ -310,15 +320,16 @@ The `FileType` describes the type of an inode.
 - `CharDevice` means a character device
 - `NamedPipe` means a named pipe/fifo
 
-    FileType {
-        File => 0,
-        Directory => 1,
-        Symlink => 2,
-        BlockDevice => 3,
-        CharDevice => 4,
-        NamedPipe => 5
-    }
-
+```
+FileType {
+   File => 0,
+   Directory => 1,
+   Symlink => 2,
+   BlockDevice => 3,
+   CharDevice => 4,
+   NamedPipe => 5
+}
+```
 
 ### Types
 The following types are used to simplify the encoding specifications. They can
@@ -329,6 +340,7 @@ used in the encoding specifications instead of their definitions.
 #### `Encryption`
 The `Encryption` is a combination of an `EncryptionMethod` and a key.
 The method specifies how the key was used to encrypt the data.
+
 For the `Sodium` method, the key is the public key used to encrypt the data
 with. The secret key needed for decryption, must correspond to that public key.
 
@@ -349,6 +361,7 @@ compression level. The level is only used for compression.
 The `BundleHeader` structure contains information on how to decrypt other parts
 of a bundle. The structure is encoded using the MessagePack encoding that has
 been defined in a previous section.
+
 The `encryption` field contains the information needed to decrypt the rest of
 the bundle parts. If the `encryption` option is set, the following parts are
 encrypted using the specified method and key, otherwise the parts are not
@@ -365,6 +378,7 @@ encrypted. The `info_size` contains the encrypted size of the following
 The `BundleInfo` structure contains information on a bundle. The structure is
 encoded using the MessagePack encoding that has been defined in a previous
 section.
+
 If the `compression` option is set, the chunk data is compressed with the
 specified method, otherwise it is uncompressed. The encrypted size of the
 following `ChunkList` is stored in the `chunk_list_size` field.
@@ -404,20 +418,27 @@ the list in order or appearance in the list.
 The `Inode` structure contains information on a backup inode, e.g. a file or
 a directory. The structure is encoded using the MessagePack encoding that has
 been defined in a previous section.
+
 The `name` field contains the name of this inode which can be concatenated with
 the names of all parent inodes (with a platform-dependent seperator) to form the
 full path of the inode.
+
 The `size` field contains the raw size of the data in
 bytes (this is 0 for everything except files).
+
 The `file_type` specifies the type of this inode.
 The `mode` field specifies the permissions of the inode as a number which is
 normally interpreted as octal.
+
 The `user` and `group` fields specify the ownership of the inode in the form of
 user and group id.
+
 The `timestamp` specifies the modification time of the inode in whole seconds
 since the UNIX epoch (1970-01-01 12:00 am).
+
 The `symlink_target` specifies the target of symlink inodes and is only set for
 symlinks.
+
 The `data` specifies the data of a file and is only set for regular files. The
 data is specified as a tuple of `nesting` and `bytes`. If `nesting` is `0`,
 `bytes` contains the data of the file. This "inline" format is only used for
@@ -427,17 +448,20 @@ the data of the file. If `nesting` is `2`, `bytes` is also an encoded
 `ChunkList`, but the concatenated data of those chunks form again an encoded
 `ChunkList` which in turn contains the chunks with the file data. Thus `nesting`
 specifies the number of indirection steps via `ChunkList`s.
+
 The `children` field specifies the child inodes of a directory and is only set
 for directories. It is a mapping from the name of the child entry to the bytes
 of the encoded chunklist of the encoded `Inode` structure of the child. It is
 important that the names in the mapping correspond with the names in the
 respective child `Inode`s and that the mapping is stored in alphabetic order of
 the names.
+
 The `cum_size`, `cum_dirs` and `cum_files` are cumulative values for the inode
 as well as the whole subtree (including all children recursively). `cum_size` is
 the sum of all inode data sizes plus 1000 bytes for each inode (for encoded
 metadata). `cum_dirs` and `cum_files` is the count of directories and
 non-directories (symlinks and regular files).
+
 The `xattrs` contains a mapping of all extended attributes of the inode. And
 `device` contains a tuple with the major and minor device id if the inode is a
 block or character device.
@@ -471,6 +495,7 @@ This structure is encoded with the following field default values:
 The `BackupHeader` structure contains information on how to decrypt the rest of
 the backup file. The structure is encoded using the MessagePack encoding that
 has been defined in a previous section.
+
 The `encryption` field contains the information needed to decrypt the rest of
 the backup file. If the `encryption` option is set, the rest of the backup file
 is encrypted using the specified method and key, otherwise the rest is not
@@ -485,8 +510,10 @@ encrypted.
 The `Backup` structure contains information on one specific backup and
 references the root of the backup file tree. The structure is encoded using the
 MessagePack encoding that has been defined in a previous section.
+
 The `root` field contains an encoded `ChunkList` that references the root of the
 backup file tree.
+
 The fields `total_data_size`, `changed_data_size`, `deduplicated_data_size` and
 `encoded_data_size` list the sizes of the backup in various stages in bytes.
 - `total_data_size` gives the cumulative sizes of all entries in the backup.
@@ -496,16 +523,21 @@ The fields `total_data_size`, `changed_data_size`, `deduplicated_data_size` and
   this backup that have not been stored in the repository yet.
 - `encoded_data_size` gives the cumulative encoded (and compressed) size of all
   new bundles that have been written specifically to store this backup.
+
 The fields `bundle_count` and `chunk_count` contain the number of new bundles
 and chunks that had to be written to store this backup. `avg_chunk_size` is the
 average size of new chunks in this backup.
+
 The field `date` specifies the start of the backup run in seconds since the UNIX
 epoch and the field `duration` contains the duration of the backup run in
 seconds as a floating point number containing also fractions of seconds.
+
 The fields `file_count` and `dir_count` contain the total number of
 non-directories and directories in this backup.
+
 The `host` and `path` field contain the host name and the the path on that host
 where the root of the backup was located.
+
 The field `config` contains the configuration of zVault during the backup run.
 
     Backup {
