@@ -26,22 +26,21 @@ fn random_data(seed: u64, size: usize) -> Vec<u8> {
 }
 
 
-struct CutPositions(Vec<u64>, u64);
+struct CutPositions(Vec<u8>, u64);
 
 impl CutPositions {
     pub fn new() -> Self {
-        CutPositions(vec![], 0)
+        CutPositions(Vec::with_capacity(1024*1024), 0)
     }
 
-    pub fn positions(&self) -> &[u64] {
+    pub fn data(&self) -> &[u8] {
         &self.0
     }
 }
 
 impl Write for CutPositions {
     fn write(&mut self, data: &[u8]) -> Result<usize, io::Error> {
-        self.1 += data.len() as u64;
-        self.0.push(self.1);
+        self.0.extend_from_slice(data);
         Ok(data.len())
     }
 
@@ -67,7 +66,7 @@ fn test_fixed_8192(b: &mut Bencher) {
         let mut cursor = Cursor::new(&data);
         let mut sink = CutPositions::new();
         while chunker.chunk(&mut cursor, &mut sink).unwrap() == ChunkerStatus::Continue {};
-        test::black_box(sink.positions().len())
+        test::black_box(sink.data().len())
     })
 }
 
@@ -88,7 +87,7 @@ fn test_ae_8192(b: &mut Bencher) {
         let mut cursor = Cursor::new(&data);
         let mut sink = CutPositions::new();
         while chunker.chunk(&mut cursor, &mut sink).unwrap() == ChunkerStatus::Continue {};
-        test::black_box(sink.positions().len())
+        test::black_box(sink.data().len())
     })
 }
 
@@ -109,7 +108,7 @@ fn test_rabin_8192(b: &mut Bencher) {
         let mut cursor = Cursor::new(&data);
         let mut sink = CutPositions::new();
         while chunker.chunk(&mut cursor, &mut sink).unwrap() == ChunkerStatus::Continue {};
-        test::black_box(sink.positions().len())
+        test::black_box(sink.data().len())
     })
 }
 
@@ -130,6 +129,6 @@ fn test_fastcdc_8192(b: &mut Bencher) {
         let mut cursor = Cursor::new(&data);
         let mut sink = CutPositions::new();
         while chunker.chunk(&mut cursor, &mut sink).unwrap() == ChunkerStatus::Continue {};
-        test::black_box(sink.positions().len())
+        test::black_box(sink.data().len())
     })
 }
