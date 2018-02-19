@@ -57,6 +57,7 @@ quick_error!{
 }
 
 
+#[allow(needless_pass_by_value)]
 fn load_bundles(
     path: &Path,
     base: &Path,
@@ -195,10 +196,11 @@ impl BundleDb {
             &self.layout.local_bundle_cache_path()
         ));
         let bundles: Vec<_> = self.remote_bundles.values().cloned().collect();
-        Ok(try!(StoredBundle::save_list_to(
+        try!(StoredBundle::save_list_to(
             &bundles,
             &self.layout.remote_bundle_cache_path()
-        )))
+        ));
+        Ok(())
     }
 
     fn update_cache(&mut self) -> Result<(), BundleDbError> {
@@ -244,7 +246,7 @@ impl BundleDb {
         Ok((self_, new, gone))
     }
 
-    pub fn create(layout: RepositoryLayout) -> Result<(), BundleDbError> {
+    pub fn create(layout: &RepositoryLayout) -> Result<(), BundleDbError> {
         try!(fs::create_dir_all(layout.remote_bundles_path()).context(
             &layout.remote_bundles_path() as
                 &Path
@@ -432,7 +434,7 @@ impl BundleDb {
         }
         if !to_repair.is_empty() {
             for id in ProgressIter::new("repairing bundles", to_repair.len(), to_repair.iter()) {
-                try!(self.repair_bundle(id.clone()));
+                try!(self.repair_bundle(id));
             }
             try!(self.flush());
         }
@@ -453,8 +455,8 @@ impl BundleDb {
         Ok(())
     }
 
-    fn repair_bundle(&mut self, id: BundleId) -> Result<(), BundleDbError> {
-        let stored = self.remote_bundles[&id].clone();
+    fn repair_bundle(&mut self, id: &BundleId) -> Result<(), BundleDbError> {
+        let stored = self.remote_bundles[id].clone();
         let mut bundle = match self.get_bundle(&stored) {
             Ok(bundle) => bundle,
             Err(err) => {

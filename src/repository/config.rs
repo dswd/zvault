@@ -30,8 +30,8 @@ quick_error!{
 
 
 impl HashMethod {
-    fn from_yaml(yaml: String) -> Result<Self, ConfigError> {
-        HashMethod::from(&yaml).map_err(ConfigError::Parse)
+    fn from_yaml(yaml: &str) -> Result<Self, ConfigError> {
+        HashMethod::from(yaml).map_err(ConfigError::Parse)
     }
 
     fn to_yaml(&self) -> String {
@@ -61,7 +61,7 @@ serde_impl!(ChunkerYaml(String) {
 });
 
 impl ChunkerType {
-    fn from_yaml(yaml: ChunkerYaml) -> Result<Self, ConfigError> {
+    fn from_yaml(yaml: &ChunkerYaml) -> Result<Self, ConfigError> {
         ChunkerType::from(&yaml.method, yaml.avg_size, yaml.seed).map_err(ConfigError::Parse)
     }
 
@@ -78,8 +78,8 @@ impl ChunkerType {
 
 impl Compression {
     #[inline]
-    fn from_yaml(yaml: String) -> Result<Self, ConfigError> {
-        Compression::from_string(&yaml).map_err(|_| ConfigError::Parse("Invalid codec"))
+    fn from_yaml(yaml: &str) -> Result<Self, ConfigError> {
+        Compression::from_string(yaml).map_err(|_| ConfigError::Parse("Invalid codec"))
     }
 
     #[inline]
@@ -91,8 +91,8 @@ impl Compression {
 
 impl EncryptionMethod {
     #[inline]
-    fn from_yaml(yaml: String) -> Result<Self, ConfigError> {
-        EncryptionMethod::from_string(&yaml).map_err(|_| ConfigError::Parse("Invalid codec"))
+    fn from_yaml(yaml: &str) -> Result<Self, ConfigError> {
+        EncryptionMethod::from_string(yaml).map_err(|_| ConfigError::Parse("Invalid codec"))
     }
 
     #[inline]
@@ -179,12 +179,12 @@ serde_impl!(Config(u64) {
 impl Config {
     fn from_yaml(yaml: ConfigYaml) -> Result<Self, ConfigError> {
         let compression = if let Some(c) = yaml.compression {
-            Some(try!(Compression::from_yaml(c)))
+            Some(try!(Compression::from_yaml(&c)))
         } else {
             None
         };
         let encryption = if let Some(e) = yaml.encryption {
-            let method = try!(EncryptionMethod::from_yaml(e.method));
+            let method = try!(EncryptionMethod::from_yaml(&e.method));
             let key = try!(parse_hex(&e.key).map_err(|_| {
                 ConfigError::Parse("Invalid public key")
             }));
@@ -196,8 +196,8 @@ impl Config {
             compression: compression,
             encryption: encryption,
             bundle_size: yaml.bundle_size,
-            chunker: try!(ChunkerType::from_yaml(yaml.chunker)),
-            hash: try!(HashMethod::from_yaml(yaml.hash))
+            chunker: try!(ChunkerType::from_yaml(&yaml.chunker)),
+            hash: try!(HashMethod::from_yaml(&yaml.hash))
         })
     }
 

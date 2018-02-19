@@ -67,7 +67,7 @@ impl RabinChunker {
 
 impl Chunker for RabinChunker {
     #[allow(unknown_lints,explicit_counter_loop)]
-    fn chunk(&mut self, r: &mut Read, mut w: &mut Write) -> Result<ChunkerStatus, ChunkerError> {
+    fn chunk(&mut self, r: &mut Read, w: &mut Write) -> Result<ChunkerStatus, ChunkerError> {
         let mut max;
         let mut hash = 0u32;
         let mut pos = 0;

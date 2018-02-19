@@ -48,7 +48,8 @@ impl Repository {
         let mut new = false;
         for &(hash, len) in chunks {
             if let Some(pos) = self.index.get(&hash) {
-                if let Some(bundle) = bundles.get_mut(&pos.bundle) {
+                let bundle = pos.bundle;
+                if let Some(bundle) = bundles.get_mut(&bundle) {
                     if !bundle.chunk_usage.get(pos.chunk as usize) {
                         new = true;
                         bundle.chunk_usage.set(pos.chunk as usize);

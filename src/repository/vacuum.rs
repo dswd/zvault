@@ -102,12 +102,14 @@ impl Repository {
         try!(self.flush());
         info!("Checking index");
         for (hash, location) in self.index.iter() {
-            if rewrite_bundles.contains(&location.bundle) {
+            let loc_bundle = location.bundle;
+            let loc_chunk = location.chunk;
+            if rewrite_bundles.contains(&loc_bundle) {
                 panic!(
                     "Removed bundle is still referenced in index: hash:{}, bundle:{}, chunk:{}",
                     hash,
-                    location.bundle,
-                    location.chunk
+                    loc_bundle,
+                    loc_chunk
                 );
             }
         }

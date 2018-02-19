@@ -89,11 +89,11 @@ impl ErrorCode {
 }
 
 
-pub const DEFAULT_CHUNKER: &'static str = "fastcdc/16";
-pub const DEFAULT_HASH: &'static str = "blake2";
-pub const DEFAULT_COMPRESSION: &'static str = "brotli/3";
-pub const DEFAULT_BUNDLE_SIZE_STR: &'static str = "25";
-pub const DEFAULT_VACUUM_RATIO_STR: &'static str = "0";
+pub const DEFAULT_CHUNKER: &str = "fastcdc/16";
+pub const DEFAULT_HASH: &str = "blake2";
+pub const DEFAULT_COMPRESSION: &str = "brotli/3";
+pub const DEFAULT_BUNDLE_SIZE_STR: &str = "25";
+pub const DEFAULT_VACUUM_RATIO_STR: &str = "0";
 lazy_static! {
     pub static ref ZVAULT_FOLDER: PathBuf = {
         env::home_dir().unwrap().join(".zvault")
@@ -435,7 +435,7 @@ pub fn run() -> Result<(), ErrorCode> {
             let mut repo = checked!(
                 Repository::create(
                     repo_path,
-                    Config {
+                    &Config {
                         bundle_size: bundle_size,
                         chunker: chunker,
                         compression: compression,

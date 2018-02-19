@@ -32,8 +32,8 @@ pub use self::layout::RepositoryLayout;
 use self::bundle_map::BundleMap;
 
 
-const REPOSITORY_README: &'static [u8] = include_bytes!("../../docs/repository_readme.md");
-const DEFAULT_EXCLUDES: &'static [u8] = include_bytes!("../../docs/excludes.default");
+const REPOSITORY_README: &[u8] = include_bytes!("../../docs/repository_readme.md");
+const DEFAULT_EXCLUDES: &[u8] = include_bytes!("../../docs/excludes.default");
 
 const INDEX_MAGIC: [u8; 7] = *b"zvault\x02";
 const INDEX_VERSION: u8 = 1;
@@ -93,7 +93,7 @@ pub struct Repository {
 impl Repository {
     pub fn create<P: AsRef<Path>, R: AsRef<Path>>(
         path: P,
-        config: Config,
+        config: &Config,
         remote: R,
     ) -> Result<Self, RepositoryError> {
         let layout = RepositoryLayout::new(path.as_ref().to_path_buf());
@@ -111,7 +111,7 @@ impl Repository {
         ));
         try!(fs::create_dir_all(layout.remote_locks_path()));
         try!(config.save(layout.config_path()));
-        try!(BundleDb::create(layout.clone()));
+        try!(BundleDb::create(&layout));
         try!(Index::<Hash, Location>::create(
             layout.index_path(),
             &INDEX_MAGIC,
@@ -181,7 +181,7 @@ impl Repository {
                 info!("Removig {} old bundles from index", gone.len());
                 try!(repo.write_mode());
                 for bundle in gone {
-                    try!(repo.remove_gone_remote_bundle(bundle))
+                    try!(repo.remove_gone_remote_bundle(&bundle))
                 }
                 save_bundle_map = true;
             }
@@ -194,7 +194,7 @@ impl Repository {
                     new.into_iter()
                 )
                 {
-                    try!(repo.add_new_remote_bundle(bundle))
+                    try!(repo.add_new_remote_bundle(&bundle))
                 }
                 save_bundle_map = true;
             }
@@ -224,7 +224,7 @@ impl Repository {
         key_files: Vec<String>,
     ) -> Result<Self, RepositoryError> {
         let path = path.as_ref();
-        let mut repo = try!(Repository::create(path, Config::default(), remote));
+        let mut repo = try!(Repository::create(path, &Config::default(), remote));
         for file in key_files {
             try!(repo.crypto.lock().unwrap().register_keyfile(file));
         }
@@ -250,10 +250,11 @@ impl Repository {
         secret: SecretKey,
     ) -> Result<(), RepositoryError> {
         try!(self.write_mode());
-        Ok(try!(self.crypto.lock().unwrap().register_secret_key(
+        try!(self.crypto.lock().unwrap().register_secret_key(
             public,
             secret
-        )))
+        ));
+        Ok(())
     }
 
     #[inline]
@@ -338,7 +339,7 @@ impl Repository {
         Ok(())
     }
 
-    fn add_new_remote_bundle(&mut self, bundle: BundleInfo) -> Result<(), RepositoryError> {
+    fn add_new_remote_bundle(&mut self, bundle: &BundleInfo) -> Result<(), RepositoryError> {
         if self.bundle_map.find(&bundle.id).is_some() {
             return Ok(());
         }
@@ -374,7 +375,7 @@ impl Repository {
         Ok(())
     }
 
-    fn remove_gone_remote_bundle(&mut self, bundle: BundleInfo) -> Result<(), RepositoryError> {
+    fn remove_gone_remote_bundle(&mut self, bundle: &BundleInfo) -> Result<(), RepositoryError> {
         if let Some(id) = self.bundle_map.find(&bundle.id) {
             debug!("Removing bundle from index: {}", bundle.id);
             try!(self.bundles.delete_local_bundle(&bundle.id));
@@ -386,7 +387,8 @@ impl Repository {
 
     #[inline]
     fn write_mode(&mut self) -> Result<(), RepositoryError> {
-        Ok(try!(self.local_locks.upgrade(&mut self.lock)))
+        try!(self.local_locks.upgrade(&mut self.lock));
+        Ok(())
     }
 
     #[inline]

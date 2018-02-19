@@ -88,7 +88,7 @@ impl FastCdcChunker {
 
 impl Chunker for FastCdcChunker {
     #[allow(unknown_lints,explicit_counter_loop,needless_range_loop)]
-    fn chunk(&mut self, r: &mut Read, mut w: &mut Write) -> Result<ChunkerStatus, ChunkerError> {
+    fn chunk(&mut self, r: &mut Read, w: &mut Write) -> Result<ChunkerStatus, ChunkerError> {
         let mut max;
         let mut hash = 0u64;
         let mut pos = 0;
@@ -107,7 +107,7 @@ impl Chunker for FastCdcChunker {
                 for i in min_size_p..avg_size_p {
                     hash = (hash << 1).wrapping_add(self.gear[self.buffer[i] as usize]);
                     if hash & self.mask_short == 0 {
-                        return self.write_output(w, i+1, max);
+                        return self.write_output(w, i + 1, max);
                     }
                 }
             }

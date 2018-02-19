@@ -79,7 +79,7 @@ impl ChunkerType {
         match *self {
             ChunkerType::Ae(_size) |
             ChunkerType::Fixed(_size) => 0,
-            ChunkerType::Rabin((_size, seed)) => seed as u64,
+            ChunkerType::Rabin((_size, seed)) => u64::from(seed),
             ChunkerType::FastCdc((_size, seed)) => seed,
         }
     }

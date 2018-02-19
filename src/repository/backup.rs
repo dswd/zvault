@@ -73,11 +73,12 @@ impl Repository {
         try!(self.write_mode());
         let path = self.layout.backup_path(name);
         try!(fs::create_dir_all(path.parent().unwrap()));
-        Ok(try!(backup.save_to(
+        try!(backup.save_to(
             &self.crypto.lock().unwrap(),
             self.config.encryption.clone(),
             path
-        )))
+        ));
+        Ok(())
     }
 
     pub fn delete_backup(&mut self, name: &str) -> Result<(), RepositoryError> {
@@ -298,7 +299,7 @@ impl Repository {
                 let chunks = try!(self.put_inode(&child_inode));
                 inode.cum_size += child_inode.cum_size;
                 for &(_, len) in chunks.iter() {
-                    meta_size += len as u64;
+                    meta_size += u64::from(len);
                 }
                 inode.cum_dirs += child_inode.cum_dirs;
                 inode.cum_files += child_inode.cum_files;
@@ -309,7 +310,7 @@ impl Repository {
             inode.cum_files = 1;
             if let Some(FileData::ChunkedIndirect(ref chunks)) = inode.data {
                 for &(_, len) in chunks.iter() {
-                    meta_size += len as u64;
+                    meta_size += u64::from(len);
                 }
             }
         }
@@ -357,7 +358,7 @@ impl Repository {
         backup.timestamp = start.timestamp();
         backup.total_data_size = root_inode.cum_size;
         for &(_, len) in backup.root.iter() {
-            backup.total_data_size += len as u64;
+            backup.total_data_size += u64::from(len);
         }
         backup.file_count = root_inode.cum_files;
         backup.dir_count = root_inode.cum_dirs;
@@ -474,6 +475,7 @@ impl Repository {
         Ok(versions)
     }
 
+    #[allow(needless_pass_by_value)]
     fn find_differences_recurse(
         &mut self,
         inode1: &Inode,

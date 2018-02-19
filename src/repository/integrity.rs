@@ -488,7 +488,7 @@ impl Repository {
                 );
                 return self.rebuild_index();
             } else {
-                return Err(err.into());
+                return Err(err);
             }
         }
         Ok(())

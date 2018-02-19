@@ -19,7 +19,7 @@ impl FixedChunker {
 
 impl Chunker for FixedChunker {
     #[allow(unknown_lints,explicit_counter_loop)]
-    fn chunk(&mut self, r: &mut Read, mut w: &mut Write) -> Result<ChunkerStatus, ChunkerError> {
+    fn chunk(&mut self, r: &mut Read, w: &mut Write) -> Result<ChunkerStatus, ChunkerError> {
         let mut todo = self.size;
         loop {
             // Fill the buffer, there might be some bytes still in there from last chunk

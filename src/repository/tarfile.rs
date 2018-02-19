@@ -177,7 +177,7 @@ impl Repository {
                     } else {
                         if let Some(FileData::ChunkedIndirect(ref chunks)) = inode.data {
                             for &(_, len) in chunks.iter() {
-                                inode.cum_size += len as u64;
+                                inode.cum_size += u64::from(len);
                             }
                         }
                         inode.cum_files = 1;
@@ -226,7 +226,7 @@ impl Repository {
                         children.remove(&inode.name);
                         parent_inode.cum_size += inode.cum_size;
                         for &(_, len) in chunks.iter() {
-                            parent_inode.cum_size += len as u64;
+                            parent_inode.cum_size += u64::from(len);
                         }
                         parent_inode.cum_files += inode.cum_files;
                         parent_inode.cum_dirs += inode.cum_dirs;
@@ -257,7 +257,7 @@ impl Repository {
             for (inode, chunks) in roots {
                 root_inode.cum_size += inode.cum_size;
                 for &(_, len) in chunks.iter() {
-                    root_inode.cum_size += len as u64;
+                    root_inode.cum_size += u64::from(len);
                 }
                 root_inode.cum_files += inode.cum_files;
                 root_inode.cum_dirs += inode.cum_dirs;
@@ -334,7 +334,8 @@ impl Repository {
                 str::from_utf8(value).unwrap()
             );
         }
-        Ok(try!(tarfile.append_pax_extensions(&pax)))
+        try!(tarfile.append_pax_extensions(&pax));
+        Ok(())
     }
 
     fn export_tarfile_recurse<W: Write>(

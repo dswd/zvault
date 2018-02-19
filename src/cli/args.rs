@@ -5,6 +5,7 @@ use std::path::{Path, PathBuf};
 use log::LogLevel;
 use clap::{App, AppSettings, Arg, SubCommand};
 
+#[allow(option_option)]
 pub enum Arguments {
     Init {
         repo_path: PathBuf,

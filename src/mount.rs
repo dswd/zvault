@@ -260,7 +260,7 @@ impl<'a> FuseFilesystem<'a> {
     }
 
     pub fn mount<P: AsRef<Path>>(self, mountpoint: P) -> Result<(), RepositoryError> {
-        Ok(try!(fuse::mount(
+        try!(fuse::mount(
             self,
             &mountpoint,
             &[
@@ -269,7 +269,8 @@ impl<'a> FuseFilesystem<'a> {
                 OsStr::new("auto_cache"),
                 OsStr::new("readonly"),
             ]
-        )))
+        ));
+        Ok(())
     }
 
     pub fn get_inode(&mut self, num: u64) -> Option<FuseInodeRef> {
@@ -551,8 +552,8 @@ impl<'a> fuse::Filesystem for FuseFilesystem<'a> {
         if let Some(ref chunks) = inode.chunks {
             let mut data = Vec::with_capacity(size as usize);
             for &(hash, len) in chunks.iter() {
-                if len as u64 <= offset {
-                    offset -= len as u64;
+                if u64::from(len) <= offset {
+                    offset -= u64::from(len);
                     continue;
                 }
                 let chunk = match fuse_try!(self.repository.get_chunk(hash), reply) {

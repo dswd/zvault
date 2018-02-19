@@ -25,7 +25,7 @@ impl<'a> ChunkReader<'a> {
 }
 
 impl<'a> Read for ChunkReader<'a> {
-    fn read(&mut self, mut buf: &mut [u8]) -> Result<usize, io::Error> {
+    fn read(&mut self, buf: &mut [u8]) -> Result<usize, io::Error> {
         let mut bpos = 0;
         loop {
             if buf.len() == bpos {

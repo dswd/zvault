@@ -58,7 +58,8 @@ impl LockFile {
 
     pub fn save<P: AsRef<Path>>(&self, path: P) -> Result<(), LockError> {
         let mut f = try!(File::create(path));
-        Ok(try!(serde_yaml::to_writer(&mut f, &self)))
+        try!(serde_yaml::to_writer(&mut f, &self));
+        Ok(())
     }
 }
 

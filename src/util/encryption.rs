@@ -108,7 +108,8 @@ impl KeyfileYaml {
 
     pub fn save<P: AsRef<Path>>(&self, path: P) -> Result<(), EncryptionError> {
         let mut f = try!(File::create(path));
-        Ok(try!(serde_yaml::to_writer(&mut f, &self)))
+        try!(serde_yaml::to_writer(&mut f, &self));
+        Ok(())
     }
 }
 
