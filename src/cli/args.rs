@@ -2,7 +2,7 @@ use prelude::*;
 use super::*;
 
 use std::path::{Path, PathBuf};
-use log::LogLevel;
+use log;
 use clap::{App, AppSettings, Arg, SubCommand};
 
 #[allow(option_option)]
@@ -309,7 +309,7 @@ fn validate_existing_path_or_stdio(val: String) -> Result<(), String> {
 
 
 #[allow(unknown_lints, cyclomatic_complexity)]
-pub fn parse() -> Result<(LogLevel, Arguments), ErrorCode> {
+pub fn parse() -> Result<(log::Level, Arguments), ErrorCode> {
     let args = App::new("zvault").version(crate_version!()).author(crate_authors!(",\n")).about(crate_description!())
         .settings(&[AppSettings::VersionlessSubcommands, AppSettings::SubcommandRequiredElseHelp])
         .global_settings(&[AppSettings::AllowMissingPositional, AppSettings::UnifiedHelpMessage, AppSettings::ColoredHelp, AppSettings::ColorAuto])
@@ -467,10 +467,10 @@ pub fn parse() -> Result<(LogLevel, Arguments), ErrorCode> {
         .map(|m| m.occurrences_of("quiet"))
         .unwrap_or(0) + args.occurrences_of("quiet");
     let log_level = match 1 + verbose_count - quiet_count {
-        0 => LogLevel::Warn,
-        1 => LogLevel::Info,
-        2 => LogLevel::Debug,
-        _ => LogLevel::Trace,
+        0 => log::Level::Warn,
+        1 => log::Level::Info,
+        2 => log::Level::Debug,
+        _ => log::Level::Trace,
     };
     let args = match args.subcommand() {
         ("init", Some(args)) => {
