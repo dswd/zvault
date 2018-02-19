@@ -533,7 +533,7 @@ impl<'a> fuse::Filesystem for FuseFilesystem<'a> {
         _req: &fuse::Request,
         ino: u64,
         _fh: u64,
-        mut offset: u64,
+        mut offset: i64,
         mut size: u32,
         reply: fuse::ReplyData,
     ) {
@@ -552,8 +552,8 @@ impl<'a> fuse::Filesystem for FuseFilesystem<'a> {
         if let Some(ref chunks) = inode.chunks {
             let mut data = Vec::with_capacity(size as usize);
             for &(hash, len) in chunks.iter() {
-                if u64::from(len) <= offset {
-                    offset -= u64::from(len);
+                if i64::from(len) <= offset {
+                    offset -= i64::from(len);
                     continue;
                 }
                 let chunk = match fuse_try!(self.repository.get_chunk(hash), reply) {
@@ -582,7 +582,7 @@ impl<'a> fuse::Filesystem for FuseFilesystem<'a> {
         _req: &fuse::Request,
         _ino: u64,
         _fh: u64,
-        _offset: u64,
+        _offset: i64,
         _data: &[u8],
         _flags: u32,
         reply: fuse::ReplyWrite,
@@ -653,7 +653,7 @@ impl<'a> fuse::Filesystem for FuseFilesystem<'a> {
         _req: &fuse::Request,
         ino: u64,
         _fh: u64,
-        offset: u64,
+        offset: i64,
         mut reply: fuse::ReplyDirectory,
     ) {
         let dir = inode!(self, ino, reply);
@@ -663,7 +663,7 @@ impl<'a> fuse::Filesystem for FuseFilesystem<'a> {
                 if i < offset as usize {
                     continue;
                 }
-                if reply.add(num, i as u64 + 1, file_type, &Path::new(&name)) {
+                if reply.add(num, i as i64 + 1, file_type, &Path::new(&name)) {
                     break;
                 }
             }
