@@ -40,10 +40,12 @@ impl Repository {
         );
         let mut rewrite_bundles = HashSet::new();
         let mut reclaim_space = 0;
+        let mut rewrite_data = 0;
         for (id, bundle) in &usage {
             if bundle.get_usage_ratio() <= ratio {
                 rewrite_bundles.insert(*id);
                 reclaim_space += bundle.get_unused_size();
+                rewrite_data += bundle.get_used_size();
             }
         }
         if combine {
@@ -69,9 +71,10 @@ impl Repository {
             }
         }
         info!(
-            "Reclaiming {} by rewriting {} bundles",
+            "Reclaiming about {} by rewriting {} bundles ({})",
             to_file_size(reclaim_space as u64),
-            rewrite_bundles.len()
+            rewrite_bundles.len(),
+            to_file_size(rewrite_data as u64)
         );
         if !force {
             self.dirty = false;

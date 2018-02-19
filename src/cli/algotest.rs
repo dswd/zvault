@@ -129,7 +129,7 @@ pub fn run(
         dup_size += len;
     }
     println!(
-        "- {} duplicate chunks, {}, {:.1}% saved",
+        "- {} duplicate chunks, {}, {:.1}% saved by internal deduplication",
         dups.len(),
         to_file_size(dup_size as u64),
         dup_size as f32 / size as f32 * 100.0

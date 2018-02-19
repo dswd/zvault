@@ -447,7 +447,7 @@ impl Repository {
         self.index.clear();
         let mut bundles = self.bundle_map.bundles();
         bundles.sort_by_key(|&(_, ref v)| v.clone());
-        for (num, id) in bundles {
+        for (num, id) in ProgressIter::new("Rebuilding index from bundles", bundles.len(), bundles.into_iter()) {
             let chunks = try!(self.bundles.get_chunk_list(&id));
             for (i, (hash, _len)) in chunks.into_inner().into_iter().enumerate() {
                 try!(self.index.set(

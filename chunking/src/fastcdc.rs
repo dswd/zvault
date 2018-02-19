@@ -9,6 +9,7 @@ use std::cmp;
 // Presentation: https://www.usenix.org/sites/default/files/conference/protected-files/atc16_slides_xia.pdf
 
 
+
 // Creating 256 pseudo-random values (based on Knuth's MMIX)
 fn create_gear(seed: u64) -> [u64; 256] {
     let mut table = [0u64; 256];
@@ -75,6 +76,8 @@ impl FastCdcChunker {
 
 impl FastCdcChunker {
     fn write_output(&mut self, w: &mut Write, pos: usize, max: usize) -> Result<ChunkerStatus, ChunkerError> {
+        debug_assert!(max <= self.buffer.len());
+        debug_assert!(pos <= self.buffer.len());
         try!(w.write_all(&self.buffer[..pos]).map_err(ChunkerError::Write));
         unsafe { ptr::copy(self.buffer[pos..].as_ptr(), self.buffer.as_mut_ptr(), max-pos) };
         self.buffered = max-pos;

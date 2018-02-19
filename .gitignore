@@ -7,3 +7,4 @@ excludes
 ._*
 .~*
 docs/logo
+.idea
