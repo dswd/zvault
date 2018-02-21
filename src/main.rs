@@ -38,7 +38,10 @@ extern crate libc;
 extern crate tar;
 extern crate index;
 extern crate chunking;
+#[macro_use]
+extern crate runtime_fmt;
 
+#[macro_use] mod translation;
 pub mod util;
 mod bundledb;
 mod repository;
