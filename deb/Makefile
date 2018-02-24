@@ -25,6 +25,7 @@ $(PACKAGE)/man/*: ../docs/man/*
 
 $(PACKAGE)/zvault: ../target/release/zvault
 	cp ../target/release/zvault $(PACKAGE)/zvault
+        strip -s $(PACKAGE)/zvault
 
 ../target/release/zvault: ../src/*.rs ../Cargo.toml
 	(cd ..; cargo build --release)
