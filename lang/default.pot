@@ -22,8 +22,8 @@ msgid ""
 "\tcaused by: {}"
 msgstr ""
 
-#: bundledb/cache.rs:26 bundledb/reader.rs:22 repository/backup_file.rs:39
-#: repository/bundle_map.rs:32
+#: bundledb/cache.rs:26 bundledb/reader.rs:22 index.rs:34
+#: repository/backup_file.rs:39 repository/bundle_map.rs:32
 msgid "Wrong header"
 msgstr ""
 
@@ -381,6 +381,30 @@ msgstr ""
 msgid "Chunk size must be a number"
 msgstr ""
 
+#: chunking/mod.rs:28
+msgid "Failed to read input"
+msgstr ""
+
+#: chunking/mod.rs:29
+msgid ""
+"Chunker error: failed to read input\n"
+"\tcaused by: {}"
+msgstr ""
+
+#: chunking/mod.rs:34
+msgid ""
+"Chunker error: failed to write to output\n"
+"\tcaused by: {}"
+msgstr ""
+
+#: chunking/mod.rs:38
+msgid "Custom error"
+msgstr ""
+
+#: chunking/mod.rs:39
+msgid "Chunker error: {}"
+msgstr ""
+
 #: cli/algotest.rs:55
 msgid "Reading input file ..."
 msgstr ""
@@ -451,7 +475,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: PACKAGE VERSION\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2018-02-24 14:45+0100\n"
+"POT-Creation-Date: 2018-02-24 23:34+0100\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
@@ -1338,6 +1362,66 @@ msgstr ""
 msgid "add key pair"
 msgstr ""
 
+#: index.rs:24
+msgid "Failed to open index file"
+msgstr ""
+
+#: index.rs:25
+msgid ""
+"Index error: failed to open the index file\n"
+"\tcaused by: {}"
+msgstr ""
+
+#: index.rs:30
+msgid "Failed to memory-map the index file"
+msgstr ""
+
+#: index.rs:31
+msgid ""
+"Index error: failed to memory-map the index file\n"
+"\tcaused by: {}"
+msgstr ""
+
+#: index.rs:35
+msgid "Index error: file has the wrong magic header"
+msgstr ""
+
+#: index.rs:38
+msgid "Unsupported version"
+msgstr ""
+
+#: index.rs:39
+msgid "Index error: index file has unsupported version: {}"
+msgstr ""
+
+#: index.rs:42
+msgid "Key at wrong position"
+msgstr ""
+
+#: index.rs:43
+msgid "Index error: key has wrong position, expected at: {}, but is at: {:?}"
+msgstr ""
+
+#: index.rs:46
+msgid "Wrong entry count"
+msgstr ""
+
+#: index.rs:47
+msgid "Index error: index has wrong entry count, expected {}, but is {}"
+msgstr ""
+
+#: index.rs:150
+msgid "Memory map too small"
+msgstr ""
+
+#: index.rs:210
+msgid "Inconsistent after creation"
+msgstr ""
+
+#: index.rs:444 index.rs:453 index.rs:462 index.rs:472
+msgid "Inconsistent before get"
+msgstr ""
+
 #: mount.rs:22
 msgid "Error: {:?}"
 msgstr ""
@@ -1944,53 +2028,53 @@ msgstr ""
 msgid "Failed to set user {} and group {} on {:?}: {}"
 msgstr ""
 
-#: repository/mod.rs:142
+#: repository/mod.rs:141
 msgid ""
 "Failed to load local index:\n"
 "\tcaused by: {}"
 msgstr ""
 
-#: repository/mod.rs:156
+#: repository/mod.rs:155
 msgid ""
 "Failed to load local bundle map:\n"
 "\tcaused by: {}"
 msgstr ""
 
-#: repository/mod.rs:181
-msgid "Removig {} old bundles from index"
+#: repository/mod.rs:180
+msgid "Removing {} old bundles from index"
 msgstr ""
 
-#: repository/mod.rs:189
+#: repository/mod.rs:188
 msgid "Adding {} new bundles to index"
 msgstr ""
 
-#: repository/mod.rs:192
+#: repository/mod.rs:191
 msgid "adding bundles to index"
 msgstr ""
 
-#: repository/mod.rs:235
+#: repository/mod.rs:234
 msgid "Taking configuration from the last backup '{}'"
 msgstr ""
 
-#: repository/mod.rs:240
+#: repository/mod.rs:239
 msgid ""
 "No backup found in the repository to take configuration from, please set the "
 "configuration manually."
 msgstr ""
 
-#: repository/mod.rs:271
+#: repository/mod.rs:270
 msgid "The secret key for that public key is not stored in the repository."
 msgstr ""
 
-#: repository/mod.rs:346
+#: repository/mod.rs:345
 msgid "Adding new bundle to index: {}"
 msgstr ""
 
-#: repository/mod.rs:380
+#: repository/mod.rs:379
 msgid "Removing bundle from index: {}"
 msgstr ""
 
-#: repository/mod.rs:409
+#: repository/mod.rs:408
 msgid "Failed to flush repository: {}"
 msgstr ""
 

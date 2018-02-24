@@ -1590,3 +1590,68 @@ msgstr ""
 msgid "a Path, err: msgpack::EncodeError) -> (err, path.to_path_buf())"
 msgstr ""
 
+#: chunking/ae.rs:6
+msgid ""
+"AE: An Asymmetric Extremum Content Defined Chunking Algorithm for Fast and "
+"Bandwidth-Efficient Data Deduplication"
+msgstr ""
+
+#: chunking/fastcdc.rs:7
+msgid ""
+"FastCDC: a Fast and Efficient Content-Defined Chunking Approach for Data "
+"Deduplication"
+msgstr ""
+
+#: chunking/fastcdc.rs:13
+msgid "s MMIX)"
+msgstr ""
+
+#: chunking/mod.rs:17
+msgid ""
+"A Comprehensive Study of the Past, Present, and Future of Data Deduplication"
+msgstr ""
+
+#: chunking/rabin.rs:7
+msgid "Fingerprinting by Random Polynomials"
+msgstr ""
+
+#: chunking/rabin.rs:9
+msgid "Redundancy Elimination Within Large Collections of Files"
+msgstr ""
+
+#: index.rs:110 index.rs:126
+msgid "a, K: "
+msgstr ""
+
+#: index.rs:110 index.rs:126
+msgid "static> (&"
+msgstr ""
+
+#: index.rs:112
+msgid "a, K: Key, V> Iterator for Iter<"
+msgstr ""
+
+#: index.rs:113 index.rs:129
+msgid "a K, &"
+msgstr ""
+
+#: index.rs:128
+msgid "a, K: Key, V> Iterator for IterMut<"
+msgstr ""
+
+#: index.rs:148
+msgid "static mut Header, &"
+msgstr ""
+
+#: index.rs:158
+msgid "static, V: "
+msgstr ""
+
+#: index.rs:166
+msgid "static mut Header,"
+msgstr ""
+
+#: index.rs:167
+msgid "static mut [Entry<K, V>]"
+msgstr ""
+
