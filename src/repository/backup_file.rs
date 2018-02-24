@@ -15,49 +15,49 @@ quick_error!{
     pub enum BackupFileError {
         Read(err: io::Error, path: PathBuf) {
             cause(err)
-            description("Failed to read backup")
-            display("Backup file error: failed to read backup file {:?}\n\tcaused by: {}", path, err)
+            description(tr!("Failed to read backup"))
+            display("{}", tr_format!("Backup file error: failed to read backup file {:?}\n\tcaused by: {}", path, err))
         }
         Write(err: io::Error, path: PathBuf) {
             cause(err)
-            description("Failed to write backup")
-            display("Backup file error: failed to write backup file {:?}\n\tcaused by: {}", path, err)
+            description(tr!("Failed to write backup"))
+            display("{}", tr_format!("Backup file error: failed to write backup file {:?}\n\tcaused by: {}", path, err))
         }
         Decode(err: msgpack::DecodeError, path: PathBuf) {
             cause(err)
             context(path: &'a Path, err: msgpack::DecodeError) -> (err, path.to_path_buf())
-            description("Failed to decode backup")
-            display("Backup file error: failed to decode backup of {:?}\n\tcaused by: {}", path, err)
+            description(tr!("Failed to decode backup"))
+            display("{}", tr_format!("Backup file error: failed to decode backup of {:?}\n\tcaused by: {}", path, err))
         }
         Encode(err: msgpack::EncodeError, path: PathBuf) {
             cause(err)
             context(path: &'a Path, err: msgpack::EncodeError) -> (err, path.to_path_buf())
-            description("Failed to encode backup")
-            display("Backup file error: failed to encode backup of {:?}\n\tcaused by: {}", path, err)
+            description(tr!("Failed to encode backup"))
+            display("{}", tr_format!("Backup file error: failed to encode backup of {:?}\n\tcaused by: {}", path, err))
         }
         WrongHeader(path: PathBuf) {
-            description("Wrong header")
-            display("Backup file error: wrong header on backup {:?}", path)
+            description(tr!("Wrong header"))
+            display("{}", tr_format!("Backup file error: wrong header on backup {:?}", path))
         }
         UnsupportedVersion(path: PathBuf, version: u8) {
-            description("Wrong version")
-            display("Backup file error: unsupported version on backup {:?}: {}", path, version)
+            description(tr!("Wrong version"))
+            display("{}", tr_format!("Backup file error: unsupported version on backup {:?}: {}", path, version))
         }
         Decryption(err: EncryptionError, path: PathBuf) {
             cause(err)
             context(path: &'a Path, err: EncryptionError) -> (err, path.to_path_buf())
-            description("Decryption failed")
-            display("Backup file error: decryption failed on backup {:?}\n\tcaused by: {}", path, err)
+            description(tr!("Decryption failed"))
+            display("{}", tr_format!("Backup file error: decryption failed on backup {:?}\n\tcaused by: {}", path, err))
         }
         Encryption(err: EncryptionError) {
             from()
             cause(err)
-            description("Encryption failed")
-            display("Backup file error: encryption failed\n\tcaused by: {}", err)
+            description(tr!("Encryption failed"))
+            display("{}", tr_format!("Backup file error: encryption failed\n\tcaused by: {}", err))
         }
         PartialBackupsList(partial: HashMap<String, Backup>, failed: Vec<PathBuf>) {
-            description("Some backups could not be loaded")
-            display("Backup file error: some backups could not be loaded: {:?}", failed)
+            description(tr!("Some backups could not be loaded"))
+            display("{}", tr_format!("Backup file error: some backups could not be loaded: {:?}", failed))
         }
     }
 }
@@ -180,7 +180,7 @@ impl Backup {
         let base_path = path.as_ref();
         let path = path.as_ref();
         if !path.exists() {
-            debug!("Backup root folder does not exist");
+            tr_debug!("Backup root folder does not exist");
             return Ok(backups);
         }
         let mut paths = vec![path.to_path_buf()];

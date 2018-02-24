@@ -16,14 +16,14 @@ quick_error!{
         }
         Parse(reason: &'static str) {
             from()
-            description("Failed to parse config")
-            display("Failed to parse config: {}", reason)
+            description(tr!("Failed to parse config"))
+            display("{}", tr_format!("Failed to parse config: {}", reason))
         }
         Yaml(err: serde_yaml::Error) {
             from()
             cause(err)
-            description("Yaml format error")
-            display("Yaml format error: {}", err)
+            description(tr!("Yaml format error"))
+            display("{}", tr_format!("Yaml format error: {}", err))
         }
     }
 }
@@ -79,7 +79,7 @@ impl ChunkerType {
 impl Compression {
     #[inline]
     fn from_yaml(yaml: &str) -> Result<Self, ConfigError> {
-        Compression::from_string(yaml).map_err(|_| ConfigError::Parse("Invalid codec"))
+        Compression::from_string(yaml).map_err(|_| ConfigError::Parse(tr!("Invalid codec")))
     }
 
     #[inline]
@@ -92,7 +92,7 @@ impl Compression {
 impl EncryptionMethod {
     #[inline]
     fn from_yaml(yaml: &str) -> Result<Self, ConfigError> {
-        EncryptionMethod::from_string(yaml).map_err(|_| ConfigError::Parse("Invalid codec"))
+        EncryptionMethod::from_string(yaml).map_err(|_| ConfigError::Parse(tr!("Invalid codec")))
     }
 
     #[inline]
@@ -186,7 +186,7 @@ impl Config {
         let encryption = if let Some(e) = yaml.encryption {
             let method = try!(EncryptionMethod::from_yaml(&e.method));
             let key = try!(parse_hex(&e.key).map_err(|_| {
-                ConfigError::Parse("Invalid public key")
+                ConfigError::Parse(tr!("Invalid public key"))
             }));
             Some((method, key.into()))
         } else {

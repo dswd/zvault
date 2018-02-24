@@ -14,33 +14,33 @@ quick_error!{
     pub enum BundleCacheError {
         Read(err: io::Error) {
             cause(err)
-            description("Failed to read bundle cache")
-            display("Bundle cache error: failed to read bundle cache\n\tcaused by: {}", err)
+            description(tr!("Failed to read bundle cache"))
+            display("{}", tr_format!("Bundle cache error: failed to read bundle cache\n\tcaused by: {}", err))
         }
         Write(err: io::Error) {
             cause(err)
-            description("Failed to write bundle cache")
-            display("Bundle cache error: failed to write bundle cache\n\tcaused by: {}", err)
+            description(tr!("Failed to write bundle cache"))
+            display("{}", tr_format!("Bundle cache error: failed to write bundle cache\n\tcaused by: {}", err))
         }
         WrongHeader {
-            description("Wrong header")
-            display("Bundle cache error: wrong header on bundle cache")
+            description(tr!("Wrong header"))
+            display("{}", tr_format!("Bundle cache error: wrong header on bundle cache"))
         }
         UnsupportedVersion(version: u8) {
-            description("Wrong version")
-            display("Bundle cache error: unsupported version: {}", version)
+            description(tr!("Wrong version"))
+            display("{}", tr_format!("Bundle cache error: unsupported version: {}", version))
         }
         Decode(err: msgpack::DecodeError) {
             from()
             cause(err)
-            description("Failed to decode bundle cache")
-            display("Bundle cache error: failed to decode bundle cache\n\tcaused by: {}", err)
+            description(tr!("Failed to decode bundle cache"))
+            display("{}", tr_format!("Bundle cache error: failed to decode bundle cache\n\tcaused by: {}", err))
         }
         Encode(err: msgpack::EncodeError) {
             from()
             cause(err)
-            description("Failed to encode bundle cache")
-            display("Bundle cache error: failed to encode bundle cache\n\tcaused by: {}", err)
+            description(tr!("Failed to encode bundle cache"))
+            display("{}", tr_format!("Bundle cache error: failed to encode bundle cache\n\tcaused by: {}", err))
         }
     }
 }

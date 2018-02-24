@@ -61,7 +61,7 @@ impl ChunkList {
     #[inline]
     pub fn read_from(src: &[u8]) -> Self {
         if src.len() % 20 != 0 {
-            warn!("Reading truncated chunk list");
+            tr_warn!("Reading truncated chunk list");
         }
         ChunkList::read_n_from(src.len() / 20, &mut Cursor::new(src)).unwrap()
     }
@@ -129,7 +129,7 @@ impl<'a> Deserialize<'a> for ChunkList {
     {
         let data: Vec<u8> = try!(ByteBuf::deserialize(deserializer)).into();
         if data.len() % 20 != 0 {
-            return Err(D::Error::custom("Invalid chunk list length"));
+            return Err(D::Error::custom(tr!("Invalid chunk list length")));
         }
         Ok(
             ChunkList::read_n_from(data.len() / 20, &mut Cursor::new(data)).unwrap()

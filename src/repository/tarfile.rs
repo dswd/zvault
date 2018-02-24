@@ -198,7 +198,7 @@ impl Repository {
                 Err(RepositoryError::Inode(_)) |
                 Err(RepositoryError::Chunker(_)) |
                 Err(RepositoryError::Io(_)) => {
-                    info!("Failed to backup {:?}", path);
+                    tr_info!("Failed to backup {:?}", path);
                     failed_paths.push(path);
                     continue;
                 }
@@ -243,7 +243,7 @@ impl Repository {
         if roots.len() == 1 {
             Ok(roots.pop().unwrap())
         } else {
-            warn!("Tar file contains multiple roots, adding dummy folder");
+            tr_warn!("Tar file contains multiple roots, adding dummy folder");
             let mut root_inode = Inode {
                 file_type: FileType::Directory,
                 mode: 0o755,

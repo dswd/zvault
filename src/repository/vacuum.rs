@@ -20,11 +20,11 @@ impl Repository {
         force: bool,
     ) -> Result<(), RepositoryError> {
         try!(self.flush());
-        info!("Locking repository");
+        tr_info!("Locking repository");
         try!(self.write_mode());
         let _lock = try!(self.lock(true));
         // analyze_usage will set the dirty flag
-        info!("Analyzing chunk usage");
+        tr_info!("Analyzing chunk usage");
         let usage = try!(self.analyze_usage());
         let mut data_total = 0;
         let mut data_used = 0;
@@ -32,7 +32,7 @@ impl Repository {
             data_total += bundle.info.encoded_size;
             data_used += bundle.get_used_size();
         }
-        info!(
+        tr_info!(
             "Usage: {} of {}, {:.1}%",
             to_file_size(data_used as u64),
             to_file_size(data_total as u64),
@@ -70,7 +70,7 @@ impl Repository {
                 }
             }
         }
-        info!(
+        tr_info!(
             "Reclaiming about {} by rewriting {} bundles ({})",
             to_file_size(reclaim_space as u64),
             rewrite_bundles.len(),
@@ -81,7 +81,7 @@ impl Repository {
             return Ok(());
         }
         for id in ProgressIter::new(
-            "rewriting bundles",
+            tr!("rewriting bundles"),
             rewrite_bundles.len(),
             rewrite_bundles.iter()
         )
@@ -100,12 +100,12 @@ impl Repository {
             }
         }
         try!(self.flush());
-        info!("Checking index");
+        tr_info!("Checking index");
         for (hash, location) in self.index.iter() {
             let loc_bundle = location.bundle;
             let loc_chunk = location.chunk;
             if rewrite_bundles.contains(&loc_bundle) {
-                panic!(
+                tr_panic!(
                     "Removed bundle is still referenced in index: hash:{}, bundle:{}, chunk:{}",
                     hash,
                     loc_bundle,
@@ -113,7 +113,7 @@ impl Repository {
                 );
             }
         }
-        info!("Deleting {} bundles", rewrite_bundles.len());
+        tr_info!("Deleting {} bundles", rewrite_bundles.len());
         for id in rewrite_bundles {
             try!(self.delete_bundle(id));
         }

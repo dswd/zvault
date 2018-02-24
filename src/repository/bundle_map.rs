@@ -16,24 +16,24 @@ quick_error!{
         Io(err: io::Error) {
             from()
             cause(err)
-            description("Failed to read/write bundle map")
+            description(tr!("Failed to read/write bundle map"))
         }
         Decode(err: msgpack::DecodeError) {
             from()
             cause(err)
-            description("Failed to decode bundle map")
+            description(tr!("Failed to decode bundle map"))
         }
         Encode(err: msgpack::EncodeError) {
             from()
             cause(err)
-            description("Failed to encode bundle map")
+            description(tr!("Failed to encode bundle map"))
         }
         WrongHeader {
-            description("Wrong header")
+            description(tr!("Wrong header"))
         }
         WrongVersion(version: u8) {
-            description("Wrong version")
-            display("Wrong version: {}", version)
+            description(tr!("Wrong version"))
+            display("{}", tr_format!("Wrong version: {}", version))
         }
     }
 }

@@ -40,6 +40,7 @@ extern crate index;
 extern crate chunking;
 #[macro_use]
 extern crate runtime_fmt;
+extern crate locale_config;
 
 #[macro_use] mod translation;
 pub mod util;

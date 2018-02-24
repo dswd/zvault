@@ -524,10 +524,10 @@ impl<'a> fuse::Filesystem for FuseFilesystem<'a> {
     /// Read data
     /// Read should send exactly the number of bytes requested except on EOF or error,
     /// otherwise the rest of the data will be substituted with zeroes. An exception to
-    /// this is when the file has been opened in 'direct_io' mode, in which case the
+    /// this is when the file has been opened in direct_io mode, in which case the
     /// return value of the read system call will reflect the return value of this
     /// operation. fh will contain the value set by the open method, or will be undefined
-    /// if the open method didn't set any value.
+    /// if the open method didnt set any value.
     fn read(
         &mut self,
         _req: &fuse::Request,
@@ -608,7 +608,7 @@ impl<'a> fuse::Filesystem for FuseFilesystem<'a> {
     /// call there will be exactly one release call. The filesystem may reply with an
     /// error, but error values are not returned to close() or munmap() which triggered
     /// the release. fh will contain the value set by the open method, or will be undefined
-    /// if the open method didn't set any value. flags will contain the same flags as for
+    /// if the open method didnt set any value. flags will contain the same flags as for
     /// open.
     fn release(
         &mut self,

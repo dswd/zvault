@@ -14,44 +14,44 @@ quick_error!{
     pub enum BundleDbError {
         ListBundles(err: io::Error) {
             cause(err)
-            description("Failed to list bundles")
-            display("Bundle db error: failed to list bundles\n\tcaused by: {}", err)
+            description(tr!("Failed to list bundles"))
+            display("{}", tr_format!("Bundle db error: failed to list bundles\n\tcaused by: {}", err))
         }
         Reader(err: BundleReaderError) {
             from()
             cause(err)
-            description("Failed to read bundle")
-            display("Bundle db error: failed to read bundle\n\tcaused by: {}", err)
+            description(tr!("Failed to read bundle"))
+            display("{}", tr_format!("Bundle db error: failed to read bundle\n\tcaused by: {}", err))
         }
         Writer(err: BundleWriterError) {
             from()
             cause(err)
-            description("Failed to write bundle")
-            display("Bundle db error: failed to write bundle\n\tcaused by: {}", err)
+            description(tr!("Failed to write bundle"))
+            display("{}", tr_format!("Bundle db error: failed to write bundle\n\tcaused by: {}", err))
         }
         Cache(err: BundleCacheError) {
             from()
             cause(err)
-            description("Failed to read/write bundle cache")
-            display("Bundle db error: failed to read/write bundle cache\n\tcaused by: {}", err)
+            description(tr!("Failed to read/write bundle cache"))
+            display("{}", tr_format!("Bundle db error: failed to read/write bundle cache\n\tcaused by: {}", err))
         }
         UploadFailed {
-            description("Uploading a bundle failed")
+            description(tr!("Uploading a bundle failed"))
         }
         Io(err: io::Error, path: PathBuf) {
             cause(err)
             context(path: &'a Path, err: io::Error) -> (err, path.to_path_buf())
-            description("Io error")
-            display("Bundle db error: io error on {:?}\n\tcaused by: {}", path, err)
+            description(tr!("Io error"))
+            display("{}", tr_format!("Bundle db error: io error on {:?}\n\tcaused by: {}", path, err))
         }
         NoSuchBundle(bundle: BundleId) {
-            description("No such bundle")
-            display("Bundle db error: no such bundle: {:?}", bundle)
+            description(tr!("No such bundle"))
+            display("{}", tr_format!("Bundle db error: no such bundle: {:?}", bundle))
         }
         Remove(err: io::Error, bundle: BundleId) {
             cause(err)
-            description("Failed to remove bundle")
-            display("Bundle db error: failed to remove bundle {}\n\tcaused by: {}", bundle, err)
+            description(tr!("Failed to remove bundle"))
+            display("{}", tr_format!("Bundle db error: failed to remove bundle {}\n\tcaused by: {}", bundle, err))
         }
     }
 }
@@ -146,14 +146,14 @@ impl BundleDb {
                 self.local_bundles.insert(bundle.id(), bundle);
             }
         } else {
-            warn!("Failed to read local bundle cache, rebuilding cache");
+            tr_warn!("Failed to read local bundle cache, rebuilding cache");
         }
         if let Ok(list) = StoredBundle::read_list_from(&self.layout.remote_bundle_cache_path()) {
             for bundle in list {
                 self.remote_bundles.insert(bundle.id(), bundle);
             }
         } else {
-            warn!("Failed to read remote bundle cache, rebuilding cache");
+            tr_warn!("Failed to read remote bundle cache, rebuilding cache");
         }
         let base_path = self.layout.base_path();
         let (new, gone) = try!(load_bundles(
@@ -219,7 +219,7 @@ impl BundleDb {
         for id in meta_bundles {
             if !self.local_bundles.contains_key(&id) {
                 let bundle = self.remote_bundles[&id].clone();
-                debug!("Copying new meta bundle to local cache: {}", bundle.info.id);
+                tr_debug!("Copying new meta bundle to local cache: {}", bundle.info.id);
                 try!(self.copy_remote_bundle_to_cache(&bundle));
             }
         }
@@ -407,7 +407,7 @@ impl BundleDb {
     pub fn check(&mut self, full: bool, repair: bool) -> Result<bool, BundleDbError> {
         let mut to_repair = vec![];
         for (id, stored) in ProgressIter::new(
-            "checking bundles",
+            tr!("checking bundles"),
             self.remote_bundles.len(),
             self.remote_bundles.iter()
         )
@@ -433,7 +433,7 @@ impl BundleDb {
             }
         }
         if !to_repair.is_empty() {
-            for id in ProgressIter::new("repairing bundles", to_repair.len(), to_repair.iter()) {
+            for id in ProgressIter::new(tr!("repairing bundles"), to_repair.len(), to_repair.iter()) {
                 try!(self.repair_bundle(id));
             }
             try!(self.flush());
@@ -460,7 +460,7 @@ impl BundleDb {
         let mut bundle = match self.get_bundle(&stored) {
             Ok(bundle) => bundle,
             Err(err) => {
-                warn!(
+                tr_warn!(
                     "Problem detected: failed to read bundle header: {}\n\tcaused by: {}",
                     id,
                     err
@@ -471,7 +471,7 @@ impl BundleDb {
         let chunks = match bundle.get_chunk_list() {
             Ok(chunks) => chunks.clone(),
             Err(err) => {
-                warn!(
+                tr_warn!(
                     "Problem detected: failed to read bundle chunks: {}\n\tcaused by: {}",
                     id,
                     err
@@ -482,7 +482,7 @@ impl BundleDb {
         let data = match bundle.load_contents() {
             Ok(data) => data,
             Err(err) => {
-                warn!(
+                tr_warn!(
                     "Problem detected: failed to read bundle data: {}\n\tcaused by: {}",
                     id,
                     err
@@ -490,8 +490,8 @@ impl BundleDb {
                 return self.evacuate_broken_bundle(stored);
             }
         };
-        warn!("Problem detected: bundle data was truncated: {}", id);
-        info!("Copying readable data into new bundle");
+        tr_warn!("Problem detected: bundle data was truncated: {}", id);
+        tr_info!("Copying readable data into new bundle");
         let info = stored.info.clone();
         let mut new_bundle = try!(self.create_bundle(
             info.mode,
@@ -509,7 +509,7 @@ impl BundleDb {
             pos += len as usize;
         }
         let bundle = try!(self.add_bundle(new_bundle));
-        info!("New bundle id is {}", bundle.id);
+        tr_info!("New bundle id is {}", bundle.id);
         self.evacuate_broken_bundle(stored)
     }
 

@@ -52,7 +52,7 @@ pub fn run(
     let mut total_write_time = 0.0;
     let mut total_read_time = 0.0;
 
-    println!("Reading input file ...");
+    tr_println!("Reading input file ...");
     let mut file = File::open(path).unwrap();
     let total_size = file.metadata().unwrap().len();
     let mut size = total_size;
@@ -67,7 +67,7 @@ pub fn run(
 
     println!();
 
-    println!(
+    tr_println!(
         "Chunking data with {}, avg chunk size {} ...",
         chunker.name(),
         to_file_size(chunker.avg_size() as u64)
@@ -95,7 +95,7 @@ pub fn run(
                                  .sum::<f32>() /
                                  (chunks.len() as f32 - 1.0))
         .sqrt();
-    println!(
+    tr_println!(
         "- {} chunks, avg size: {} ±{}",
         chunks.len(),
         to_file_size(chunk_size_avg as u64),
@@ -104,7 +104,7 @@ pub fn run(
 
     println!();
 
-    println!("Hashing chunks with {} ...", hash.name());
+    tr_println!("Hashing chunks with {} ...", hash.name());
     let mut hashes = Vec::with_capacity(chunks.len());
     let hash_time = Duration::span(|| for &(pos, len) in &chunks {
         hashes.push(hash.hash(&data[pos..pos + len]))
@@ -128,7 +128,7 @@ pub fn run(
         let (_, len) = chunks.remove(*i);
         dup_size += len;
     }
-    println!(
+    tr_println!(
         "- {} duplicate chunks, {}, {:.1}% saved by internal deduplication",
         dups.len(),
         to_file_size(dup_size as u64),
@@ -141,7 +141,7 @@ pub fn run(
     if let Some(compression) = compression.clone() {
         println!();
 
-        println!("Compressing chunks with {} ...", compression.to_string());
+        tr_println!("Compressing chunks with {} ...", compression.to_string());
         let compress_time = Duration::span(|| {
             let mut bundle = Vec::with_capacity(bundle_size + 2 * chunk_size_avg as usize);
             let mut c = compression.compress_stream().unwrap();
@@ -164,7 +164,7 @@ pub fn run(
             to_speed(size, compress_time)
         );
         let compressed_size = bundles.iter().map(|b| b.len()).sum::<usize>();
-        println!(
+        tr_println!(
             "- {} bundles, {}, {:.1}% saved",
             bundles.len(),
             to_file_size(compressed_size as u64),
@@ -191,7 +191,7 @@ pub fn run(
         crypto.add_secret_key(public, secret);
         let encryption = (EncryptionMethod::Sodium, public[..].to_vec().into());
 
-        println!("Encrypting bundles...");
+        tr_println!("Encrypting bundles...");
         let mut encrypted_bundles = Vec::with_capacity(bundles.len());
 
         let encrypt_time = Duration::span(|| for bundle in bundles {
@@ -206,7 +206,7 @@ pub fn run(
 
         println!();
 
-        println!("Decrypting bundles...");
+        tr_println!("Decrypting bundles...");
         bundles = Vec::with_capacity(encrypted_bundles.len());
         let decrypt_time = Duration::span(|| for bundle in encrypted_bundles {
             bundles.push(crypto.decrypt(&encryption, &bundle).unwrap());
@@ -222,7 +222,7 @@ pub fn run(
     if let Some(compression) = compression {
         println!();
 
-        println!("Decompressing bundles with {} ...", compression.to_string());
+        tr_println!("Decompressing bundles with {} ...", compression.to_string());
         let mut dummy = ChunkSink {
             chunks: vec![],
             written: 0,
@@ -243,17 +243,17 @@ pub fn run(
 
     println!();
 
-    println!(
+    tr_println!(
         "Total storage size: {} / {}, ratio: {:.1}%",
         to_file_size(size as u64),
         to_file_size(total_size as u64),
         size as f32 / total_size as f32 * 100.0
     );
-    println!(
+    tr_println!(
         "Total processing speed: {}",
         to_speed(total_size, total_write_time)
     );
-    println!(
+    tr_println!(
         "Total read speed: {}",
         to_speed(total_size, total_read_time)
     );

@@ -25,14 +25,14 @@ impl ChunkerType {
             "rabin" => Ok(ChunkerType::Rabin((avg_size, seed as u32))),
             "fastcdc" => Ok(ChunkerType::FastCdc((avg_size, seed))),
             "fixed" => Ok(ChunkerType::Fixed(avg_size)),
-            _ => Err("Unsupported chunker type"),
+            _ => Err(tr!("Unsupported chunker type")),
         }
     }
 
     pub fn from_string(name: &str) -> Result<Self, &'static str> {
         let (name, size) = if let Some(pos) = name.find('/') {
             let size = try!(usize::from_str(&name[pos + 1..]).map_err(
-                |_| "Chunk size must be a number"
+                |_| tr!("Chunk size must be a number")
             ));
             let name = &name[..pos];
             (name, size)

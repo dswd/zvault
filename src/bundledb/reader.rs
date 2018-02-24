@@ -15,42 +15,42 @@ quick_error!{
         Read(err: io::Error, path: PathBuf) {
             cause(err)
             context(path: &'a Path, err: io::Error) -> (err, path.to_path_buf())
-            description("Failed to read data from file")
-            display("Bundle reader error: failed to read data from file {:?}\n\tcaused by: {}", path, err)
+            description(tr!("Failed to read data from file"))
+            display("{}", tr_format!("Bundle reader error: failed to read data from file {:?}\n\tcaused by: {}", path, err))
         }
         WrongHeader(path: PathBuf) {
-            description("Wrong header")
-            display("Bundle reader error: wrong header on bundle {:?}", path)
+            description(tr!("Wrong header"))
+            display("{}", tr_format!("Bundle reader error: wrong header on bundle {:?}", path))
         }
         UnsupportedVersion(path: PathBuf, version: u8) {
-            description("Wrong version")
-            display("Bundle reader error: unsupported version on bundle {:?}: {}", path, version)
+            description(tr!("Wrong version"))
+            display("{}", tr_format!("Bundle reader error: unsupported version on bundle {:?}: {}", path, version))
         }
         NoSuchChunk(bundle: BundleId, id: usize) {
-            description("Bundle has no such chunk")
-            display("Bundle reader error: bundle {:?} has no chunk with id {}", bundle, id)
+            description(tr!("Bundle has no such chunk"))
+            display("{}", tr_format!("Bundle reader error: bundle {:?} has no chunk with id {}", bundle, id))
         }
         Decode(err: msgpack::DecodeError, path: PathBuf) {
             cause(err)
             context(path: &'a Path, err: msgpack::DecodeError) -> (err, path.to_path_buf())
-            description("Failed to decode bundle header")
-            display("Bundle reader error: failed to decode bundle header of {:?}\n\tcaused by: {}", path, err)
+            description(tr!("Failed to decode bundle header"))
+            display("{}", tr_format!("Bundle reader error: failed to decode bundle header of {:?}\n\tcaused by: {}", path, err))
         }
         Decompression(err: CompressionError, path: PathBuf) {
             cause(err)
             context(path: &'a Path, err: CompressionError) -> (err, path.to_path_buf())
-            description("Decompression failed")
-            display("Bundle reader error: decompression failed on bundle {:?}\n\tcaused by: {}", path, err)
+            description(tr!("Decompression failed"))
+            display("{}", tr_format!("Bundle reader error: decompression failed on bundle {:?}\n\tcaused by: {}", path, err))
         }
         Decryption(err: EncryptionError, path: PathBuf) {
             cause(err)
             context(path: &'a Path, err: EncryptionError) -> (err, path.to_path_buf())
-            description("Decryption failed")
-            display("Bundle reader error: decryption failed on bundle {:?}\n\tcaused by: {}", path, err)
+            description(tr!("Decryption failed"))
+            display("{}", tr_format!("Bundle reader error: decryption failed on bundle {:?}\n\tcaused by: {}", path, err))
         }
         Integrity(bundle: BundleId, reason: &'static str) {
-            description("Bundle has an integrity error")
-            display("Bundle reader error: bundle {:?} has an integrity error: {}", bundle, reason)
+            description(tr!("Bundle has an integrity error"))
+            display("{}", tr_format!("Bundle reader error: bundle {:?} has an integrity error: {}", bundle, reason))
         }
     }
 }
@@ -151,7 +151,7 @@ impl BundleReader {
     }
 
     fn load_chunklist(&mut self) -> Result<(), BundleReaderError> {
-        debug!(
+        tr_debug!(
             "Load bundle chunklist {} ({:?})",
             self.info.id,
             self.info.mode
@@ -197,7 +197,7 @@ impl BundleReader {
     }
 
     fn load_encoded_contents(&self) -> Result<Vec<u8>, BundleReaderError> {
-        debug!("Load bundle data {} ({:?})", self.info.id, self.info.mode);
+        tr_debug!("Load bundle data {} ({:?})", self.info.id, self.info.mode);
         let mut file = BufReader::new(try!(File::open(&self.path).context(&self.path as &Path)));
         try!(
             file.seek(SeekFrom::Start(self.content_start as u64))
@@ -256,7 +256,7 @@ impl BundleReader {
         if self.info.chunk_count != self.chunks.as_ref().unwrap().len() {
             return Err(BundleReaderError::Integrity(
                 self.id(),
-                "Chunk list size does not match chunk count"
+                tr!("Chunk list size does not match chunk count")
             ));
         }
         if self.chunks
@@ -268,7 +268,7 @@ impl BundleReader {
         {
             return Err(BundleReaderError::Integrity(
                 self.id(),
-                "Individual chunk sizes do not add up to total size"
+                tr!("Individual chunk sizes do not add up to total size")
             ));
         }
         if !full {
@@ -276,7 +276,7 @@ impl BundleReader {
             if size as usize != self.info.encoded_size + self.content_start {
                 return Err(BundleReaderError::Integrity(
                     self.id(),
-                    "File size does not match size in header, truncated file"
+                    tr!("File size does not match size in header, truncated file")
                 ));
             }
             return Ok(());
@@ -285,14 +285,14 @@ impl BundleReader {
         if self.info.encoded_size != encoded_contents.len() {
             return Err(BundleReaderError::Integrity(
                 self.id(),
-                "Encoded data size does not match size in header, truncated bundle"
+                tr!("Encoded data size does not match size in header, truncated bundle")
             ));
         }
         let contents = try!(self.decode_contents(encoded_contents));
         if self.info.raw_size != contents.len() {
             return Err(BundleReaderError::Integrity(
                 self.id(),
-                "Raw data size does not match size in header, truncated bundle"
+                tr!("Raw data size does not match size in header, truncated bundle")
             ));
         }
         //TODO: verify checksum
@@ -302,15 +302,14 @@ impl BundleReader {
 
 impl Debug for BundleReader {
     fn fmt(&self, fmt: &mut fmt::Formatter) -> Result<(), fmt::Error> {
-        write!(
-            fmt,
-            "Bundle(\n\tid: {}\n\tpath: {:?}\n\tchunks: {}\n\tsize: {}, encoded: {}\n\tcompression: {:?}\n)",
+        write!(fmt, "{}",
+            tr_format!("Bundle(\n\tid: {}\n\tpath: {:?}\n\tchunks: {}\n\tsize: {}, encoded: {}\n\tcompression: {:?}\n)",
             self.info.id.to_string(),
             self.path,
             self.info.chunk_count,
             self.info.raw_size,
             self.info.encoded_size,
             self.info.compression
-        )
+        ))
     }
 }

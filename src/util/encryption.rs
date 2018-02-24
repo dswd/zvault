@@ -21,7 +21,7 @@ static INIT: Once = ONCE_INIT;
 
 fn sodium_init() {
     INIT.call_once(|| if !sodiumoxide::init() {
-        panic!("Failed to initialize sodiumoxide");
+        tr_panic!("Failed to initialize sodiumoxide");
     });
 }
 
@@ -29,27 +29,27 @@ quick_error!{
     #[derive(Debug)]
     pub enum EncryptionError {
         InvalidKey {
-            description("Invalid key")
+            description(tr!("Invalid key"))
         }
         MissingKey(key: PublicKey) {
-            description("Missing key")
-            display("Missing key: {}", to_hex(&key[..]))
+            description(tr!("Missing key"))
+            display("{}", tr_format!("Missing key: {}", to_hex(&key[..])))
         }
         Operation(reason: &'static str) {
-            description("Operation failed")
-            display("Operation failed: {}", reason)
+            description(tr!("Operation failed"))
+            display("{}", tr_format!("Operation failed: {}", reason))
         }
         Io(err: io::Error) {
             from()
             cause(err)
-            description("IO error")
-            display("IO error: {}", err)
+            description(tr!("IO error"))
+            display("{}", tr_format!("IO error: {}", err))
         }
         Yaml(err: serde_yaml::Error) {
             from()
             cause(err)
-            description("Yaml format error")
-            display("Yaml format error: {}", err)
+            description(tr!("Yaml format error"))
+            display("{}", tr_format!("Yaml format error: {}", err))
         }
     }
 }
@@ -68,7 +68,7 @@ impl EncryptionMethod {
     pub fn from_string(val: &str) -> Result<Self, &'static str> {
         match val {
             "sodium" => Ok(EncryptionMethod::Sodium),
-            _ => Err("Unsupported encryption method"),
+            _ => Err(tr!("Unsupported encryption method")),
         }
     }
 
@@ -255,7 +255,7 @@ impl Crypto {
         match *method {
             EncryptionMethod::Sodium => {
                 sealedbox::open(data, &public, secret).map_err(|_| {
-                    EncryptionError::Operation("Decryption failed")
+                    EncryptionError::Operation(tr!("Decryption failed"))
                 })
             }
         }
@@ -285,7 +285,7 @@ impl Crypto {
         let mut pk = [0u8; 32];
         let mut sk = [0u8; 32];
         if unsafe { libsodium_sys::crypto_box_seed_keypair(&mut pk, &mut sk, &seed) } != 0 {
-            panic!("Libsodium failed");
+            tr_panic!("Libsodium failed");
         }
         (
             PublicKey::from_slice(&pk).unwrap(),

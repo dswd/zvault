@@ -34,6 +34,7 @@ users = "0.6"
 time = "*"
 libc = "0.2"
 runtime-fmt = "0.3"
+locale_config = "^0.2.2"
 index = {path="index"}
 chunking = {path="chunking"}
 

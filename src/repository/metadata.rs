@@ -19,44 +19,44 @@ quick_error!{
     #[derive(Debug)]
     pub enum InodeError {
         UnsupportedFiletype(path: PathBuf) {
-            description("Unsupported file type")
-            display("Inode error: file {:?} has an unsupported type", path)
+            description(tr!("Unsupported file type"))
+            display("{}", tr_format!("Inode error: file {:?} has an unsupported type", path))
         }
         ReadMetadata(err: io::Error, path: PathBuf) {
             cause(err)
-            description("Failed to obtain metadata for file")
-            display("Inode error: failed to obtain metadata for file {:?}\n\tcaused by: {}", path, err)
+            description(tr!("Failed to obtain metadata for file"))
+            display("{}", tr_format!("Inode error: failed to obtain metadata for file {:?}\n\tcaused by: {}", path, err))
         }
         ReadXattr(err: io::Error, path: PathBuf) {
             cause(err)
-            description("Failed to obtain xattr for file")
-            display("Inode error: failed to obtain xattr for file {:?}\n\tcaused by: {}", path, err)
+            description(tr!("Failed to obtain xattr for file"))
+            display("{}", tr_format!("Inode error: failed to obtain xattr for file {:?}\n\tcaused by: {}", path, err))
         }
         ReadLinkTarget(err: io::Error, path: PathBuf) {
             cause(err)
-            description("Failed to obtain link target for file")
-            display("Inode error: failed to obtain link target for file {:?}\n\tcaused by: {}", path, err)
+            description(tr!("Failed to obtain link target for file"))
+            display("{}", tr_format!("Inode error: failed to obtain link target for file {:?}\n\tcaused by: {}", path, err))
         }
         Create(err: io::Error, path: PathBuf) {
             cause(err)
-            description("Failed to create entity")
-            display("Inode error: failed to create entity {:?}\n\tcaused by: {}", path, err)
+            description(tr!("Failed to create entity"))
+            display("{}", tr_format!("Inode error: failed to create entity {:?}\n\tcaused by: {}", path, err))
         }
         Integrity(reason: &'static str) {
-            description("Integrity error")
-            display("Inode error: inode integrity error: {}", reason)
+            description(tr!("Integrity error"))
+            display("{}", tr_format!("Inode error: inode integrity error: {}", reason))
         }
         Decode(err: msgpack::DecodeError) {
             from()
             cause(err)
-            description("Failed to decode metadata")
-            display("Inode error: failed to decode metadata\n\tcaused by: {}", err)
+            description(tr!("Failed to decode metadata"))
+            display("{}", tr_format!("Inode error: failed to decode metadata\n\tcaused by: {}", err))
         }
         Encode(err: msgpack::EncodeError) {
             from()
             cause(err)
-            description("Failed to encode metadata")
-            display("Inode error: failed to encode metadata\n\tcaused by: {}", err)
+            description(tr!("Failed to encode metadata"))
+            display("{}", tr_format!("Inode error: failed to encode metadata\n\tcaused by: {}", err))
         }
     }
 }
@@ -82,12 +82,12 @@ serde_impl!(FileType(u8) {
 impl fmt::Display for FileType {
     fn fmt(&self, format: &mut fmt::Formatter) -> Result<(), fmt::Error> {
         match *self {
-            FileType::File => write!(format, "file"),
-            FileType::Directory => write!(format, "directory"),
-            FileType::Symlink => write!(format, "symlink"),
-            FileType::BlockDevice => write!(format, "block device"),
-            FileType::CharDevice => write!(format, "char device"),
-            FileType::NamedPipe => write!(format, "named pipe"),
+            FileType::File => write!(format, "{}", tr!("file")),
+            FileType::Directory => write!(format, "{}", tr!("directory")),
+            FileType::Symlink => write!(format, "{}", tr!("symlink")),
+            FileType::BlockDevice => write!(format, "{}", tr!("block device")),
+            FileType::CharDevice => write!(format, "{}", tr!("char device")),
+            FileType::NamedPipe => write!(format, "{}", tr!("named pipe")),
         }
     }
 }
@@ -249,13 +249,13 @@ impl Inode {
                         InodeError::Create(e, full_path.clone())
                     }));
                 } else {
-                    return Err(InodeError::Integrity("Symlink without target"));
+                    return Err(InodeError::Integrity(tr!("Symlink without target")));
                 }
             }
             FileType::NamedPipe => {
                 let name = try!(
                     ffi::CString::new(full_path.as_os_str().as_bytes())
-                        .map_err(|_| InodeError::Integrity("Name contains nulls"))
+                        .map_err(|_| InodeError::Integrity(tr!("Name contains nulls")))
                 );
                 let mode = self.mode | libc::S_IFIFO;
                 if unsafe { libc::mkfifo(name.as_ptr(), mode) } != 0 {
@@ -268,7 +268,7 @@ impl Inode {
             FileType::BlockDevice | FileType::CharDevice => {
                 let name = try!(
                     ffi::CString::new(full_path.as_os_str().as_bytes())
-                        .map_err(|_| InodeError::Integrity("Name contains nulls"))
+                        .map_err(|_| InodeError::Integrity(tr!("Name contains nulls")))
                 );
                 let mode = self.mode |
                     match self.file_type {
@@ -279,7 +279,7 @@ impl Inode {
                 let device = if let Some((major, minor)) = self.device {
                     unsafe { libc::makedev(major, minor) }
                 } else {
-                    return Err(InodeError::Integrity("Device without id"));
+                    return Err(InodeError::Integrity(tr!("Device without id")));
                 };
                 if unsafe { libc::mknod(name.as_ptr(), mode, device) } != 0 {
                     return Err(InodeError::Create(
@@ -291,21 +291,21 @@ impl Inode {
         }
         let time = FileTime::from_seconds_since_1970(self.timestamp as u64, 0);
         if let Err(err) = filetime::set_file_times(&full_path, time, time) {
-            warn!("Failed to set file time on {:?}: {}", full_path, err);
+            tr_warn!("Failed to set file time on {:?}: {}", full_path, err);
         }
         if !self.xattrs.is_empty() {
             if xattr::SUPPORTED_PLATFORM {
                 for (name, data) in &self.xattrs {
                     if let Err(err) = xattr::set(&full_path, name, data) {
-                        warn!("Failed to set xattr {} on {:?}: {}", name, full_path, err);
+                        tr_warn!("Failed to set xattr {} on {:?}: {}", name, full_path, err);
                     }
                 }
             } else {
-                warn!("Not setting xattr on {:?}", full_path);
+                tr_warn!("Not setting xattr on {:?}", full_path);
             }
         }
         if let Err(err) = fs::set_permissions(&full_path, Permissions::from_mode(self.mode)) {
-            warn!(
+            tr_warn!(
                 "Failed to set permissions {:o} on {:?}: {}",
                 self.mode,
                 full_path,
@@ -313,7 +313,7 @@ impl Inode {
             );
         }
         if let Err(err) = chown(&full_path, self.user, self.group) {
-            warn!(
+            tr_warn!(
                 "Failed to set user {} and group {} on {:?}: {}",
                 self.user,
                 self.group,

@@ -15,12 +15,12 @@ quick_error!{
     #[allow(unknown_lints,large_enum_variant)]
     pub enum BackupError {
         FailedPaths(backup: Backup, failed: Vec<PathBuf>) {
-            description("Some paths could not be backed up")
-            display("Backup error: some paths could not be backed up")
+            description(tr!("Some paths could not be backed up"))
+            display("{}", tr_format!("Backup error: some paths could not be backed up"))
         }
         RemoveRoot {
-            description("The root of a backup can not be removed")
-            display("Backup error: the root of a backup can not be removed")
+            description(tr!("The root of a backup can not be removed"))
+            display("{}", tr_format!("Backup error: the root of a backup can not be removed"))
         }
     }
 }
@@ -110,7 +110,7 @@ impl Repository {
             Ok(backup_map) => backup_map,
             Err(RepositoryError::BackupFile(BackupFileError::PartialBackupsList(backup_map,
                                                                                 _failed))) => {
-                warn!("Some backups could not be read, ignoring them");
+                tr_warn!("Some backups could not be read, ignoring them");
                 backup_map
             }
             Err(err) => return Err(err),
@@ -239,7 +239,7 @@ impl Repository {
                     user.name().to_string()
                 );
             } else {
-                warn!("Failed to retrieve name of user {}", inode.user);
+                tr_warn!("Failed to retrieve name of user {}", inode.user);
             }
         }
         if !backup.group_names.contains_key(&inode.group) {
@@ -249,7 +249,7 @@ impl Repository {
                     group.name().to_string()
                 );
             } else {
-                warn!("Failed to retrieve name of group {}", inode.group);
+                tr_warn!("Failed to retrieve name of group {}", inode.group);
             }
         }
         let mut meta_size = 0;

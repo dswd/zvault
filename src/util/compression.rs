@@ -11,26 +11,26 @@ quick_error!{
     #[derive(Debug)]
     pub enum CompressionError {
         UnsupportedCodec(name: String) {
-            description("Unsupported codec")
-            display("Unsupported codec: {}", name)
+            description(tr!("Unsupported codec"))
+            display("{}", tr_format!("Unsupported codec: {}", name))
         }
         InitializeCodec {
-            description("Failed to initialize codec")
+            description(tr!("Failed to initialize codec"))
         }
         InitializeOptions {
-            description("Failed to set codec options")
+            description(tr!("Failed to set codec options"))
         }
         InitializeStream {
-            description("Failed to create stream")
+            description(tr!("Failed to create stream"))
         }
         Operation(reason: &'static str) {
-            description("Operation failed")
-            display("Operation failed: {}", reason)
+            description(tr!("Operation failed"))
+            display("{}", tr_format!("Operation failed: {}", reason))
         }
         Output(err: io::Error) {
             from()
             cause(err)
-            description("Failed to write to output")
+            description(tr!("Failed to write to output"))
         }
     }
 }

@@ -157,10 +157,10 @@ fn parse_repo_path(
     let mut parts = repo_path.splitn(3, "::");
     let repo = convert_repo_path(parts.next().unwrap_or(""));
     if existing && !repo.join("config.yaml").exists() {
-        return Err("The specified repository does not exist".to_string());
+        return Err(tr!("The specified repository does not exist").to_string());
     }
     if !existing && repo.exists() {
-        return Err("The specified repository already exists".to_string());
+        return Err(tr!("The specified repository already exists").to_string());
     }
     let mut backup = parts.next();
     if let Some(val) = backup {
@@ -176,18 +176,18 @@ fn parse_repo_path(
     }
     if let Some(restr) = backup_restr {
         if !restr && backup.is_some() {
-            return Err("No backup may be given here".to_string());
+            return Err(tr!("No backup may be given here").to_string());
         }
         if restr && backup.is_none() {
-            return Err("A backup must be specified".to_string());
+            return Err(tr!("A backup must be specified").to_string());
         }
     }
     if let Some(restr) = path_restr {
         if !restr && path.is_some() {
-            return Err("No subpath may be given here".to_string());
+            return Err(tr!("No subpath may be given here").to_string());
         }
         if restr && path.is_none() {
-            return Err("A subpath must be specified".to_string());
+            return Err(tr!("A subpath must be specified").to_string());
         }
     }
     Ok((repo, backup, path))
@@ -207,7 +207,7 @@ fn parse_num(num: &str) -> Result<u64, String> {
     if let Ok(num) = num.parse::<u64>() {
         Ok(num)
     } else {
-        Err("Must be a number".to_string())
+        Err(tr!("Must be a number").to_string())
     }
 }
 
@@ -220,7 +220,7 @@ fn parse_chunker(val: &str) -> Result<ChunkerType, String> {
     if let Ok(chunker) = ChunkerType::from_string(val) {
         Ok(chunker)
     } else {
-        Err("Invalid chunker method/size".to_string())
+        Err(tr!("Invalid chunker method/size").to_string())
     }
 }
 
@@ -236,7 +236,7 @@ fn parse_compression(val: &str) -> Result<Option<Compression>, String> {
     if let Ok(compression) = Compression::from_string(val) {
         Ok(Some(compression))
     } else {
-        Err("Invalid compression method/level".to_string())
+        Err(tr!("Invalid compression method/level").to_string())
     }
 }
 
@@ -252,13 +252,13 @@ fn parse_public_key(val: &str) -> Result<Option<PublicKey>, String> {
     let bytes = match parse_hex(val) {
         Ok(bytes) => bytes,
         Err(_) => {
-            return Err("Invalid hexadecimal".to_string());
+            return Err(tr!("Invalid hexadecimal").to_string());
         }
     };
     if let Some(key) = PublicKey::from_slice(&bytes) {
         Ok(Some(key))
     } else {
-        return Err("Invalid key".to_string());
+        return Err(tr!("Invalid key").to_string());
     }
 }
 
@@ -271,7 +271,7 @@ fn parse_hash(val: &str) -> Result<HashMethod, String> {
     if let Ok(hash) = HashMethod::from(val) {
         Ok(hash)
     } else {
-        Err("Invalid hash method".to_string())
+        Err(tr!("Invalid hash method").to_string())
     }
 }
 
@@ -284,7 +284,7 @@ fn parse_bundle_id(val: &str) -> Result<BundleId, ErrorCode> {
     if let Ok(hash) = Hash::from_string(val) {
         Ok(BundleId(hash))
     } else {
-        error!("Invalid bundle id: {}", val);
+        tr_error!("Invalid bundle id: {}", val);
         Err(ErrorCode::InvalidArgs)
     }
 }
@@ -292,7 +292,7 @@ fn parse_bundle_id(val: &str) -> Result<BundleId, ErrorCode> {
 #[allow(unknown_lints, needless_pass_by_value)]
 fn validate_existing_path(val: String) -> Result<(), String> {
     if !Path::new(&val).exists() {
-        Err("Path does not exist".to_string())
+        Err(tr!("Path does not exist").to_string())
     } else {
         Ok(())
     }
@@ -301,7 +301,7 @@ fn validate_existing_path(val: String) -> Result<(), String> {
 #[allow(unknown_lints, needless_pass_by_value)]
 fn validate_existing_path_or_stdio(val: String) -> Result<(), String> {
     if val != "-" && !Path::new(&val).exists() {
-        Err("Path does not exist".to_string())
+        Err(tr!("Path does not exist").to_string())
     } else {
         Ok(())
     }
@@ -310,153 +310,274 @@ fn validate_existing_path_or_stdio(val: String) -> Result<(), String> {
 
 #[allow(unknown_lints, cyclomatic_complexity)]
 pub fn parse() -> Result<(log::Level, Arguments), ErrorCode> {
-    let args = App::new("zvault").version(crate_version!()).author(crate_authors!(",\n")).about(crate_description!())
+    let args = App::new("zvault")
+        .version(crate_version!())
+        .author(crate_authors!(",\n"))
+        .about(crate_description!())
         .settings(&[AppSettings::VersionlessSubcommands, AppSettings::SubcommandRequiredElseHelp])
         .global_settings(&[AppSettings::AllowMissingPositional, AppSettings::UnifiedHelpMessage, AppSettings::ColoredHelp, AppSettings::ColorAuto])
-        .arg(Arg::from_usage("-v --verbose 'Print more information'").global(true).multiple(true).max_values(3).takes_value(false))
-        .arg(Arg::from_usage("-q --quiet 'Print less information'").global(true).conflicts_with("verbose"))
-        .subcommand(SubCommand::with_name("init").about("Initialize a new repository")
-            .arg(Arg::from_usage("[bundle_size] --bundle-size [SIZE] 'Set the target bundle size in MiB'")
-                .default_value(DEFAULT_BUNDLE_SIZE_STR).validator(validate_num))
-            .arg(Arg::from_usage("--chunker [CHUNKER] 'Set the chunker algorithm and target chunk size'")
-                .default_value(DEFAULT_CHUNKER).validator(validate_chunker))
-            .arg(Arg::from_usage("-c --compression [COMPRESSION] 'Set the compression method and level'")
-                .default_value(DEFAULT_COMPRESSION).validator(validate_compression))
-            .arg(Arg::from_usage("-e --encrypt 'Generate a keypair and enable encryption'"))
-            .arg(Arg::from_usage("--hash [HASH] 'Set the hash method'")
-                .default_value(DEFAULT_HASH).validator(validate_hash))
-            .arg(Arg::from_usage("-r --remote <REMOTE> 'Set the path to the mounted remote storage'")
-                .validator(validate_existing_path))
-            .arg(Arg::from_usage("<REPO> 'The path for the new repository'")
-                .validator(|val| validate_repo_path(val, false, Some(false), Some(false)))))
-        .subcommand(SubCommand::with_name("backup").about("Create a new backup")
-            .arg(Arg::from_usage("--full 'Create a full backup without using a reference'"))
-            .arg(Arg::from_usage("[reference] --ref [REF] 'Base the new backup on this reference'")
-                .conflicts_with("full"))
-            .arg(Arg::from_usage("[cross_device] -x --xdev 'Allow to cross filesystem boundaries'"))
-            .arg(Arg::from_usage("-e --exclude [PATTERN]... 'Exclude this path or file pattern'"))
-            .arg(Arg::from_usage("[excludes_from] --excludes-from [FILE] 'Read the list of excludes from this file'"))
-            .arg(Arg::from_usage("[no_default_excludes] --no-default-excludes 'Do not load the default excludes file'"))
-            .arg(Arg::from_usage("--tar 'Read the source data from a tar file'")
-                .conflicts_with_all(&["reference", "exclude", "excludes_from"]))
-            .arg(Arg::from_usage("<SRC> 'Source path to backup'")
-                .validator(validate_existing_path_or_stdio))
-            .arg(Arg::from_usage("<BACKUP> 'Backup path, [repository]::backup'")
-                .validator(|val| validate_repo_path(val, true, Some(true), Some(false)))))
-        .subcommand(SubCommand::with_name("restore").about("Restore a backup or subtree")
-            .arg(Arg::from_usage("--tar 'Restore in form of a tar file'"))
-            .arg(Arg::from_usage("<BACKUP> 'The backup/subtree path, [repository]::backup[::subtree]'")
-                .validator(|val| validate_repo_path(val, true, Some(true), None)))
-            .arg(Arg::from_usage("<DST> 'Destination path for backup'")))
-        .subcommand(SubCommand::with_name("remove").aliases(&["rm", "delete", "del"]).about("Remove a backup or a subtree")
-            .arg(Arg::from_usage("-f --force 'Remove multiple backups in a backup folder'"))
-            .arg(Arg::from_usage("<BACKUP> 'The backup/subtree path, [repository]::backup[::subtree]'")
-                .validator(|val| validate_repo_path(val, true, Some(true), None))))
-        .subcommand(SubCommand::with_name("prune").about("Remove backups based on age")
-            .arg(Arg::from_usage("-p --prefix [PREFIX] 'Only consider backups starting with this prefix'"))
-            .arg(Arg::from_usage("-d --daily [NUM] 'Keep this number of daily backups'")
-                .default_value("0").validator(validate_num))
-            .arg(Arg::from_usage("-w --weekly [NUM] 'Keep this number of weekly backups'")
-                .default_value("0").validator(validate_num))
-            .arg(Arg::from_usage("-m --monthly [NUM] 'Keep this number of monthly backups'")
-                .default_value("0").validator(validate_num))
-            .arg(Arg::from_usage("-y --yearly [NUM] 'Keep this number of yearly backups'")
-                .default_value("0").validator(validate_num))
-            .arg(Arg::from_usage("-f --force 'Actually run the prune instead of simulating it'"))
-            .arg(Arg::from_usage("<REPO> 'Path of the repository'")
-                .validator(|val| validate_repo_path(val, true, Some(false), Some(false)))))
-        .subcommand(SubCommand::with_name("vacuum").about("Reclaim space by rewriting bundles")
-            .arg(Arg::from_usage("-r --ratio [NUM] 'Ratio in % of unused space in a bundle to rewrite that bundle'")
-                .default_value(DEFAULT_VACUUM_RATIO_STR).validator(validate_num))
-            .arg(Arg::from_usage("--combine 'Combine small bundles into larger ones'"))
-            .arg(Arg::from_usage("-f --force 'Actually run the vacuum instead of simulating it'"))
-            .arg(Arg::from_usage("<REPO> 'Path of the repository'")
-                .validator(|val| validate_repo_path(val, true, Some(false), Some(false)))))
-        .subcommand(SubCommand::with_name("check").about("Check the repository, a backup or a backup subtree")
-            .arg(Arg::from_usage("-b --bundles 'Check the bundles'"))
-            .arg(Arg::from_usage("[bundle_data] --bundle-data 'Check bundle contents (slow)'").requires("bundles").alias("data"))
-            .arg(Arg::from_usage("-i --index 'Check the chunk index'"))
-            .arg(Arg::from_usage("-r --repair 'Try to repair errors'"))
-            .arg(Arg::from_usage("<PATH> 'Path of the repository/backup/subtree, [repository][::backup[::subtree]]'")
-                .validator(|val| validate_repo_path(val, true, None, None))))
-        .subcommand(SubCommand::with_name("list").alias("ls").about("List backups or backup contents")
-            .arg(Arg::from_usage("<PATH> 'Path of the repository/backup/subtree, [repository][::backup[::subtree]]'")
-                .validator(|val| validate_repo_path(val, true, None, None))))
-        .subcommand(SubCommand::with_name("mount").about("Mount the repository, a backup or a subtree")
-            .arg(Arg::from_usage("<PATH> 'Path of the repository/backup/subtree, [repository][::backup[::subtree]]'")
-                .validator(|val| validate_repo_path(val, true, None, None)))
-            .arg(Arg::from_usage("<MOUNTPOINT> 'Existing mount point'")
-                .validator(validate_existing_path)))
-        .subcommand(SubCommand::with_name("bundlelist").about("List bundles in a repository")
-            .arg(Arg::from_usage("<REPO> 'Path of the repository'")
-                .validator(|val| validate_repo_path(val, true, Some(false), Some(false)))))
-        .subcommand(SubCommand::with_name("bundleinfo").about("Display information on a bundle")
-            .arg(Arg::from_usage("<REPO> 'Path of the repository'")
-                .validator(|val| validate_repo_path(val, true, Some(false), Some(false))))
-            .arg(Arg::from_usage("<BUNDLE> 'Id of the bundle'")))
-        .subcommand(SubCommand::with_name("import").about("Reconstruct a repository from the remote storage")
-            .arg(Arg::from_usage("-k --key [FILE]... 'Key file needed to read the bundles'"))
-            .arg(Arg::from_usage("<REMOTE> 'Remote repository path'")
-                .validator(validate_existing_path))
-            .arg(Arg::from_usage("<REPO> 'The path for the new repository'")
-                .validator(|val| validate_repo_path(val, false, Some(false), Some(false)))))
-        .subcommand(SubCommand::with_name("info").about("Display information on a repository, a backup or a subtree")
-            .arg(Arg::from_usage("<PATH> 'Path of the repository/backup/subtree, [repository][::backup[::subtree]]'")
-                .validator(|val| validate_repo_path(val, true, None, None))))
-        .subcommand(SubCommand::with_name("analyze").about("Analyze the used and reclaimable space of bundles")
-            .arg(Arg::from_usage("<REPO> 'Path of the repository'")
-                .validator(|val| validate_repo_path(val, true, Some(false), Some(false)))))
-        .subcommand(SubCommand::with_name("versions").about("Find different versions of a file in all backups")
-            .arg(Arg::from_usage("<REPO> 'Path of the repository'")
-                .validator(|val| validate_repo_path(val, true, Some(false), Some(false))))
-            .arg(Arg::from_usage("<PATH> 'Path of the file'")))
-        .subcommand(SubCommand::with_name("diff").about("Display differences between two backup versions")
-            .arg(Arg::from_usage("<OLD> 'Old version, [repository]::backup[::subpath]'")
-                .validator(|val| validate_repo_path(val, true, Some(true), None)))
-            .arg(Arg::from_usage("<NEW> 'New version, [repository]::backup[::subpath]'")
-                .validator(|val| validate_repo_path(val, true, Some(true), None))))
-        .subcommand(SubCommand::with_name("copy").alias("cp").about("Create a copy of a backup")
-            .arg(Arg::from_usage("<SRC> 'Existing backup, [repository]::backup'")
-                .validator(|val| validate_repo_path(val, true, Some(true), Some(false))))
-            .arg(Arg::from_usage("<DST> 'Destination backup, [repository]::backup'")
-                .validator(|val| validate_repo_path(val, true, Some(true), Some(false)))))
-        .subcommand(SubCommand::with_name("config").about("Display or change the configuration")
-            .arg(Arg::from_usage("[bundle_size] --bundle-size [SIZE] 'Set the target bundle size in MiB'")
+        .arg(Arg::from_usage("-v --verbose")
+            .help(tr!("Print more information"))
+            .global(true)
+            .multiple(true)
+            .max_values(3)
+            .takes_value(false))
+        .arg(Arg::from_usage("-q --quiet")
+            .help(tr!("Print less information"))
+            .global(true)
+            .conflicts_with("verbose"))
+        .subcommand(SubCommand::with_name("init")
+            .about(tr!("Initialize a new repository"))
+            .arg(Arg::from_usage("[bundle_size] --bundle-size [SIZE]")
+                .help(tr!("Set the target bundle size in MiB"))
+                .default_value(DEFAULT_BUNDLE_SIZE_STR)
                 .validator(validate_num))
-            .arg(Arg::from_usage("--chunker [CHUNKER] 'Set the chunker algorithm and target chunk size'")
+            .arg(Arg::from_usage("--chunker [CHUNKER]")
+                .help(tr!("Set the chunker algorithm and target chunk size"))
+                .default_value(DEFAULT_CHUNKER)
+                .validator(validate_chunker))
+            .arg(Arg::from_usage("-c --compression [COMPRESSION]")
+                .help(tr!("Set the compression method and level"))
+                .default_value(DEFAULT_COMPRESSION)
+                .validator(validate_compression))
+            .arg(Arg::from_usage("-e --encrypt")
+                .help(tr!("Generate a keypair and enable encryption")))
+            .arg(Arg::from_usage("--hash [HASH]")
+                .help(tr!("Set the hash method'"))
+                .default_value(DEFAULT_HASH)
+                .validator(validate_hash))
+            .arg(Arg::from_usage("-r --remote <REMOTE>")
+                .help(tr!("Set the path to the mounted remote storage"))
+                .validator(validate_existing_path))
+            .arg(Arg::from_usage("<REPO>")
+                .help(tr!("The path for the new repository"))
+                .validator(|val| validate_repo_path(val, false, Some(false), Some(false)))))
+        .subcommand(SubCommand::with_name("backup")
+            .about(tr!("Create a new backup"))
+            .arg(Arg::from_usage("--full")
+                .help(tr!("Create a full backup without using a reference")))
+            .arg(Arg::from_usage("[reference] --ref [REF]")
+                .help(tr!("Base the new backup on this reference"))
+                .conflicts_with("full"))
+            .arg(Arg::from_usage("[cross_device] -x --xdev")
+                .help(tr!("Allow to cross filesystem boundaries")))
+            .arg(Arg::from_usage("-e --exclude [PATTERN]...")
+                .help(tr!("Exclude this path or file pattern")))
+            .arg(Arg::from_usage("[excludes_from] --excludes-from [FILE]")
+                .help(tr!("Read the list of excludes from this file")))
+            .arg(Arg::from_usage("[no_default_excludes] --no-default-excludes")
+                .help(tr!("Do not load the default excludes file")))
+            .arg(Arg::from_usage("--tar")
+                .help(tr!("Read the source data from a tar file"))
+                .conflicts_with_all(&["reference", "exclude", "excludes_from"]))
+            .arg(Arg::from_usage("<SRC>")
+                .help(tr!("Source path to backup"))
+                .validator(validate_existing_path_or_stdio))
+            .arg(Arg::from_usage("<BACKUP>")
+                .help(tr!("Backup path, [repository]::backup"))
+                .validator(|val| validate_repo_path(val, true, Some(true), Some(false)))))
+        .subcommand(SubCommand::with_name("restore")
+            .about(tr!("Restore a backup or subtree"))
+            .arg(Arg::from_usage("--tar")
+                .help(tr!("Restore in form of a tar file")))
+            .arg(Arg::from_usage("<BACKUP>")
+                .help(tr!("The backup/subtree path, [repository]::backup[::subtree]"))
+                .validator(|val| validate_repo_path(val, true, Some(true), None)))
+            .arg(Arg::from_usage("<DST>")
+                .help(tr!("Destination path for backup"))))
+        .subcommand(SubCommand::with_name("remove")
+            .aliases(&["rm", "delete", "del"])
+            .about(tr!("Remove a backup or a subtree"))
+            .arg(Arg::from_usage("-f --force")
+                .help(tr!("Remove multiple backups in a backup folder")))
+            .arg(Arg::from_usage("<BACKUP>")
+                .help(tr!("The backup/subtree path, [repository]::backup[::subtree]"))
+                .validator(|val| validate_repo_path(val, true, Some(true), None))))
+        .subcommand(SubCommand::with_name("prune")
+            .about(tr!("Remove backups based on age"))
+            .arg(Arg::from_usage("-p --prefix [PREFIX]")
+                .help(tr!("Only consider backups starting with this prefix")))
+            .arg(Arg::from_usage("-d --daily [NUM]")
+                .help(tr!("Keep this number of daily backups"))
+                .default_value("0")
+                .validator(validate_num))
+            .arg(Arg::from_usage("-w --weekly [NUM]")
+                .help(tr!("Keep this number of weekly backups"))
+                .default_value("0")
+                .validator(validate_num))
+            .arg(Arg::from_usage("-m --monthly [NUM]")
+                .help(tr!("Keep this number of monthly backups"))
+                .default_value("0")
+                .validator(validate_num))
+            .arg(Arg::from_usage("-y --yearly [NUM]")
+                .help(tr!("Keep this number of yearly backups"))
+                .default_value("0")
+                .validator(validate_num))
+            .arg(Arg::from_usage("-f --force")
+                .help(tr!("Actually run the prune instead of simulating it")))
+            .arg(Arg::from_usage("<REPO>")
+                .help(tr!("Path of the repository"))
+                .validator(|val| validate_repo_path(val, true, Some(false), Some(false)))))
+        .subcommand(SubCommand::with_name("vacuum")
+            .about(tr!("Reclaim space by rewriting bundles"))
+            .arg(Arg::from_usage("-r --ratio [NUM]")
+                .help(tr!("Ratio in % of unused space in a bundle to rewrite that bundle"))
+                .default_value(DEFAULT_VACUUM_RATIO_STR).validator(validate_num))
+            .arg(Arg::from_usage("--combine")
+                .help(tr!("Combine small bundles into larger ones")))
+            .arg(Arg::from_usage("-f --force")
+                .help(tr!("Actually run the vacuum instead of simulating it")))
+            .arg(Arg::from_usage("<REPO>")
+                .help(tr!("Path of the repository"))
+                .validator(|val| validate_repo_path(val, true, Some(false), Some(false)))))
+        .subcommand(SubCommand::with_name("check")
+            .about(tr!("Check the repository, a backup or a backup subtree"))
+            .arg(Arg::from_usage("-b --bundles")
+                .help(tr!("Check the bundles")))
+            .arg(Arg::from_usage("[bundle_data] --bundle-data")
+                .help(tr!("Check bundle contents (slow)"))
+                .requires("bundles")
+                .alias("data"))
+            .arg(Arg::from_usage("-i --index")
+                .help(tr!("Check the chunk index")))
+            .arg(Arg::from_usage("-r --repair")
+                .help(tr!("Try to repair errors")))
+            .arg(Arg::from_usage("<PATH>")
+                .help(tr!("Path of the repository/backup/subtree, [repository][::backup[::subtree]]"))
+                .validator(|val| validate_repo_path(val, true, None, None))))
+        .subcommand(SubCommand::with_name("list")
+            .alias("ls")
+            .about(tr!("List backups or backup contents"))
+            .arg(Arg::from_usage("<PATH>")
+                .help(tr!("Path of the repository/backup/subtree, [repository][::backup[::subtree]]"))
+                .validator(|val| validate_repo_path(val, true, None, None))))
+        .subcommand(SubCommand::with_name("mount")
+            .about(tr!("Mount the repository, a backup or a subtree"))
+            .arg(Arg::from_usage("<PATH>")
+                .help(tr!("Path of the repository/backup/subtree, [repository][::backup[::subtree]]"))
+                .validator(|val| validate_repo_path(val, true, None, None)))
+            .arg(Arg::from_usage("<MOUNTPOINT>")
+                .help(tr!("Existing mount point"))
+                .validator(validate_existing_path)))
+        .subcommand(SubCommand::with_name("bundlelist")
+            .about(tr!("List bundles in a repository"))
+            .arg(Arg::from_usage("<REPO>")
+                .help(tr!("Path of the repository"))
+                .validator(|val| validate_repo_path(val, true, Some(false), Some(false)))))
+        .subcommand(SubCommand::with_name("bundleinfo")
+            .about(tr!("Display information on a bundle"))
+            .arg(Arg::from_usage("<REPO>")
+                .help(tr!("Path of the repository"))
+                .validator(|val| validate_repo_path(val, true, Some(false), Some(false))))
+            .arg(Arg::from_usage("<BUNDLE>")
+                .help(tr!("Id of the bundle"))))
+        .subcommand(SubCommand::with_name("import")
+            .about(tr!("Reconstruct a repository from the remote storage"))
+            .arg(Arg::from_usage("-k --key [FILE]...")
+                .help(tr!("Key file needed to read the bundles")))
+            .arg(Arg::from_usage("<REMOTE>")
+                .help(tr!("Remote repository path"))
+                .validator(validate_existing_path))
+            .arg(Arg::from_usage("<REPO>")
+                .help(tr!("The path for the new repository"))
+                .validator(|val| validate_repo_path(val, false, Some(false), Some(false)))))
+        .subcommand(SubCommand::with_name("info")
+            .about(tr!("Display information on a repository, a backup or a subtree"))
+            .arg(Arg::from_usage("<PATH>")
+                .help(tr!("Path of the repository/backup/subtree, [repository][::backup[::subtree]]"))
+                .validator(|val| validate_repo_path(val, true, None, None))))
+        .subcommand(SubCommand::with_name("analyze")
+            .about(tr!("Analyze the used and reclaimable space of bundles"))
+            .arg(Arg::from_usage("<REPO>")
+                .help(tr!("Path of the repository"))
+                .validator(|val| validate_repo_path(val, true, Some(false), Some(false)))))
+        .subcommand(SubCommand::with_name("versions")
+            .about(tr!("Find different versions of a file in all backups"))
+            .arg(Arg::from_usage("<REPO>")
+                .help(tr!("Path of the repository"))
+                .validator(|val| validate_repo_path(val, true, Some(false), Some(false))))
+            .arg(Arg::from_usage("<PATH>")
+                .help(tr!("Path of the file"))))
+        .subcommand(SubCommand::with_name("diff")
+            .about(tr!("Display differences between two backup versions"))
+            .arg(Arg::from_usage("<OLD>")
+                .help(tr!("Old version, [repository]::backup[::subpath]"))
+                .validator(|val| validate_repo_path(val, true, Some(true), None)))
+            .arg(Arg::from_usage("<NEW>")
+                .help(tr!("New version, [repository]::backup[::subpath]"))
+                .validator(|val| validate_repo_path(val, true, Some(true), None))))
+        .subcommand(SubCommand::with_name("copy")
+            .alias("cp")
+            .about(tr!("Create a copy of a backup"))
+            .arg(Arg::from_usage("<SRC>")
+                .help(tr!("Existing backup, [repository]::backup"))
+                .validator(|val| validate_repo_path(val, true, Some(true), Some(false))))
+            .arg(Arg::from_usage("<DST>")
+                .help(tr!("Destination backup, [repository]::backup"))
+                .validator(|val| validate_repo_path(val, true, Some(true), Some(false)))))
+        .subcommand(SubCommand::with_name("config")
+            .about(tr!("Display or change the configuration"))
+            .arg(Arg::from_usage("[bundle_size] --bundle-size [SIZE]")
+                .help(tr!("Set the target bundle size in MiB"))
+                .validator(validate_num))
+            .arg(Arg::from_usage("--chunker [CHUNKER]")
+                .help(tr!("Set the chunker algorithm and target chunk size"))
+                .validator(validate_chunker))
+            .arg(Arg::from_usage("-c --compression [COMPRESSION]")
+                .help(tr!("Set the compression method and level"))
+                .validator(validate_compression))
+            .arg(Arg::from_usage("-e --encryption [PUBLIC_KEY]")
+                .help(tr!("The public key to use for encryption"))
+                .validator(validate_public_key))
+            .arg(Arg::from_usage("--hash [HASH]")
+                .help(tr!("Set the hash method"))
+                .validator(validate_hash))
+            .arg(Arg::from_usage("<REPO>")
+                .help(tr!("Path of the repository"))
+                .validator(|val| validate_repo_path(val, true, Some(false), Some(false)))))
+        .subcommand(SubCommand::with_name("genkey")
+            .about(tr!("Generate a new key pair"))
+            .arg(Arg::from_usage("-p --password [PASSWORD]")
+                .help(tr!("Derive the key pair from the given password")))
+            .arg(Arg::from_usage("[FILE]")
+                .help(tr!("Destination file for the keypair"))))
+        .subcommand(SubCommand::with_name("addkey")
+            .about(tr!("Add a key pair to the repository"))
+            .arg(Arg::from_usage("-g --generate")
+                .help(tr!("Generate a new key pair"))
+                .conflicts_with("FILE"))
+            .arg(Arg::from_usage("[set_default] --default -d")
+                .help(tr!("Set the key pair as default")))
+            .arg(Arg::from_usage("-p --password [PASSWORD]")
+                .help(tr!("Derive the key pair from the given password"))
+                .requires("generate"))
+            .arg(Arg::from_usage("[FILE]")
+                .help(tr!("File containing the keypair"))
+                .validator(validate_existing_path))
+            .arg(Arg::from_usage("<REPO>")
+                .help(tr!("Path of the repository"))
+                .validator(|val| validate_repo_path(val, true, Some(false), Some(false)))))
+        .subcommand(SubCommand::with_name("algotest")
+            .about(tr!("Test a specific algorithm combination"))
+            .arg(Arg::from_usage("[bundle_size] --bundle-size [SIZE]")
+                .help(tr!("Set the target bundle size in MiB"))
+                .default_value(DEFAULT_BUNDLE_SIZE_STR)
+                .validator(validate_num))
+            .arg(Arg::from_usage("--chunker [CHUNKER]")
+                .help(tr!("Set the chunker algorithm and target chunk size"))
+                .default_value(DEFAULT_CHUNKER)
                 .validator(validate_chunker))
             .arg(Arg::from_usage("-c --compression [COMPRESSION] 'Set the compression method and level'")
+                .default_value(DEFAULT_COMPRESSION)
                 .validator(validate_compression))
-            .arg(Arg::from_usage("-e --encryption [PUBLIC_KEY] 'The public key to use for encryption'")
-                .validator(validate_public_key))
-            .arg(Arg::from_usage("--hash [HASH] 'Set the hash method'")
+            .arg(Arg::from_usage("-e --encrypt")
+                .help(tr!("Generate a keypair and enable encryption")))
+            .arg(Arg::from_usage("--hash [HASH]")
+                .help(tr!("Set the hash method"))
+                .default_value(DEFAULT_HASH)
                 .validator(validate_hash))
-            .arg(Arg::from_usage("<REPO> 'Path of the repository'")
-                .validator(|val| validate_repo_path(val, true, Some(false), Some(false)))))
-        .subcommand(SubCommand::with_name("genkey").about("Generate a new key pair")
-            .arg(Arg::from_usage("-p --password [PASSWORD] 'Derive the key pair from the given password'"))
-            .arg(Arg::from_usage("[FILE] 'Destination file for the keypair'")))
-        .subcommand(SubCommand::with_name("addkey").about("Add a key pair to the repository")
-            .arg(Arg::from_usage("-g --generate 'Generate a new key pair'")
-                .conflicts_with("FILE"))
-            .arg(Arg::from_usage("[set_default] --default -d 'Set the key pair as default'"))
-            .arg(Arg::from_usage("-p --password [PASSWORD] 'Derive the key pair from the given password'")
-                .requires("generate"))
-            .arg(Arg::from_usage("[FILE] 'File containing the keypair'")
-                .validator(validate_existing_path))
-            .arg(Arg::from_usage("<REPO> 'Path of the repository'")
-                .validator(|val| validate_repo_path(val, true, Some(false), Some(false)))))
-        .subcommand(SubCommand::with_name("algotest").about("Test a specific algorithm combination")
-            .arg(Arg::from_usage("[bundle_size] --bundle-size [SIZE] 'Set the target bundle size in MiB'")
-                .default_value(DEFAULT_BUNDLE_SIZE_STR).validator(validate_num))
-            .arg(Arg::from_usage("--chunker [CHUNKER] 'Set the chunker algorithm and target chunk size'")
-                .default_value(DEFAULT_CHUNKER).validator(validate_chunker))
-            .arg(Arg::from_usage("-c --compression [COMPRESSION] 'Set the compression method and level'")
-                .default_value(DEFAULT_COMPRESSION).validator(validate_compression))
-            .arg(Arg::from_usage("-e --encrypt 'Generate a keypair and enable encryption'"))
-            .arg(Arg::from_usage("--hash [HASH] 'Set the hash method'")
-                .default_value(DEFAULT_HASH).validator(validate_hash))
-            .arg(Arg::from_usage("<FILE> 'File with test data'")
+            .arg(Arg::from_usage("<FILE>")
+                .help(tr!("File with test data"))
                 .validator(validate_existing_path))).get_matches();
     let verbose_count = args.subcommand()
         .1
@@ -745,7 +866,7 @@ pub fn parse() -> Result<(log::Level, Arguments), ErrorCode> {
             }
         }
         _ => {
-            error!("No subcommand given");
+            tr_error!("No subcommand given");
             return Err(ErrorCode::InvalidArgs);
         }
     };

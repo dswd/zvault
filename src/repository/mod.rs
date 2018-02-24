@@ -139,7 +139,7 @@ impl Repository {
             match unsafe { Index::open(layout.index_path(), &INDEX_MAGIC, INDEX_VERSION) } {
                 Ok(index) => (index, false),
                 Err(err) => {
-                    error!("Failed to load local index:\n\tcaused by: {}", err);
+                    tr_error!("Failed to load local index:\n\tcaused by: {}", err);
                     (
                         try!(Index::create(
                             layout.index_path(),
@@ -153,7 +153,7 @@ impl Repository {
         let (bundle_map, rebuild_bundle_map) = match BundleMap::load(layout.bundle_map_path()) {
             Ok(bundle_map) => (bundle_map, false),
             Err(err) => {
-                error!("Failed to load local bundle map:\n\tcaused by: {}", err);
+                tr_error!("Failed to load local bundle map:\n\tcaused by: {}", err);
                 (BundleMap::create(), true)
             }
         };
@@ -178,7 +178,7 @@ impl Repository {
         if !rebuild_bundle_map {
             let mut save_bundle_map = false;
             if !gone.is_empty() {
-                info!("Removig {} old bundles from index", gone.len());
+                tr_info!("Removig {} old bundles from index", gone.len());
                 try!(repo.write_mode());
                 for bundle in gone {
                     try!(repo.remove_gone_remote_bundle(&bundle))
@@ -186,10 +186,10 @@ impl Repository {
                 save_bundle_map = true;
             }
             if !new.is_empty() {
-                info!("Adding {} new bundles to index", new.len());
+                tr_info!("Adding {} new bundles to index", new.len());
                 try!(repo.write_mode());
                 for bundle in ProgressIter::new(
-                    "adding bundles to index",
+                    tr!("adding bundles to index"),
                     new.len(),
                     new.into_iter()
                 )
@@ -232,11 +232,11 @@ impl Repository {
         let mut backups: Vec<(String, Backup)> = try!(repo.get_all_backups()).into_iter().collect();
         backups.sort_by_key(|&(_, ref b)| b.timestamp);
         if let Some((name, backup)) = backups.pop() {
-            info!("Taking configuration from the last backup '{}'", name);
+            tr_info!("Taking configuration from the last backup '{}'", name);
             repo.config = backup.config;
             try!(repo.save_config())
         } else {
-            warn!(
+            tr_warn!(
                 "No backup found in the repository to take configuration from, please set the configuration manually."
             );
         }
@@ -268,7 +268,7 @@ impl Repository {
     pub fn set_encryption(&mut self, public: Option<&PublicKey>) {
         if let Some(key) = public {
             if !self.crypto.lock().unwrap().contains_secret_key(key) {
-                warn!("The secret key for that public key is not stored in the repository.")
+                tr_warn!("The secret key for that public key is not stored in the repository.")
             }
             let mut key_bytes = Vec::new();
             key_bytes.extend_from_slice(&key[..]);
@@ -343,7 +343,7 @@ impl Repository {
         if self.bundle_map.find(&bundle.id).is_some() {
             return Ok(());
         }
-        debug!("Adding new bundle to index: {}", bundle.id);
+        tr_debug!("Adding new bundle to index: {}", bundle.id);
         let bundle_id = match bundle.mode {
             BundleMode::Data => self.next_data_bundle,
             BundleMode::Meta => self.next_meta_bundle,
@@ -377,7 +377,7 @@ impl Repository {
 
     fn remove_gone_remote_bundle(&mut self, bundle: &BundleInfo) -> Result<(), RepositoryError> {
         if let Some(id) = self.bundle_map.find(&bundle.id) {
-            debug!("Removing bundle from index: {}", bundle.id);
+            tr_debug!("Removing bundle from index: {}", bundle.id);
             try!(self.bundles.delete_local_bundle(&bundle.id));
             try!(self.index.filter(|_key, data| data.bundle != id));
             self.bundle_map.remove(id);
@@ -406,7 +406,7 @@ impl Repository {
 impl Drop for Repository {
     fn drop(&mut self) {
         if let Err(err) = self.flush() {
-            error!("Failed to flush repository: {}", err);
+            tr_error!("Failed to flush repository: {}", err);
         }
     }
 }

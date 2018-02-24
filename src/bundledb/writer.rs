@@ -14,31 +14,31 @@ quick_error!{
     pub enum BundleWriterError {
         CompressionSetup(err: CompressionError) {
             cause(err)
-            description("Failed to setup compression")
-            display("Bundle writer error: failed to setup compression\n\tcaused by: {}", err)
+            description(tr!("Failed to setup compression"))
+            display("{}", tr_format!("Bundle writer error: failed to setup compression\n\tcaused by: {}", err))
         }
         Compression(err: CompressionError) {
             cause(err)
-            description("Failed to compress data")
-            display("Bundle writer error: failed to compress data\n\tcaused by: {}", err)
+            description(tr!("Failed to compress data"))
+            display("{}", tr_format!("Bundle writer error: failed to compress data\n\tcaused by: {}", err))
         }
         Encryption(err: EncryptionError) {
             from()
             cause(err)
-            description("Encryption failed")
-            display("Bundle writer error: failed to encrypt data\n\tcaused by: {}", err)
+            description(tr!("Encryption failed"))
+            display("{}", tr_format!("Bundle writer error: failed to encrypt data\n\tcaused by: {}", err))
         }
         Encode(err: msgpack::EncodeError, path: PathBuf) {
             cause(err)
             context(path: &'a Path, err: msgpack::EncodeError) -> (err, path.to_path_buf())
-            description("Failed to encode bundle header to file")
-            display("Bundle writer error: failed to encode bundle header to file {:?}\n\tcaused by: {}", path, err)
+            description(tr!("Failed to encode bundle header to file"))
+            display("{}", tr_format!("Bundle writer error: failed to encode bundle header to file {:?}\n\tcaused by: {}", path, err))
         }
         Write(err: io::Error, path: PathBuf) {
             cause(err)
             context(path: &'a Path, err: io::Error) -> (err, path.to_path_buf())
-            description("Failed to write data to file")
-            display("Bundle writer error: failed to write data to file {:?}\n\tcaused by: {}", path, err)
+            description(tr!("Failed to write data to file"))
+            display("{}", tr_format!("Bundle writer error: failed to write data to file {:?}\n\tcaused by: {}", path, err))
         }
     }
 }

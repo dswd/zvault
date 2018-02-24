@@ -73,7 +73,7 @@ impl<T: Iterator> Iterator for ProgressIter<T> {
     fn next(&mut self) -> Option<Self::Item> {
         match self.inner.next() {
             None => {
-                let msg = self.msg.clone() + "done.";
+                let msg = self.msg.clone() + tr!("done.");
                 self.bar.finish_print(&msg);
                 None
             }

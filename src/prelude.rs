@@ -7,6 +7,7 @@ pub use repository::{Repository, Backup, Config, RepositoryError, RepositoryInfo
                      FileData, DiffType, InodeError, RepositoryLayout, Location};
 pub use index::{Index, IndexError};
 pub use mount::FuseFilesystem;
+pub use translation::CowStr;
 
 pub use serde::{Serialize, Deserialize};
 

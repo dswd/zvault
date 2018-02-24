@@ -105,7 +105,7 @@ macro_rules! checked {
         match $expr {
             Ok(val) => val,
             Err(err) => {
-                error!("Failed to {}\n\tcaused by: {}", $msg, err);
+                tr_error!("Failed to {}\n\tcaused by: {}", $msg, err);
                 return Err($code)
             }
         }
@@ -122,7 +122,7 @@ fn open_repository(path: &Path) -> Result<Repository, ErrorCode> {
 
 fn get_backup(repo: &Repository, backup_name: &str) -> Result<Backup, ErrorCode> {
     if !repo.has_backup(backup_name) {
-        error!("A backup with that name does not exist");
+        tr_error!("A backup with that name does not exist");
         return Err(ErrorCode::NoSuchBackup);
     }
     Ok(checked!(
@@ -145,11 +145,11 @@ fn find_reference_backup(
         Ok(backup_map) => backup_map,
         Err(RepositoryError::BackupFile(BackupFileError::PartialBackupsList(backup_map,
                                                                             _failed))) => {
-            warn!("Some backups could not be read, ignoring them");
+            tr_warn!("Some backups could not be read, ignoring them");
             backup_map
         }
         Err(err) => {
-            error!("Failed to load backup files: {}", err);
+            tr_error!("Failed to load backup files: {}", err);
             return Err(ErrorCode::LoadBackup);
         }
     };
@@ -164,41 +164,41 @@ fn find_reference_backup(
 
 fn print_backup(backup: &Backup) {
     if backup.modified {
-        warn!("This backup has been modified");
+        tr_warn!("This backup has been modified");
     }
-    println!(
+    tr_println!(
         "Date: {}",
         Local.timestamp(backup.timestamp, 0).to_rfc2822()
     );
-    println!("Source: {}:{}", backup.host, backup.path);
-    println!("Duration: {}", to_duration(backup.duration));
-    println!(
+    tr_println!("Source: {}:{}", backup.host, backup.path);
+    tr_println!("Duration: {}", to_duration(backup.duration));
+    tr_println!(
         "Entries: {} files, {} dirs",
         backup.file_count,
         backup.dir_count
     );
-    println!(
+    tr_println!(
         "Total backup size: {}",
         to_file_size(backup.total_data_size)
     );
-    println!(
+    tr_println!(
         "Modified data size: {}",
         to_file_size(backup.changed_data_size)
     );
     let dedup_ratio = backup.deduplicated_data_size as f32 / backup.changed_data_size as f32;
-    println!(
+    tr_println!(
         "Deduplicated size: {}, {:.1}% saved",
         to_file_size(backup.deduplicated_data_size),
         (1.0 - dedup_ratio) * 100.0
     );
     let compress_ratio = backup.encoded_data_size as f32 / backup.deduplicated_data_size as f32;
-    println!(
+    tr_println!(
         "Compressed size: {} in {} bundles, {:.1}% saved",
         to_file_size(backup.encoded_data_size),
         backup.bundle_count,
         (1.0 - compress_ratio) * 100.0
     );
-    println!(
+    tr_println!(
         "Chunk count: {}, avg size: {}",
         backup.chunk_count,
         to_file_size(backup.avg_chunk_size as u64)
@@ -246,30 +246,30 @@ pub fn format_inode_one_line(inode: &Inode) -> String {
 }
 
 fn print_inode(inode: &Inode) {
-    println!("Name: {}", inode.name);
-    println!("Type: {}", inode.file_type);
-    println!("Size: {}", to_file_size(inode.size));
-    println!("Permissions: {:3o}", inode.mode);
-    println!("User: {}", inode.user);
-    println!("Group: {}", inode.group);
-    println!(
+    tr_println!("Name: {}", inode.name);
+    tr_println!("Type: {}", inode.file_type);
+    tr_println!("Size: {}", to_file_size(inode.size));
+    tr_println!("Permissions: {:3o}", inode.mode);
+    tr_println!("User: {}", inode.user);
+    tr_println!("Group: {}", inode.group);
+    tr_println!(
         "Timestamp: {}",
         Local.timestamp(inode.timestamp, 0).to_rfc2822()
     );
     if let Some(ref target) = inode.symlink_target {
-        println!("Symlink target: {}", target);
+        tr_println!("Symlink target: {}", target);
     }
-    println!("Cumulative size: {}", to_file_size(inode.cum_size));
-    println!("Cumulative file count: {}", inode.cum_files);
-    println!("Cumulative directory count: {}", inode.cum_dirs);
+    tr_println!("Cumulative size: {}", to_file_size(inode.cum_size));
+    tr_println!("Cumulative file count: {}", inode.cum_files);
+    tr_println!("Cumulative directory count: {}", inode.cum_dirs);
     if let Some(ref children) = inode.children {
-        println!("Children:");
+        tr_println!("Children:");
         for name in children.keys() {
             println!("  - {}", name);
         }
     }
     if !inode.xattrs.is_empty() {
-        println!("Extended attributes:");
+        tr_println!("Extended attributes:");
         for (key, value) in &inode.xattrs {
             if let Ok(value) = str::from_utf8(value) {
                 println!("  - {} = '{}'", key, value);
@@ -296,17 +296,17 @@ fn print_backups(backup_map: &HashMap<String, Backup>) {
 }
 
 fn print_repoinfo(info: &RepositoryInfo) {
-    println!("Bundles: {}", info.bundle_count);
-    println!("Total size: {}", to_file_size(info.encoded_data_size));
-    println!("Uncompressed size: {}", to_file_size(info.raw_data_size));
-    println!("Compression ratio: {:.1}%", info.compression_ratio * 100.0);
-    println!("Chunk count: {}", info.chunk_count);
-    println!(
+    tr_println!("Bundles: {}", info.bundle_count);
+    tr_println!("Total size: {}", to_file_size(info.encoded_data_size));
+    tr_println!("Uncompressed size: {}", to_file_size(info.raw_data_size));
+    tr_println!("Compression ratio: {:.1}%", info.compression_ratio * 100.0);
+    tr_println!("Chunk count: {}", info.chunk_count);
+    tr_println!(
         "Average chunk size: {}",
         to_file_size(info.avg_chunk_size as u64)
     );
     let index_usage = info.index_entries as f32 / info.index_capacity as f32;
-    println!(
+    tr_println!(
         "Index: {}, {:.0}% full",
         to_file_size(info.index_size as u64),
         index_usage * 100.0
@@ -314,26 +314,26 @@ fn print_repoinfo(info: &RepositoryInfo) {
 }
 
 fn print_bundle(bundle: &StoredBundle) {
-    println!("Bundle {}", bundle.info.id);
-    println!("  - Mode: {:?}", bundle.info.mode);
-    println!("  - Path: {:?}", bundle.path);
-    println!(
+    tr_println!("Bundle {}", bundle.info.id);
+    tr_println!("  - Mode: {:?}", bundle.info.mode);
+    tr_println!("  - Path: {:?}", bundle.path);
+    tr_println!(
         "  - Date: {}",
         Local.timestamp(bundle.info.timestamp, 0).to_rfc2822()
     );
-    println!("  - Hash method: {:?}", bundle.info.hash_method);
+    tr_println!("  - Hash method: {:?}", bundle.info.hash_method);
     let encryption = if let Some((_, ref key)) = bundle.info.encryption {
         to_hex(key)
     } else {
         "none".to_string()
     };
-    println!("  - Encryption: {}", encryption);
-    println!("  - Chunks: {}", bundle.info.chunk_count);
-    println!(
+    tr_println!("  - Encryption: {}", encryption);
+    tr_println!("  - Chunks: {}", bundle.info.chunk_count);
+    tr_println!(
         "  - Size: {}",
         to_file_size(bundle.info.encoded_size as u64)
     );
-    println!(
+    tr_println!(
         "  - Data size: {}",
         to_file_size(bundle.info.raw_size as u64)
     );
@@ -343,7 +343,7 @@ fn print_bundle(bundle: &StoredBundle) {
     } else {
         "none".to_string()
     };
-    println!(
+    tr_println!(
         "  - Compression: {}, ratio: {:.1}%",
         compression,
         ratio * 100.0
@@ -351,7 +351,7 @@ fn print_bundle(bundle: &StoredBundle) {
 }
 
 fn print_bundle_one_line(bundle: &BundleInfo) {
-    println!(
+    tr_println!(
         "{}: {:8?}, {:5} chunks, {:8}",
         bundle.id,
         bundle.mode,
@@ -361,19 +361,19 @@ fn print_bundle_one_line(bundle: &BundleInfo) {
 }
 
 fn print_config(config: &Config) {
-    println!("Bundle size: {}", to_file_size(config.bundle_size as u64));
-    println!("Chunker: {}", config.chunker.to_string());
+    tr_println!("Bundle size: {}", to_file_size(config.bundle_size as u64));
+    tr_println!("Chunker: {}", config.chunker.to_string());
     if let Some(ref compression) = config.compression {
-        println!("Compression: {}", compression.to_string());
+        tr_println!("Compression: {}", compression.to_string());
     } else {
-        println!("Compression: none");
+        tr_println!("Compression: none");
     }
     if let Some(ref encryption) = config.encryption {
-        println!("Encryption: {}", to_hex(&encryption.1[..]));
+        tr_println!("Encryption: {}", to_hex(&encryption.1[..]));
     } else {
-        println!("Encryption: none");
+        tr_println!("Encryption: none");
     }
-    println!("Hash method: {}", config.hash.name());
+    tr_println!("Hash method: {}", config.hash.name());
 }
 
 fn print_analysis(analysis: &HashMap<u32, BundleAnalysis>) {
@@ -390,17 +390,17 @@ fn print_analysis(analysis: &HashMap<u32, BundleAnalysis>) {
             }
         }
     }
-    println!("Total bundle size: {}", to_file_size(data_total as u64));
+    tr_println!("Total bundle size: {}", to_file_size(data_total as u64));
     let used = data_total - reclaim_space[10];
-    println!(
+    tr_println!(
         "Space used: {}, {:.1} %",
         to_file_size(used as u64),
         used as f32 / data_total as f32 * 100.0
     );
-    println!("Reclaimable space (depending on vacuum ratio)");
+    tr_println!("Reclaimable space (depending on vacuum ratio)");
     #[allow(unknown_lints, needless_range_loop)]
     for i in 0..11 {
-        println!(
+        tr_println!(
             "  - ratio={:3}: {:>10}, {:4.1} %, rewriting {:>10}",
             i * 10,
             to_file_size(reclaim_space[i] as u64),
@@ -415,7 +415,7 @@ fn print_analysis(analysis: &HashMap<u32, BundleAnalysis>) {
 pub fn run() -> Result<(), ErrorCode> {
     let (log_level, args) = try!(args::parse());
     if let Err(err) = logger::init(log_level) {
-        println!("Failed to initialize the logger: {}", err);
+        tr_println!("Failed to initialize the logger: {}", err);
         return Err(ErrorCode::InitializeLogger);
     }
     match args {
@@ -429,7 +429,7 @@ pub fn run() -> Result<(), ErrorCode> {
             remote_path
         } => {
             if !Path::new(&remote_path).is_absolute() {
-                error!("The remote path of a repository must be absolute.");
+                tr_error!("The remote path of a repository must be absolute.");
                 return Err(ErrorCode::InvalidArgs);
             }
             let mut repo = checked!(
@@ -449,9 +449,9 @@ pub fn run() -> Result<(), ErrorCode> {
             );
             if encryption {
                 let (public, secret) = Crypto::gen_keypair();
-                info!("Created the following key pair");
-                println!("public: {}", to_hex(&public[..]));
-                println!("secret: {}", to_hex(&secret[..]));
+                tr_info!("Created the following key pair");
+                tr_println!("public: {}", to_hex(&public[..]));
+                tr_println!("secret: {}", to_hex(&secret[..]));
                 repo.set_encryption(Some(&public));
                 checked!(
                     repo.register_key(public, secret),
@@ -459,7 +459,7 @@ pub fn run() -> Result<(), ErrorCode> {
                     ErrorCode::AddKey
                 );
                 checked!(repo.save_config(), "save config", ErrorCode::SaveConfig);
-                warn!(
+                tr_warn!(
                     "Please store this key pair in a secure location before using the repository"
                 );
                 println!();
@@ -480,11 +480,11 @@ pub fn run() -> Result<(), ErrorCode> {
         } => {
             let mut repo = try!(open_repository(&repo_path));
             if repo.has_backup(&backup_name) {
-                error!("A backup with that name already exists");
+                tr_error!("A backup with that name already exists");
                 return Err(ErrorCode::BackupAlreadyExists);
             }
             if src_path == "-" && !tar {
-                error!("Reading from stdin requires --tar");
+                tr_error!("Reading from stdin requires --tar");
                 return Err(ErrorCode::InvalidArgs);
             }
             let mut reference_backup = None;
@@ -500,9 +500,9 @@ pub fn run() -> Result<(), ErrorCode> {
                     reference_backup = try!(find_reference_backup(&repo, &src_path));
                 }
                 if let Some(&(ref name, _)) = reference_backup.as_ref() {
-                    info!("Using backup {} as reference", name);
+                    tr_info!("Using backup {} as reference", name);
                 } else {
-                    info!("No reference backup found, doing a full scan instead");
+                    tr_info!("No reference backup found, doing a full scan instead");
                 }
             }
             let reference_backup = reference_backup.map(|(_, backup)| backup);
@@ -569,15 +569,15 @@ pub fn run() -> Result<(), ErrorCode> {
             };
             let backup = match result {
                 Ok(backup) => {
-                    info!("Backup finished");
+                    tr_info!("Backup finished");
                     backup
                 }
                 Err(RepositoryError::Backup(BackupError::FailedPaths(backup, _failed_paths))) => {
-                    warn!("Some files are missing from the backup");
+                    tr_warn!("Some files are missing from the backup");
                     backup
                 }
                 Err(err) => {
-                    error!("Backup failed: {}", err);
+                    tr_error!("Backup failed: {}", err);
                     return Err(ErrorCode::BackupRun);
                 }
             };
@@ -623,7 +623,7 @@ pub fn run() -> Result<(), ErrorCode> {
                     ErrorCode::RestoreRun
                 );
             }
-            info!("Restore finished");
+            tr_info!("Restore finished");
         }
         Arguments::Copy {
             repo_path_src,
@@ -632,12 +632,12 @@ pub fn run() -> Result<(), ErrorCode> {
             backup_name_dst
         } => {
             if repo_path_src != repo_path_dst {
-                error!("Can only run copy on same repository");
+                tr_error!("Can only run copy on same repository");
                 return Err(ErrorCode::InvalidArgs);
             }
             let mut repo = try!(open_repository(&repo_path_src));
             if repo.has_backup(&backup_name_dst) {
-                error!("A backup with that name already exists");
+                tr_error!("A backup with that name already exists");
                 return Err(ErrorCode::BackupAlreadyExists);
             }
             let backup = try!(get_backup(&repo, &backup_name_src));
@@ -666,7 +666,7 @@ pub fn run() -> Result<(), ErrorCode> {
                     "save backup file",
                     ErrorCode::SaveBackup
                 );
-                info!("The backup subpath has been deleted, run vacuum to reclaim space");
+                tr_info!("The backup subpath has been deleted, run vacuum to reclaim space");
             } else if repo.layout.backups_path().join(&backup_name).is_dir() {
                 let backups = checked!(
                     repo.get_backups(&backup_name),
@@ -682,7 +682,7 @@ pub fn run() -> Result<(), ErrorCode> {
                         );
                     }
                 } else {
-                    error!("Denying to remove multiple backups (use --force):");
+                    tr_error!("Denying to remove multiple backups (use --force):");
                     for name in backups.keys() {
                         println!("  - {}/{}", backup_name, name);
                     }
@@ -693,7 +693,7 @@ pub fn run() -> Result<(), ErrorCode> {
                     "delete backup",
                     ErrorCode::RemoveRun
                 );
-                info!("The backup has been deleted, run vacuum to reclaim space");
+                tr_info!("The backup has been deleted, run vacuum to reclaim space");
             }
         }
         Arguments::Prune {
@@ -707,7 +707,7 @@ pub fn run() -> Result<(), ErrorCode> {
         } => {
             let mut repo = try!(open_repository(&repo_path));
             if daily + weekly + monthly + yearly == 0 {
-                error!("This would remove all those backups");
+                tr_error!("This would remove all those backups");
                 return Err(ErrorCode::UnsafeArgs);
             }
             checked!(
@@ -716,7 +716,7 @@ pub fn run() -> Result<(), ErrorCode> {
                 ErrorCode::PruneRun
             );
             if !force {
-                info!("Run with --force to actually execute this command");
+                tr_info!("Run with --force to actually execute this command");
             }
         }
         Arguments::Vacuum {
@@ -733,10 +733,10 @@ pub fn run() -> Result<(), ErrorCode> {
                 ErrorCode::VacuumRun
             );
             if !force {
-                info!("Run with --force to actually execute this command");
+                tr_info!("Run with --force to actually execute this command");
             } else {
                 let info_after = repo.info();
-                info!(
+                tr_info!(
                     "Reclaimed {}",
                     to_file_size(info_before.encoded_data_size - info_after.encoded_data_size)
                 );
@@ -790,7 +790,7 @@ pub fn run() -> Result<(), ErrorCode> {
                 )
             }
             repo.set_clean();
-            info!("Integrity verified")
+            tr_info!("Integrity verified")
         }
         Arguments::List {
             repo_path,
@@ -830,11 +830,11 @@ pub fn run() -> Result<(), ErrorCode> {
             let backup_map = match backup_map {
                 Ok(backup_map) => backup_map,
                 Err(RepositoryError::BackupFile(BackupFileError::PartialBackupsList(backup_map, _failed))) => {
-                    warn!("Some backups could not be read, ignoring them");
+                    tr_warn!("Some backups could not be read, ignoring them");
                     backup_map
                 }
                 Err(err) => {
-                    error!("Failed to load backup files: {}", err);
+                    tr_error!("Failed to load backup files: {}", err);
                     return Err(ErrorCode::LoadBackup);
                 }
             };
@@ -904,8 +904,8 @@ pub fn run() -> Result<(), ErrorCode> {
                     ErrorCode::FuseMount
                 )
             };
-            info!("Mounting the filesystem...");
-            info!(
+            tr_info!("Mounting the filesystem...");
+            tr_info!(
                 "Please unmount the filesystem via 'fusermount -u {}' when done.",
                 mount_point
             );
@@ -937,7 +937,7 @@ pub fn run() -> Result<(), ErrorCode> {
             if let Some(bundle) = repo.get_bundle(&bundle_id) {
                 print_bundle(bundle);
             } else {
-                error!("No such bundle");
+                tr_error!("No such bundle");
                 return Err(ErrorCode::LoadBundle);
             }
         }
@@ -951,7 +951,7 @@ pub fn run() -> Result<(), ErrorCode> {
                 "import repository",
                 ErrorCode::ImportRun
             );
-            info!("Import finished");
+            tr_info!("Import finished");
         }
         Arguments::Versions { repo_path, path } => {
             let mut repo = try!(open_repository(&repo_path));
@@ -968,7 +968,7 @@ pub fn run() -> Result<(), ErrorCode> {
                 found = true;
             }
             if !found {
-                info!("No versions of that file were found.");
+                tr_info!("No versions of that file were found.");
             }
         }
         Arguments::Diff {
@@ -980,7 +980,7 @@ pub fn run() -> Result<(), ErrorCode> {
             inode_new
         } => {
             if repo_path_old != repo_path_new {
-                error!("Can only run diff on same repository");
+                tr_error!("Can only run diff on same repository");
                 return Err(ErrorCode::InvalidArgs);
             }
             let mut repo = try!(open_repository(&repo_path_old));
@@ -1015,7 +1015,7 @@ pub fn run() -> Result<(), ErrorCode> {
                 );
             }
             if diffs.is_empty() {
-                info!("No differences found");
+                tr_info!("No differences found");
             }
         }
         Arguments::Config {
@@ -1033,7 +1033,7 @@ pub fn run() -> Result<(), ErrorCode> {
                 changed = true;
             }
             if let Some(chunker) = chunker {
-                warn!(
+                tr_warn!(
                     "Changing the chunker makes it impossible to use existing data for deduplication"
                 );
                 repo.config.chunker = chunker;
@@ -1048,7 +1048,7 @@ pub fn run() -> Result<(), ErrorCode> {
                 changed = true;
             }
             if let Some(hash) = hash {
-                warn!(
+                tr_warn!(
                     "Changing the hash makes it impossible to use existing data for deduplication"
                 );
                 repo.config.hash = hash;
@@ -1056,7 +1056,7 @@ pub fn run() -> Result<(), ErrorCode> {
             }
             if changed {
                 checked!(repo.save_config(), "save config", ErrorCode::SaveConfig);
-                info!("The configuration has been updated.");
+                tr_info!("The configuration has been updated.");
             } else {
                 print_config(&repo.config);
             }
@@ -1066,9 +1066,9 @@ pub fn run() -> Result<(), ErrorCode> {
                 None => Crypto::gen_keypair(),
                 Some(ref password) => Crypto::keypair_from_password(password),
             };
-            info!("Created the following key pair");
-            println!("public: {}", to_hex(&public[..]));
-            println!("secret: {}", to_hex(&secret[..]));
+            tr_info!("Created the following key pair");
+            tr_println!("public: {}", to_hex(&public[..]));
+            tr_println!("secret: {}", to_hex(&secret[..]));
             if let Some(file) = file {
                 checked!(
                     Crypto::save_keypair_to_file(&public, &secret, file),
@@ -1091,13 +1091,13 @@ pub fn run() -> Result<(), ErrorCode> {
                     ErrorCode::LoadKey
                 )
             } else {
-                info!("Created the following key pair");
+                tr_info!("Created the following key pair");
                 let (public, secret) = match password {
                     None => Crypto::gen_keypair(),
                     Some(ref password) => Crypto::keypair_from_password(password),
                 };
-                println!("public: {}", to_hex(&public[..]));
-                println!("secret: {}", to_hex(&secret[..]));
+                tr_println!("public: {}", to_hex(&public[..]));
+                tr_println!("secret: {}", to_hex(&secret[..]));
                 (public, secret)
             };
             checked!(
@@ -1108,7 +1108,7 @@ pub fn run() -> Result<(), ErrorCode> {
             if set_default {
                 repo.set_encryption(Some(&public));
                 checked!(repo.save_config(), "save config", ErrorCode::SaveConfig);
-                warn!(
+                tr_warn!(
                     "Please store this key pair in a secure location before using the repository"
                 );
             }

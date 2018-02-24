@@ -15,22 +15,22 @@ quick_error!{
         Io(err: io::Error) {
             from()
             cause(err)
-            description("IO error")
-            display("Lock error: IO error\n\tcaused by: {}", err)
+            description(tr!("IO error"))
+            display("{}", tr_format!("Lock error: IO error\n\tcaused by: {}", err))
         }
         Yaml(err: serde_yaml::Error) {
             from()
             cause(err)
-            description("Yaml format error")
-            display("Lock error: yaml format error\n\tcaused by: {}", err)
+            description(tr!("Yaml format error"))
+            display("{}", tr_format!("Lock error: yaml format error\n\tcaused by: {}", err))
         }
         InvalidLockState(reason: &'static str) {
-            description("Invalid lock state")
-            display("Lock error: invalid lock state: {}", reason)
+            description(tr!("Invalid lock state"))
+            display("{}", tr_format!("Lock error: invalid lock state: {}", reason))
         }
         Locked {
-            description("Locked")
-            display("Lock error: locked")
+            description(tr!("Locked"))
+            display("{}", tr_format!("Lock error: locked"))
         }
     }
 }
@@ -122,13 +122,13 @@ impl LockFolder {
         for lock in try!(self.get_locks()) {
             if lock.exclusive {
                 if level == LockLevel::Exclusive {
-                    return Err(LockError::InvalidLockState("multiple exclusive locks"));
+                    return Err(LockError::InvalidLockState(tr!("multiple exclusive locks")));
                 } else {
                     level = LockLevel::Exclusive
                 }
             } else if level == LockLevel::Exclusive {
                 return Err(LockError::InvalidLockState(
-                    "exclusive lock and shared locks"
+                    tr!("exclusive lock and shared locks")
                 ));
             } else {
                 level = LockLevel::Shared

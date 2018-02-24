@@ -95,7 +95,7 @@ impl<'a> Deserialize<'a> for Hash {
     {
         let dat: Vec<u8> = try!(ByteBuf::deserialize(deserializer)).into();
         if dat.len() != 16 {
-            return Err(D::Error::custom("Invalid key length"));
+            return Err(D::Error::custom(tr!("Invalid key length")));
         }
         Ok(Hash {
             high: LittleEndian::read_u64(&dat[..8]),
@@ -141,7 +141,7 @@ impl HashMethod {
         match name {
             "blake2" => Ok(HashMethod::Blake2),
             "murmur3" => Ok(HashMethod::Murmur3),
-            _ => Err("Unsupported hash method"),
+            _ => Err(tr!("Unsupported hash method")),
         }
     }
 
