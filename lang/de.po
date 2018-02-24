@@ -1,0 +1,2120 @@
+# SOME DESCRIPTIVE TITLE.
+# Copyright (C) YEAR THE PACKAGE'S COPYRIGHT HOLDER
+# This file is distributed under the same license as the PACKAGE package.
+# FIRST AUTHOR <EMAIL@ADDRESS>, YEAR.
+#
+msgid ""
+msgstr ""
+"Project-Id-Version: \n"
+"Report-Msgid-Bugs-To: \n"
+"POT-Creation-Date: 2018-02-24 14:45+0100\n"
+"PO-Revision-Date: 2018-02-24 14:55+0100\n"
+"Last-Translator: \n"
+"Language-Team: \n"
+"Language: de\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"X-Generator: Poedit 1.8.7.1\n"
+
+#: bundledb/cache.rs:8
+msgid "zvault\\004"
+msgstr ""
+
+#: bundledb/cache.rs:17
+msgid "Failed to read bundle cache"
+msgstr "Konnte Zwischenspeicher für Paketdateien nicht lesen"
+
+#: bundledb/cache.rs:18
+msgid ""
+"Bundle cache error: failed to read bundle cache\n"
+"\tcaused by: {}"
+msgstr ""
+"Fehler im Zwischenspeicher für Paketdateien: konnte Zwischenspeicher nicht "
+"lesen\n"
+"\tverursacht durch: {}"
+
+#: bundledb/cache.rs:22
+msgid "Failed to write bundle cache"
+msgstr "Konnte Zwischenspeicher für Paketdateien nicht schreiben"
+
+#: bundledb/cache.rs:23
+msgid ""
+"Bundle cache error: failed to write bundle cache\n"
+"\tcaused by: {}"
+msgstr ""
+"Fehler im Zwischenspeicher für Paketdateien: konnte Zwischenspeicher nicht "
+"schreiben\n"
+"\tverursacht durch: {}"
+
+#: bundledb/cache.rs:26 bundledb/reader.rs:22 repository/backup_file.rs:39
+#: repository/bundle_map.rs:32
+msgid "Wrong header"
+msgstr "Falsche Kopfdaten"
+
+#: bundledb/cache.rs:27
+msgid "Bundle cache error: wrong header on bundle cache"
+msgstr ""
+"Fehler im Zwischenspeicher für Paketdateien: falsche Kopfdaten im "
+"Zwischenspeicher"
+
+#: bundledb/cache.rs:30 bundledb/reader.rs:26 repository/backup_file.rs:43
+#: repository/bundle_map.rs:35
+msgid "Wrong version"
+msgstr "Falsche Version"
+
+#: bundledb/cache.rs:31
+msgid "Bundle cache error: unsupported version: {}"
+msgstr ""
+"Fehler im Zwischenspeicher für Paketdateien: nicht unterstützte Version: {}"
+
+#: bundledb/cache.rs:36
+msgid "Failed to decode bundle cache"
+msgstr ""
+
+#: bundledb/cache.rs:37
+msgid ""
+"Bundle cache error: failed to decode bundle cache\n"
+"\tcaused by: {}"
+msgstr ""
+
+#: bundledb/cache.rs:42
+msgid "Failed to encode bundle cache"
+msgstr ""
+
+#: bundledb/cache.rs:43
+msgid ""
+"Bundle cache error: failed to encode bundle cache\n"
+"\tcaused by: {}"
+msgstr ""
+
+#: bundledb/db.rs:17
+msgid "Failed to list bundles"
+msgstr ""
+
+#: bundledb/db.rs:18
+msgid ""
+"Bundle db error: failed to list bundles\n"
+"\tcaused by: {}"
+msgstr ""
+
+#: bundledb/db.rs:23
+msgid "Failed to read bundle"
+msgstr ""
+
+#: bundledb/db.rs:24
+msgid ""
+"Bundle db error: failed to read bundle\n"
+"\tcaused by: {}"
+msgstr ""
+
+#: bundledb/db.rs:29
+msgid "Failed to write bundle"
+msgstr ""
+
+#: bundledb/db.rs:30
+msgid ""
+"Bundle db error: failed to write bundle\n"
+"\tcaused by: {}"
+msgstr ""
+
+#: bundledb/db.rs:35
+msgid "Failed to read/write bundle cache"
+msgstr ""
+
+#: bundledb/db.rs:36
+msgid ""
+"Bundle db error: failed to read/write bundle cache\n"
+"\tcaused by: {}"
+msgstr ""
+
+#: bundledb/db.rs:39
+msgid "Uploading a bundle failed"
+msgstr "Upload des Pakets fehlgeschlagen"
+
+#: bundledb/db.rs:44
+msgid "Io error"
+msgstr ""
+
+#: bundledb/db.rs:45
+msgid ""
+"Bundle db error: io error on {:?}\n"
+"\tcaused by: {}"
+msgstr ""
+
+#: bundledb/db.rs:48 cli/mod.rs:940
+msgid "No such bundle"
+msgstr ""
+
+#: bundledb/db.rs:49
+msgid "Bundle db error: no such bundle: {:?}"
+msgstr ""
+
+#: bundledb/db.rs:53
+msgid "Failed to remove bundle"
+msgstr ""
+
+#: bundledb/db.rs:54
+msgid ""
+"Bundle db error: failed to remove bundle {}\n"
+"\tcaused by: {}"
+msgstr ""
+
+#: bundledb/db.rs:96
+msgid ""
+"Failed to read bundle {:?}\n"
+"\tcaused by: {}"
+msgstr ""
+
+#: bundledb/db.rs:97
+msgid "Ignoring unreadable bundle"
+msgstr ""
+
+#: bundledb/db.rs:149
+msgid "Failed to read local bundle cache, rebuilding cache"
+msgstr ""
+
+#: bundledb/db.rs:156
+msgid "Failed to read remote bundle cache, rebuilding cache"
+msgstr ""
+
+#: bundledb/db.rs:222
+msgid "Copying new meta bundle to local cache: {}"
+msgstr ""
+
+#: bundledb/db.rs:410
+msgid "checking bundles"
+msgstr ""
+
+#: bundledb/db.rs:436
+msgid "repairing bundles"
+msgstr ""
+
+#: bundledb/db.rs:452
+msgid "Moving bundle to {:?}"
+msgstr ""
+
+#: bundledb/db.rs:464
+msgid ""
+"Problem detected: failed to read bundle header: {}\n"
+"\tcaused by: {}"
+msgstr ""
+
+#: bundledb/db.rs:475
+msgid ""
+"Problem detected: failed to read bundle chunks: {}\n"
+"\tcaused by: {}"
+msgstr ""
+
+#: bundledb/db.rs:486
+msgid ""
+"Problem detected: failed to read bundle data: {}\n"
+"\tcaused by: {}"
+msgstr ""
+
+#: bundledb/db.rs:493
+msgid "Problem detected: bundle data was truncated: {}"
+msgstr ""
+
+#: bundledb/db.rs:494
+msgid "Copying readable data into new bundle"
+msgstr ""
+
+#: bundledb/db.rs:512
+msgid "New bundle id is {}"
+msgstr ""
+
+#: bundledb/reader.rs:18
+msgid "Failed to read data from file"
+msgstr ""
+
+#: bundledb/reader.rs:19
+msgid ""
+"Bundle reader error: failed to read data from file {:?}\n"
+"\tcaused by: {}"
+msgstr ""
+
+#: bundledb/reader.rs:23
+msgid "Bundle reader error: wrong header on bundle {:?}"
+msgstr ""
+
+#: bundledb/reader.rs:27
+msgid "Bundle reader error: unsupported version on bundle {:?}: {}"
+msgstr ""
+
+#: bundledb/reader.rs:30
+msgid "Bundle has no such chunk"
+msgstr ""
+
+#: bundledb/reader.rs:31
+msgid "Bundle reader error: bundle {:?} has no chunk with id {}"
+msgstr ""
+
+#: bundledb/reader.rs:36
+msgid "Failed to decode bundle header"
+msgstr ""
+
+#: bundledb/reader.rs:37
+msgid ""
+"Bundle reader error: failed to decode bundle header of {:?}\n"
+"\tcaused by: {}"
+msgstr ""
+
+#: bundledb/reader.rs:42
+msgid "Decompression failed"
+msgstr ""
+
+#: bundledb/reader.rs:43
+msgid ""
+"Bundle reader error: decompression failed on bundle {:?}\n"
+"\tcaused by: {}"
+msgstr ""
+
+#: bundledb/reader.rs:48 repository/backup_file.rs:49 util/encryption.rs:258
+msgid "Decryption failed"
+msgstr ""
+
+#: bundledb/reader.rs:49
+msgid ""
+"Bundle reader error: decryption failed on bundle {:?}\n"
+"\tcaused by: {}"
+msgstr ""
+
+#: bundledb/reader.rs:52
+msgid "Bundle has an integrity error"
+msgstr ""
+
+#: bundledb/reader.rs:53
+msgid "Bundle reader error: bundle {:?} has an integrity error: {}"
+msgstr ""
+
+#: bundledb/reader.rs:127
+msgid "Load bundle {}"
+msgstr ""
+
+#: bundledb/reader.rs:155
+msgid "Load bundle chunklist {} ({:?})"
+msgstr ""
+
+#: bundledb/reader.rs:200
+msgid "Load bundle data {} ({:?})"
+msgstr ""
+
+#: bundledb/reader.rs:259
+msgid "Chunk list size does not match chunk count"
+msgstr ""
+
+#: bundledb/reader.rs:271
+msgid "Individual chunk sizes do not add up to total size"
+msgstr ""
+
+#: bundledb/reader.rs:279
+msgid "File size does not match size in header, truncated file"
+msgstr ""
+
+#: bundledb/reader.rs:288
+msgid "Encoded data size does not match size in header, truncated bundle"
+msgstr ""
+
+#: bundledb/reader.rs:295
+msgid "Raw data size does not match size in header, truncated bundle"
+msgstr ""
+
+#: bundledb/reader.rs:306
+msgid ""
+"Bundle(\n"
+"\tid: {}\n"
+"\tpath: {:?}\n"
+"\tchunks: {}\n"
+"\tsize: {}, encoded: {}\n"
+"\tcompression: {:?}\n"
+")"
+msgstr ""
+
+#: bundledb/uploader.rs:54
+msgid "Upload queue is full, waiting for slots"
+msgstr ""
+
+#: bundledb/uploader.rs:57
+msgid "Adding to upload queue: {:?}"
+msgstr ""
+
+#: bundledb/uploader.rs:78
+msgid "Uploading {:?} to {:?}"
+msgstr ""
+
+#: bundledb/uploader.rs:85
+msgid "Uploaded {:?} to {:?}"
+msgstr ""
+
+#: bundledb/uploader.rs:92
+msgid "Upload thread failed with error: {}"
+msgstr ""
+
+#: bundledb/writer.rs:17
+msgid "Failed to setup compression"
+msgstr ""
+
+#: bundledb/writer.rs:18
+msgid ""
+"Bundle writer error: failed to setup compression\n"
+"\tcaused by: {}"
+msgstr ""
+
+#: bundledb/writer.rs:22
+msgid "Failed to compress data"
+msgstr ""
+
+#: bundledb/writer.rs:23
+msgid ""
+"Bundle writer error: failed to compress data\n"
+"\tcaused by: {}"
+msgstr ""
+
+#: bundledb/writer.rs:28 repository/backup_file.rs:55
+msgid "Encryption failed"
+msgstr ""
+
+#: bundledb/writer.rs:29
+msgid ""
+"Bundle writer error: failed to encrypt data\n"
+"\tcaused by: {}"
+msgstr ""
+
+#: bundledb/writer.rs:34
+msgid "Failed to encode bundle header to file"
+msgstr ""
+
+#: bundledb/writer.rs:35
+msgid ""
+"Bundle writer error: failed to encode bundle header to file {:?}\n"
+"\tcaused by: {}"
+msgstr ""
+
+#: bundledb/writer.rs:40
+msgid "Failed to write data to file"
+msgstr ""
+
+#: bundledb/writer.rs:41
+msgid ""
+"Bundle writer error: failed to write data to file {:?}\n"
+"\tcaused by: {}"
+msgstr ""
+
+#: chunker.rs:28
+msgid "Unsupported chunker type"
+msgstr ""
+
+#: chunker.rs:35
+msgid "Chunk size must be a number"
+msgstr ""
+
+#: cli/algotest.rs:55
+msgid "Reading input file ..."
+msgstr ""
+
+#: cli/algotest.rs:71
+msgid "Chunking data with {}, avg chunk size {} ..."
+msgstr ""
+
+#: cli/algotest.rs:99
+msgid "- {} chunks, avg size: {} \\302\\261{}"
+msgstr "- {} Chunks, durchschnittliche Größe: {} \\302\\261{}"
+
+#: cli/algotest.rs:107
+msgid "Hashing chunks with {} ..."
+msgstr ""
+
+#: cli/algotest.rs:132
+#, python-format
+msgid "- {} duplicate chunks, {}, {:.1}% saved by internal deduplication"
+msgstr ""
+"- {} doppelte Chunks, {}, {:.1}% durch interne Deduplizierung eingespart"
+
+#: cli/algotest.rs:144
+msgid "Compressing chunks with {} ..."
+msgstr ""
+
+#: cli/algotest.rs:168
+#, python-format
+msgid "- {} bundles, {}, {:.1}% saved"
+msgstr "- {} Pakete, {}, {:1}% gespart"
+
+#: cli/algotest.rs:194
+msgid "Encrypting bundles..."
+msgstr ""
+
+#: cli/algotest.rs:209
+msgid "Decrypting bundles..."
+msgstr ""
+
+#: cli/algotest.rs:225
+msgid "Decompressing bundles with {} ..."
+msgstr ""
+
+#: cli/algotest.rs:247
+msgid "Total storage size: {} / {}, ratio: {:.1}%"
+msgstr ""
+
+#: cli/algotest.rs:253
+msgid "Total processing speed: {}"
+msgstr ""
+
+#: cli/algotest.rs:257
+msgid "Total read speed: {}"
+msgstr ""
+
+#: cli/args.rs:160
+msgid "The specified repository does not exist"
+msgstr ""
+
+#: cli/args.rs:163
+msgid "The specified repository already exists"
+msgstr ""
+
+#: cli/args.rs:179
+msgid "No backup may be given here"
+msgstr ""
+
+#: cli/args.rs:182
+msgid "A backup must be specified"
+msgstr "Ein Backup muss angegeben werden"
+
+#: cli/args.rs:187
+msgid "No subpath may be given here"
+msgstr ""
+
+#: cli/args.rs:190
+msgid "A subpath must be specified"
+msgstr "Ein Unterpfad muss angegeben werden"
+
+#: cli/args.rs:210
+msgid "Must be a number"
+msgstr ""
+
+#: cli/args.rs:223
+msgid "Invalid chunker method/size"
+msgstr ""
+
+#: cli/args.rs:233 cli/args.rs:249 cli/mod.rs:328 cli/mod.rs:344
+msgid "none"
+msgstr ""
+
+#: cli/args.rs:239
+msgid "Invalid compression method/level"
+msgstr ""
+
+#: cli/args.rs:255
+msgid "Invalid hexadecimal"
+msgstr ""
+
+#: cli/args.rs:261 util/encryption.rs:32
+msgid "Invalid key"
+msgstr ""
+
+#: cli/args.rs:274
+msgid "Invalid hash method"
+msgstr ""
+
+#: cli/args.rs:287
+msgid "Invalid bundle id: {}"
+msgstr ""
+
+#: cli/args.rs:295 cli/args.rs:304
+msgid "Path does not exist"
+msgstr ""
+
+#: cli/args.rs:320
+msgid "Print more information"
+msgstr ""
+
+#: cli/args.rs:326
+msgid "Print less information"
+msgstr ""
+
+#: cli/args.rs:330
+msgid "Initialize a new repository"
+msgstr ""
+
+#: cli/args.rs:332 cli/args.rs:521 cli/args.rs:563
+msgid "Set the target bundle size in MiB"
+msgstr ""
+
+#: cli/args.rs:336 cli/args.rs:524 cli/args.rs:567
+msgid "Set the chunker algorithm and target chunk size"
+msgstr ""
+
+#: cli/args.rs:340 cli/args.rs:527 cli/args.rs:571
+msgid "Set the compression method and level"
+msgstr ""
+
+#: cli/args.rs:344 cli/args.rs:575
+msgid "Generate a keypair and enable encryption"
+msgstr ""
+
+#: cli/args.rs:346
+msgid "Set the hash method'"
+msgstr ""
+
+#: cli/args.rs:350
+msgid "Set the path to the mounted remote storage"
+msgstr ""
+
+#: cli/args.rs:353 cli/args.rs:482
+msgid "The path for the new repository"
+msgstr ""
+
+#: cli/args.rs:356
+msgid "Create a new backup"
+msgstr ""
+
+#: cli/args.rs:358
+msgid "Create a full backup without using a reference"
+msgstr ""
+
+#: cli/args.rs:360
+msgid "Base the new backup on this reference"
+msgstr ""
+
+#: cli/args.rs:363
+msgid "Allow to cross filesystem boundaries"
+msgstr ""
+
+#: cli/args.rs:365
+msgid "Exclude this path or file pattern"
+msgstr ""
+
+#: cli/args.rs:367
+msgid "Read the list of excludes from this file"
+msgstr ""
+
+#: cli/args.rs:369
+msgid "Do not load the default excludes file"
+msgstr ""
+
+#: cli/args.rs:371
+msgid "Read the source data from a tar file"
+msgstr ""
+
+#: cli/args.rs:374
+msgid "Source path to backup"
+msgstr ""
+
+#: cli/args.rs:377
+msgid "Backup path, [repository]::backup"
+msgstr ""
+
+#: cli/args.rs:380
+msgid "Restore a backup or subtree"
+msgstr ""
+
+#: cli/args.rs:382
+msgid "Restore in form of a tar file"
+msgstr ""
+
+#: cli/args.rs:384 cli/args.rs:394
+msgid "The backup/subtree path, [repository]::backup[::subtree]"
+msgstr ""
+
+#: cli/args.rs:387
+msgid "Destination path for backup"
+msgstr ""
+
+#: cli/args.rs:390
+msgid "Remove a backup or a subtree"
+msgstr ""
+
+#: cli/args.rs:392
+msgid "Remove multiple backups in a backup folder"
+msgstr ""
+
+#: cli/args.rs:397
+msgid "Remove backups based on age"
+msgstr ""
+
+#: cli/args.rs:399
+msgid "Only consider backups starting with this prefix"
+msgstr ""
+
+#: cli/args.rs:401
+msgid "Keep this number of daily backups"
+msgstr ""
+
+#: cli/args.rs:405
+msgid "Keep this number of weekly backups"
+msgstr ""
+
+#: cli/args.rs:409
+msgid "Keep this number of monthly backups"
+msgstr ""
+
+#: cli/args.rs:413
+msgid "Keep this number of yearly backups"
+msgstr ""
+
+#: cli/args.rs:417
+msgid "Actually run the prune instead of simulating it"
+msgstr ""
+
+#: cli/args.rs:419 cli/args.rs:431 cli/args.rs:465 cli/args.rs:470
+#: cli/args.rs:492 cli/args.rs:497 cli/args.rs:536 cli/args.rs:558
+msgid "Path of the repository"
+msgstr ""
+
+#: cli/args.rs:422
+msgid "Reclaim space by rewriting bundles"
+msgstr ""
+
+#: cli/args.rs:424
+#, python-format
+msgid "Ratio in % of unused space in a bundle to rewrite that bundle"
+msgstr ""
+
+#: cli/args.rs:427
+msgid "Combine small bundles into larger ones"
+msgstr ""
+
+#: cli/args.rs:429
+msgid "Actually run the vacuum instead of simulating it"
+msgstr ""
+
+#: cli/args.rs:434
+msgid "Check the repository, a backup or a backup subtree"
+msgstr ""
+
+#: cli/args.rs:436
+msgid "Check the bundles"
+msgstr ""
+
+#: cli/args.rs:438
+msgid "Check bundle contents (slow)"
+msgstr ""
+
+#: cli/args.rs:442
+msgid "Check the chunk index"
+msgstr ""
+
+#: cli/args.rs:444
+msgid "Try to repair errors"
+msgstr ""
+
+#: cli/args.rs:446 cli/args.rs:452 cli/args.rs:457 cli/args.rs:487
+msgid ""
+"Path of the repository/backup/subtree, [repository][::backup[::subtree]]"
+msgstr ""
+
+#: cli/args.rs:450
+msgid "List backups or backup contents"
+msgstr ""
+
+#: cli/args.rs:455
+msgid "Mount the repository, a backup or a subtree"
+msgstr ""
+
+#: cli/args.rs:460
+msgid "Existing mount point"
+msgstr ""
+
+#: cli/args.rs:463
+msgid "List bundles in a repository"
+msgstr ""
+
+#: cli/args.rs:468
+msgid "Display information on a bundle"
+msgstr ""
+
+#: cli/args.rs:473
+msgid "Id of the bundle"
+msgstr ""
+
+#: cli/args.rs:475
+msgid "Reconstruct a repository from the remote storage"
+msgstr ""
+
+#: cli/args.rs:477
+msgid "Key file needed to read the bundles"
+msgstr ""
+
+#: cli/args.rs:479
+msgid "Remote repository path"
+msgstr ""
+
+#: cli/args.rs:485
+msgid "Display information on a repository, a backup or a subtree"
+msgstr ""
+
+#: cli/args.rs:490
+msgid "Analyze the used and reclaimable space of bundles"
+msgstr ""
+
+#: cli/args.rs:495
+msgid "Find different versions of a file in all backups"
+msgstr ""
+
+#: cli/args.rs:500
+msgid "Path of the file"
+msgstr ""
+
+#: cli/args.rs:502
+msgid "Display differences between two backup versions"
+msgstr ""
+
+#: cli/args.rs:504
+msgid "Old version, [repository]::backup[::subpath]"
+msgstr ""
+
+#: cli/args.rs:507
+msgid "New version, [repository]::backup[::subpath]"
+msgstr ""
+
+#: cli/args.rs:511
+msgid "Create a copy of a backup"
+msgstr ""
+
+#: cli/args.rs:513
+msgid "Existing backup, [repository]::backup"
+msgstr ""
+
+#: cli/args.rs:516
+msgid "Destination backup, [repository]::backup"
+msgstr ""
+
+#: cli/args.rs:519
+msgid "Display or change the configuration"
+msgstr ""
+
+#: cli/args.rs:530
+msgid "The public key to use for encryption"
+msgstr ""
+
+#: cli/args.rs:533 cli/args.rs:577
+msgid "Set the hash method"
+msgstr ""
+
+#: cli/args.rs:539 cli/args.rs:547
+msgid "Generate a new key pair"
+msgstr ""
+
+#: cli/args.rs:541 cli/args.rs:552
+msgid "Derive the key pair from the given password"
+msgstr ""
+
+#: cli/args.rs:543
+msgid "Destination file for the keypair"
+msgstr ""
+
+#: cli/args.rs:545
+msgid "Add a key pair to the repository"
+msgstr ""
+
+#: cli/args.rs:550
+msgid "Set the key pair as default"
+msgstr ""
+
+#: cli/args.rs:555
+msgid "File containing the keypair"
+msgstr ""
+
+#: cli/args.rs:561
+msgid "Test a specific algorithm combination"
+msgstr ""
+
+#: cli/args.rs:581
+msgid "File with test data"
+msgstr ""
+
+#: cli/args.rs:870
+msgid "No subcommand given"
+msgstr ""
+
+#: cli/logger.rs:11
+msgid "failed printing to stderr"
+msgstr ""
+
+#: cli/mod.rs:108
+msgid ""
+"Failed to {}\n"
+"\tcaused by: {}"
+msgstr ""
+
+#: cli/mod.rs:118
+msgid "load repository"
+msgstr ""
+
+#: cli/mod.rs:125
+msgid "A backup with that name does not exist"
+msgstr "Ein Backup mit diesem Namen existiert nicht"
+
+#: cli/mod.rs:130
+msgid "load backup"
+msgstr ""
+
+#: cli/mod.rs:148 cli/mod.rs:833 repository/backup.rs:113
+#: repository/integrity.rs:347
+msgid "Some backups could not be read, ignoring them"
+msgstr ""
+
+#: cli/mod.rs:152 cli/mod.rs:837
+msgid "Failed to load backup files: {}"
+msgstr ""
+
+#: cli/mod.rs:167
+msgid "This backup has been modified"
+msgstr ""
+
+#: cli/mod.rs:170
+msgid "Date: {}"
+msgstr ""
+
+#: cli/mod.rs:173
+msgid "Source: {}:{}"
+msgstr ""
+
+#: cli/mod.rs:174
+msgid "Duration: {}"
+msgstr ""
+
+#: cli/mod.rs:176
+msgid "Entries: {} files, {} dirs"
+msgstr ""
+
+#: cli/mod.rs:181
+msgid "Total backup size: {}"
+msgstr ""
+
+#: cli/mod.rs:185
+msgid "Modified data size: {}"
+msgstr ""
+
+#: cli/mod.rs:190
+#, python-format
+msgid "Deduplicated size: {}, {:.1}% saved"
+msgstr ""
+
+#: cli/mod.rs:196
+#, python-format
+msgid "Compressed size: {} in {} bundles, {:.1}% saved"
+msgstr ""
+
+#: cli/mod.rs:202
+msgid "Chunk count: {}, avg size: {}"
+msgstr ""
+
+#: cli/mod.rs:212
+msgid "{:25}\t{} entries"
+msgstr "{:25}\t{} Elemente"
+
+#: cli/mod.rs:244
+msgid "{:25}\t fifo"
+msgstr "{:25}\t Fifo"
+
+#: cli/mod.rs:249
+msgid "Name: {}"
+msgstr ""
+
+#: cli/mod.rs:250
+msgid "Type: {}"
+msgstr ""
+
+#: cli/mod.rs:251
+msgid "Size: {}"
+msgstr ""
+
+#: cli/mod.rs:252
+msgid "Permissions: {:3o}"
+msgstr ""
+
+#: cli/mod.rs:253
+msgid "User: {}"
+msgstr "Benutzer: {}"
+
+#: cli/mod.rs:254
+msgid "Group: {}"
+msgstr ""
+
+#: cli/mod.rs:256
+msgid "Timestamp: {}"
+msgstr ""
+
+#: cli/mod.rs:260
+msgid "Symlink target: {}"
+msgstr ""
+
+#: cli/mod.rs:262
+msgid "Cumulative size: {}"
+msgstr ""
+
+#: cli/mod.rs:263
+msgid "Cumulative file count: {}"
+msgstr ""
+
+#: cli/mod.rs:264
+msgid "Cumulative directory count: {}"
+msgstr ""
+
+#: cli/mod.rs:266
+msgid "Children:"
+msgstr ""
+
+#: cli/mod.rs:272
+msgid "Extended attributes:"
+msgstr ""
+
+#: cli/mod.rs:288
+msgid "{:40}  {:>32}  {:7} files, {:6} dirs, {:>10}"
+msgstr "{:40}  {:>32}  {:7} Dateien, {:6} Verzeichnisse, {:>10}"
+
+#: cli/mod.rs:299
+msgid "Bundles: {}"
+msgstr "Pakete: {}"
+
+#: cli/mod.rs:300
+msgid "Total size: {}"
+msgstr "Gesamtgröße: {}"
+
+#: cli/mod.rs:301
+msgid "Uncompressed size: {}"
+msgstr "Unkomprimierte Größe: {}"
+
+#: cli/mod.rs:302
+msgid "Compression ratio: {:.1}%"
+msgstr "Kompressionsrate: {:.1}%"
+
+#: cli/mod.rs:303
+msgid "Chunk count: {}"
+msgstr "Chunkanzahl: {}"
+
+#: cli/mod.rs:305
+msgid "Average chunk size: {}"
+msgstr "Durchschnittliche Chunkgröße: {}"
+
+#: cli/mod.rs:310
+#, fuzzy, python-format
+msgid "Index: {}, {:.0}% full"
+msgstr "Index: {}, {:.0}% voll"
+
+#: cli/mod.rs:317
+msgid "Bundle {}"
+msgstr "Paket {}"
+
+#: cli/mod.rs:318
+msgid "  - Mode: {:?}"
+msgstr "  - Berechtigungen: {:?}"
+
+#: cli/mod.rs:319
+msgid "  - Path: {:?}"
+msgstr "  - Pfad: {:?}"
+
+#: cli/mod.rs:321
+msgid "  - Date: {}"
+msgstr "  - Datum: {}"
+
+#: cli/mod.rs:324
+msgid "  - Hash method: {:?}"
+msgstr "  - Fingerabdruckmethode: {:?}"
+
+#: cli/mod.rs:330
+msgid "  - Encryption: {}"
+msgstr "  - Verschlüsselung: {}"
+
+#: cli/mod.rs:331
+msgid "  - Chunks: {}"
+msgstr "  - Chunks: {}"
+
+#: cli/mod.rs:333
+msgid "  - Size: {}"
+msgstr "  - Größe: {}"
+
+#: cli/mod.rs:337
+msgid "  - Data size: {}"
+msgstr "  - Datengröße: {}"
+
+#: cli/mod.rs:347
+msgid "  - Compression: {}, ratio: {:.1}%"
+msgstr "  - Komprimierung: {}, faktor: {:.1}%"
+
+#: cli/mod.rs:355
+msgid "{}: {:8?}, {:5} chunks, {:8}"
+msgstr "{}: {:8?}, {:5} Chunks, {:8}"
+
+#: cli/mod.rs:364
+msgid "Bundle size: {}"
+msgstr "Paketgröße: {}"
+
+#: cli/mod.rs:365
+msgid "Chunker: {}"
+msgstr "Aufteilmethode: {}"
+
+#: cli/mod.rs:367
+msgid "Compression: {}"
+msgstr "Komprimierung: {}"
+
+#: cli/mod.rs:369
+msgid "Compression: none"
+msgstr "Komprimierung: keine"
+
+#: cli/mod.rs:372
+msgid "Encryption: {}"
+msgstr "Verschlüsselung: {}"
+
+#: cli/mod.rs:374
+msgid "Encryption: none"
+msgstr "Verschlüsselung: keine"
+
+#: cli/mod.rs:376
+msgid "Hash method: {}"
+msgstr "Fingerabdruckmethode: {}"
+
+#: cli/mod.rs:393
+msgid "Total bundle size: {}"
+msgstr ""
+
+#: cli/mod.rs:396
+msgid "Space used: {}, {:.1} %"
+msgstr ""
+
+#: cli/mod.rs:400
+msgid "Reclaimable space (depending on vacuum ratio)"
+msgstr ""
+
+#: cli/mod.rs:404
+msgid "  - ratio={:3}: {:>10}, {:4.1} %, rewriting {:>10}"
+msgstr "  - Rate={:3}: {:>10}, {:4.1} %, neu geschrieben werden {:>10}"
+
+#: cli/mod.rs:418
+msgid "Failed to initialize the logger: {}"
+msgstr ""
+
+#: cli/mod.rs:432
+msgid "The remote path of a repository must be absolute."
+msgstr ""
+
+#: cli/mod.rs:447
+msgid "create repository"
+msgstr ""
+
+#: cli/mod.rs:452 cli/mod.rs:1069 cli/mod.rs:1094
+msgid "Created the following key pair"
+msgstr ""
+
+#: cli/mod.rs:453 cli/mod.rs:1070 cli/mod.rs:1099
+msgid "public: {}"
+msgstr ""
+
+#: cli/mod.rs:454 cli/mod.rs:1071 cli/mod.rs:1100
+msgid "secret: {}"
+msgstr ""
+
+#: cli/mod.rs:458
+msgid "add key"
+msgstr ""
+
+#: cli/mod.rs:461 cli/mod.rs:1058 cli/mod.rs:1110
+msgid "save config"
+msgstr ""
+
+#: cli/mod.rs:463 cli/mod.rs:1112
+msgid ""
+"Please store this key pair in a secure location before using the repository"
+msgstr ""
+
+#: cli/mod.rs:483 cli/mod.rs:640
+msgid "A backup with that name already exists"
+msgstr "Ein Backup mit diesem Namen existiert bereits"
+
+#: cli/mod.rs:487
+msgid "Reading from stdin requires --tar"
+msgstr ""
+
+#: cli/mod.rs:503
+msgid "Using backup {} as reference"
+msgstr "Benutze Backup {} als Referenz"
+
+#: cli/mod.rs:505
+msgid "No reference backup found, doing a full scan instead"
+msgstr ""
+
+#: cli/mod.rs:512
+msgid "open default excludes file"
+msgstr ""
+
+#: cli/mod.rs:518
+msgid "read default excludes file"
+msgstr ""
+
+#: cli/mod.rs:526
+msgid "open excludes file"
+msgstr ""
+
+#: cli/mod.rs:532
+msgid "read excludes file"
+msgstr ""
+
+#: cli/mod.rs:557
+msgid "parse exclude patterns"
+msgstr ""
+
+#: cli/mod.rs:572
+msgid "Backup finished"
+msgstr "Backup abgeschlossen"
+
+#: cli/mod.rs:576
+msgid "Some files are missing from the backup"
+msgstr ""
+
+#: cli/mod.rs:580
+msgid "Backup failed: {}"
+msgstr ""
+
+#: cli/mod.rs:586 cli/mod.rs:646 cli/mod.rs:666
+msgid "save backup file"
+msgstr ""
+
+#: cli/mod.rs:603 cli/mod.rs:811 cli/mod.rs:854 cli/mod.rs:884 cli/mod.rs:992
+#: cli/mod.rs:998
+msgid "load subpath inode"
+msgstr ""
+
+#: cli/mod.rs:609
+msgid "load root inode"
+msgstr ""
+
+#: cli/mod.rs:616 cli/mod.rs:622
+msgid "restore backup"
+msgstr ""
+
+#: cli/mod.rs:626
+msgid "Restore finished"
+msgstr ""
+
+#: cli/mod.rs:635
+msgid "Can only run copy on same repository"
+msgstr ""
+
+#: cli/mod.rs:661
+msgid "remove backup subpath"
+msgstr ""
+
+#: cli/mod.rs:669
+msgid "The backup subpath has been deleted, run vacuum to reclaim space"
+msgstr ""
+
+#: cli/mod.rs:673
+msgid "retrieve backups"
+msgstr ""
+
+#: cli/mod.rs:680 cli/mod.rs:693
+msgid "delete backup"
+msgstr ""
+
+#: cli/mod.rs:685
+msgid "Denying to remove multiple backups (use --force):"
+msgstr ""
+
+#: cli/mod.rs:696
+msgid "The backup has been deleted, run vacuum to reclaim space"
+msgstr ""
+
+#: cli/mod.rs:710
+msgid "This would remove all those backups"
+msgstr ""
+
+#: cli/mod.rs:715
+msgid "prune backups"
+msgstr ""
+
+#: cli/mod.rs:719 cli/mod.rs:736
+msgid "Run with --force to actually execute this command"
+msgstr ""
+
+#: cli/mod.rs:740
+msgid "Reclaimed {}"
+msgstr ""
+
+#: cli/mod.rs:757 cli/mod.rs:788
+msgid "check repository"
+msgstr ""
+
+#: cli/mod.rs:763
+msgid "check bundles"
+msgstr ""
+
+#: cli/mod.rs:768
+msgid "check index"
+msgstr ""
+
+#: cli/mod.rs:775
+msgid "check inode"
+msgstr ""
+
+#: cli/mod.rs:781
+msgid "check backup"
+msgstr ""
+
+#: cli/mod.rs:793
+msgid "Integrity verified"
+msgstr ""
+
+#: cli/mod.rs:819
+msgid "load child inode"
+msgstr ""
+
+#: cli/mod.rs:876 cli/mod.rs:889 cli/mod.rs:895 cli/mod.rs:903
+msgid "create fuse filesystem"
+msgstr ""
+
+#: cli/mod.rs:907
+msgid "Mounting the filesystem..."
+msgstr ""
+
+#: cli/mod.rs:909
+msgid "Please unmount the filesystem via 'fusermount -u {}' when done."
+msgstr ""
+
+#: cli/mod.rs:914
+msgid "mount filesystem"
+msgstr ""
+
+#: cli/mod.rs:922
+msgid "analyze repository"
+msgstr ""
+
+#: cli/mod.rs:951
+msgid "import repository"
+msgstr ""
+
+#: cli/mod.rs:954
+msgid "Import finished"
+msgstr ""
+
+#: cli/mod.rs:962
+msgid "find versions"
+msgstr ""
+
+#: cli/mod.rs:971
+msgid "No versions of that file were found."
+msgstr ""
+
+#: cli/mod.rs:983
+msgid "Can only run diff on same repository"
+msgstr ""
+
+#: cli/mod.rs:1003
+msgid "find differences"
+msgstr ""
+
+#: cli/mod.rs:1010
+msgid "add"
+msgstr ""
+
+#: cli/mod.rs:1011
+msgid "mod"
+msgstr ""
+
+#: cli/mod.rs:1018
+msgid "No differences found"
+msgstr ""
+
+#: cli/mod.rs:1037
+msgid ""
+"Changing the chunker makes it impossible to use existing data for "
+"deduplication"
+msgstr ""
+
+#: cli/mod.rs:1052
+msgid ""
+"Changing the hash makes it impossible to use existing data for deduplication"
+msgstr ""
+
+#: cli/mod.rs:1059
+msgid "The configuration has been updated."
+msgstr ""
+
+#: cli/mod.rs:1075
+msgid "save key pair"
+msgstr ""
+
+#: cli/mod.rs:1090
+msgid "load key pair"
+msgstr ""
+
+#: cli/mod.rs:1105
+msgid "add key pair"
+msgstr ""
+
+#: mount.rs:22
+msgid "Error: {:?}"
+msgstr ""
+
+#: mount.rs:34
+msgid "Error: Name is not valid unicode"
+msgstr ""
+
+#: mount.rs:46
+msgid "Error: Inode not found: {}"
+msgstr ""
+
+#: mount.rs:58
+msgid "Error: Child node not found: {} -> {}"
+msgstr ""
+
+#: repository/backup.rs:18
+msgid "Some paths could not be backed up"
+msgstr ""
+
+#: repository/backup.rs:19
+msgid "Backup error: some paths could not be backed up"
+msgstr ""
+
+#: repository/backup.rs:22
+msgid "The root of a backup can not be removed"
+msgstr ""
+
+#: repository/backup.rs:23
+msgid "Backup error: the root of a backup can not be removed"
+msgstr ""
+
+#: repository/backup.rs:169
+msgid "Removing the following backups"
+msgstr ""
+
+#: repository/backup.rs:242
+msgid "Failed to retrieve name of user {}"
+msgstr ""
+
+#: repository/backup.rs:252
+msgid "Failed to retrieve name of group {}"
+msgstr ""
+
+#: repository/backup.rs:293 repository/tarfile.rs:201
+msgid "Failed to backup {:?}"
+msgstr ""
+
+#: repository/backup_file.rs:18
+msgid "Failed to read backup"
+msgstr ""
+
+#: repository/backup_file.rs:19
+msgid ""
+"Backup file error: failed to read backup file {:?}\n"
+"\tcaused by: {}"
+msgstr ""
+
+#: repository/backup_file.rs:23
+msgid "Failed to write backup"
+msgstr ""
+
+#: repository/backup_file.rs:24
+msgid ""
+"Backup file error: failed to write backup file {:?}\n"
+"\tcaused by: {}"
+msgstr ""
+
+#: repository/backup_file.rs:29
+msgid "Failed to decode backup"
+msgstr ""
+
+#: repository/backup_file.rs:30
+msgid ""
+"Backup file error: failed to decode backup of {:?}\n"
+"\tcaused by: {}"
+msgstr ""
+
+#: repository/backup_file.rs:35
+msgid "Failed to encode backup"
+msgstr ""
+
+#: repository/backup_file.rs:36
+msgid ""
+"Backup file error: failed to encode backup of {:?}\n"
+"\tcaused by: {}"
+msgstr ""
+
+#: repository/backup_file.rs:40
+msgid "Backup file error: wrong header on backup {:?}"
+msgstr ""
+
+#: repository/backup_file.rs:44
+msgid "Backup file error: unsupported version on backup {:?}: {}"
+msgstr ""
+
+#: repository/backup_file.rs:50
+msgid ""
+"Backup file error: decryption failed on backup {:?}\n"
+"\tcaused by: {}"
+msgstr ""
+
+#: repository/backup_file.rs:56
+msgid ""
+"Backup file error: encryption failed\n"
+"\tcaused by: {}"
+msgstr ""
+
+#: repository/backup_file.rs:59
+msgid "Some backups could not be loaded"
+msgstr ""
+
+#: repository/backup_file.rs:60
+msgid "Backup file error: some backups could not be loaded: {:?}"
+msgstr ""
+
+#: repository/backup_file.rs:183
+msgid "Backup root folder does not exist"
+msgstr ""
+
+#: repository/bundle_map.rs:19
+msgid "Failed to read/write bundle map"
+msgstr ""
+
+#: repository/bundle_map.rs:24
+msgid "Failed to decode bundle map"
+msgstr ""
+
+#: repository/bundle_map.rs:29
+msgid "Failed to encode bundle map"
+msgstr ""
+
+#: repository/bundle_map.rs:36
+msgid "Wrong version: {}"
+msgstr "Falsche Version: {}"
+
+#: repository/config.rs:19
+msgid "Failed to parse config"
+msgstr ""
+
+#: repository/config.rs:20
+msgid "Failed to parse config: {}"
+msgstr ""
+
+#: repository/config.rs:25 util/encryption.rs:51 util/lock.rs:24
+msgid "Yaml format error"
+msgstr "Yaml Formatfehler"
+
+#: repository/config.rs:26 util/encryption.rs:52
+msgid "Yaml format error: {}"
+msgstr "Yaml Formatfehler: {}"
+
+#: repository/config.rs:82 repository/config.rs:95
+msgid "Invalid codec"
+msgstr ""
+
+#: repository/config.rs:189
+msgid "Invalid public key"
+msgstr ""
+
+#: repository/error.rs:18
+msgid "Remote storage not found"
+msgstr ""
+
+#: repository/error.rs:19
+msgid ""
+"Repository error: The remote storage has not been found, may be it needs to "
+"be mounted?"
+msgstr ""
+
+#: repository/error.rs:24
+msgid "Index error"
+msgstr ""
+
+#: repository/error.rs:25
+msgid ""
+"Repository error: index error\n"
+"\tcaused by: {}"
+msgstr ""
+
+#: repository/error.rs:30
+msgid "Bundle error"
+msgstr ""
+
+#: repository/error.rs:31
+msgid ""
+"Repository error: bundle db error\n"
+"\tcaused by: {}"
+msgstr ""
+
+#: repository/error.rs:36
+msgid "Bundle write error"
+msgstr ""
+
+#: repository/error.rs:37
+msgid ""
+"Repository error: failed to write to new bundle\n"
+"\tcaused by: {}"
+msgstr ""
+
+#: repository/error.rs:42
+msgid "Backup file error"
+msgstr ""
+
+#: repository/error.rs:43
+msgid ""
+"Repository error: backup file error\n"
+"\tcaused by: {}"
+msgstr ""
+
+#: repository/error.rs:48
+msgid "Chunker error"
+msgstr ""
+
+#: repository/error.rs:49
+msgid ""
+"Repository error: failed to chunk data\n"
+"\tcaused by: {}"
+msgstr ""
+
+#: repository/error.rs:54
+msgid "Configuration error"
+msgstr ""
+
+#: repository/error.rs:55
+msgid ""
+"Repository error: configuration error\n"
+"\tcaused by: {}"
+msgstr ""
+
+#: repository/error.rs:60
+msgid "Inode error"
+msgstr ""
+
+#: repository/error.rs:61
+msgid ""
+"Repository error: inode error\n"
+"\tcaused by: {}"
+msgstr ""
+
+#: repository/error.rs:66
+msgid "Failed to load keys"
+msgstr ""
+
+#: repository/error.rs:67
+msgid ""
+"Repository error: failed to load keys\n"
+"\tcaused by: {}"
+msgstr ""
+
+#: repository/error.rs:72
+msgid "Bundle map error"
+msgstr ""
+
+#: repository/error.rs:73
+msgid ""
+"Repository error: bundle map error\n"
+"\tcaused by: {}"
+msgstr ""
+
+#: repository/error.rs:78 repository/metadata.rs:46
+msgid "Integrity error"
+msgstr ""
+
+#: repository/error.rs:79
+msgid ""
+"Repository error: integrity error\n"
+"\tcaused by: {}"
+msgstr ""
+
+#: repository/error.rs:82
+msgid "Dirty repository"
+msgstr ""
+
+#: repository/error.rs:83
+msgid "The repository is dirty, please run a check"
+msgstr ""
+
+#: repository/error.rs:88
+msgid "Failed to create a backup"
+msgstr ""
+
+#: repository/error.rs:89
+msgid ""
+"Repository error: failed to create backup\n"
+"\tcaused by: {}"
+msgstr ""
+
+#: repository/error.rs:94
+msgid "Failed to obtain lock"
+msgstr ""
+
+#: repository/error.rs:95
+msgid ""
+"Repository error: failed to obtain lock\n"
+"\tcaused by: {}"
+msgstr ""
+
+#: repository/error.rs:101 util/encryption.rs:45 util/lock.rs:18
+msgid "IO error"
+msgstr ""
+
+#: repository/error.rs:102 util/encryption.rs:46
+msgid "IO error: {}"
+msgstr ""
+
+#: repository/error.rs:105
+msgid "No such file in backup"
+msgstr ""
+
+#: repository/error.rs:106
+msgid "The backup does not contain the file {:?}"
+msgstr ""
+
+#: repository/integrity.rs:15
+msgid "Missing chunk"
+msgstr ""
+
+#: repository/integrity.rs:16
+msgid "Missing chunk: {}"
+msgstr ""
+
+#: repository/integrity.rs:19 repository/integrity.rs:23
+msgid "Missing bundle"
+msgstr ""
+
+#: repository/integrity.rs:20 repository/integrity.rs:24
+msgid "Missing bundle: {}"
+msgstr ""
+
+#: repository/integrity.rs:27
+msgid "No such chunk"
+msgstr ""
+
+#: repository/integrity.rs:28
+msgid "Bundle {} does not contain the chunk {}"
+msgstr ""
+
+#: repository/integrity.rs:31
+msgid "Remote bundles missing from map"
+msgstr ""
+
+#: repository/integrity.rs:34
+msgid "Map contains duplicates"
+msgstr ""
+
+#: repository/integrity.rs:38
+msgid "Broken inode"
+msgstr ""
+
+#: repository/integrity.rs:39
+msgid ""
+"Broken inode: {:?}\n"
+"\tcaused by: {}"
+msgstr ""
+
+#: repository/integrity.rs:43
+msgid "Missing inode data"
+msgstr ""
+
+#: repository/integrity.rs:44
+msgid ""
+"Missing inode data in: {:?}\n"
+"\tcaused by: {}"
+msgstr ""
+
+#: repository/integrity.rs:52
+msgid "checking index: "
+msgstr ""
+
+#: repository/integrity.rs:61 repository/integrity.rs:66
+#: repository/integrity.rs:75
+msgid "checking index: done."
+msgstr ""
+
+#: repository/integrity.rs:139 repository/integrity.rs:275
+msgid ""
+"Problem detected: data of {:?} is corrupt\n"
+"\tcaused by: {}"
+msgstr ""
+
+#: repository/integrity.rs:143 repository/integrity.rs:279
+msgid "Removing inode data"
+msgstr ""
+
+#: repository/integrity.rs:164 repository/integrity.rs:301
+msgid ""
+"Problem detected: inode {:?} is corrupt\n"
+"\tcaused by: {}"
+msgstr ""
+
+#: repository/integrity.rs:168 repository/integrity.rs:305
+msgid "Removing broken inode from backup"
+msgstr ""
+
+#: repository/integrity.rs:191
+msgid "The backup {} was corrupted and needed to be modified."
+msgstr ""
+
+#: repository/integrity.rs:205
+msgid "The original backup was renamed to {:?}"
+msgstr ""
+
+#: repository/integrity.rs:222
+msgid "Checking backup..."
+msgstr ""
+
+#: repository/integrity.rs:241 repository/integrity.rs:373
+msgid ""
+"The root of the backup {} has been corrupted\n"
+"\tcaused by: {}"
+msgstr ""
+
+#: repository/integrity.rs:267
+msgid "Checking inode..."
+msgstr ""
+
+#: repository/integrity.rs:341
+msgid "Checking backups..."
+msgstr ""
+
+#: repository/integrity.rs:353
+msgid "checking backups"
+msgstr ""
+
+#: repository/integrity.rs:388
+msgid "Checking repository integrity..."
+msgstr ""
+
+#: repository/integrity.rs:394
+msgid "Problem detected: bundle map contains unknown bundle {}"
+msgstr ""
+
+#: repository/integrity.rs:405
+msgid "Problem detected: bundle map does not contain all remote bundles"
+msgstr ""
+
+#: repository/integrity.rs:413
+msgid "Problem detected: bundle map contains bundles multiple times"
+msgstr ""
+
+#: repository/integrity.rs:427
+msgid "Rebuilding bundle map from bundles"
+msgstr ""
+
+#: repository/integrity.rs:446 repository/integrity.rs:450
+msgid "Rebuilding index from bundles"
+msgstr ""
+
+#: repository/integrity.rs:470
+msgid "Checking index integrity..."
+msgstr ""
+
+#: repository/integrity.rs:474
+msgid ""
+"Problem detected: index was corrupted\n"
+"\tcaused by: {}"
+msgstr ""
+
+#: repository/integrity.rs:482
+msgid "Checking index entries..."
+msgstr ""
+
+#: repository/integrity.rs:486
+msgid ""
+"Problem detected: index entries were inconsistent\n"
+"\tcaused by: {}"
+msgstr ""
+
+#: repository/integrity.rs:502
+msgid "Checking bundle integrity..."
+msgstr ""
+
+#: repository/integrity.rs:505
+msgid ""
+"Some bundles have been rewritten, please remove the broken bundles manually."
+msgstr ""
+
+#: repository/metadata.rs:22
+msgid "Unsupported file type"
+msgstr ""
+
+#: repository/metadata.rs:23
+msgid "Inode error: file {:?} has an unsupported type"
+msgstr ""
+
+#: repository/metadata.rs:27
+msgid "Failed to obtain metadata for file"
+msgstr ""
+
+#: repository/metadata.rs:28
+msgid ""
+"Inode error: failed to obtain metadata for file {:?}\n"
+"\tcaused by: {}"
+msgstr ""
+
+#: repository/metadata.rs:32
+msgid "Failed to obtain xattr for file"
+msgstr ""
+
+#: repository/metadata.rs:33
+msgid ""
+"Inode error: failed to obtain xattr for file {:?}\n"
+"\tcaused by: {}"
+msgstr ""
+
+#: repository/metadata.rs:37
+msgid "Failed to obtain link target for file"
+msgstr ""
+
+#: repository/metadata.rs:38
+msgid ""
+"Inode error: failed to obtain link target for file {:?}\n"
+"\tcaused by: {}"
+msgstr ""
+
+#: repository/metadata.rs:42
+msgid "Failed to create entity"
+msgstr ""
+
+#: repository/metadata.rs:43
+msgid ""
+"Inode error: failed to create entity {:?}\n"
+"\tcaused by: {}"
+msgstr ""
+
+#: repository/metadata.rs:47
+msgid "Inode error: inode integrity error: {}"
+msgstr ""
+
+#: repository/metadata.rs:52
+msgid "Failed to decode metadata"
+msgstr ""
+
+#: repository/metadata.rs:53
+msgid ""
+"Inode error: failed to decode metadata\n"
+"\tcaused by: {}"
+msgstr ""
+
+#: repository/metadata.rs:58
+msgid "Failed to encode metadata"
+msgstr ""
+
+#: repository/metadata.rs:59
+msgid ""
+"Inode error: failed to encode metadata\n"
+"\tcaused by: {}"
+msgstr ""
+
+#: repository/metadata.rs:85
+msgid "file"
+msgstr ""
+
+#: repository/metadata.rs:86
+msgid "directory"
+msgstr ""
+
+#: repository/metadata.rs:87
+msgid "symlink"
+msgstr ""
+
+#: repository/metadata.rs:88
+msgid "block device"
+msgstr ""
+
+#: repository/metadata.rs:89
+msgid "char device"
+msgstr ""
+
+#: repository/metadata.rs:90
+msgid "named pipe"
+msgstr ""
+
+#: repository/metadata.rs:252
+msgid "Symlink without target"
+msgstr ""
+
+#: repository/metadata.rs:258 repository/metadata.rs:271
+msgid "Name contains nulls"
+msgstr ""
+
+#: repository/metadata.rs:282
+msgid "Device without id"
+msgstr ""
+
+#: repository/metadata.rs:294
+msgid "Failed to set file time on {:?}: {}"
+msgstr ""
+
+#: repository/metadata.rs:300
+msgid "Failed to set xattr {} on {:?}: {}"
+msgstr ""
+
+#: repository/metadata.rs:304
+msgid "Not setting xattr on {:?}"
+msgstr ""
+
+#: repository/metadata.rs:309
+msgid "Failed to set permissions {:o} on {:?}: {}"
+msgstr ""
+
+#: repository/metadata.rs:317
+msgid "Failed to set user {} and group {} on {:?}: {}"
+msgstr ""
+
+#: repository/mod.rs:142
+msgid ""
+"Failed to load local index:\n"
+"\tcaused by: {}"
+msgstr ""
+
+#: repository/mod.rs:156
+msgid ""
+"Failed to load local bundle map:\n"
+"\tcaused by: {}"
+msgstr ""
+
+#: repository/mod.rs:181
+msgid "Removig {} old bundles from index"
+msgstr ""
+
+#: repository/mod.rs:189
+msgid "Adding {} new bundles to index"
+msgstr ""
+
+#: repository/mod.rs:192
+msgid "adding bundles to index"
+msgstr ""
+
+#: repository/mod.rs:235
+msgid "Taking configuration from the last backup '{}'"
+msgstr ""
+
+#: repository/mod.rs:240
+msgid ""
+"No backup found in the repository to take configuration from, please set the "
+"configuration manually."
+msgstr ""
+
+#: repository/mod.rs:271
+msgid "The secret key for that public key is not stored in the repository."
+msgstr ""
+
+#: repository/mod.rs:346
+msgid "Adding new bundle to index: {}"
+msgstr ""
+
+#: repository/mod.rs:380
+msgid "Removing bundle from index: {}"
+msgstr ""
+
+#: repository/mod.rs:409
+msgid "Failed to flush repository: {}"
+msgstr ""
+
+#: repository/tarfile.rs:246
+msgid "Tar file contains multiple roots, adding dummy folder"
+msgstr ""
+
+#: repository/vacuum.rs:23
+msgid "Locking repository"
+msgstr ""
+
+#: repository/vacuum.rs:27
+msgid "Analyzing chunk usage"
+msgstr ""
+
+#: repository/vacuum.rs:36
+msgid "Usage: {} of {}, {:.1}%"
+msgstr "Belegung: {} von {}, {:.1}%"
+
+#: repository/vacuum.rs:74
+msgid "Reclaiming about {} by rewriting {} bundles ({})"
+msgstr ""
+
+#: repository/vacuum.rs:84
+msgid "rewriting bundles"
+msgstr ""
+
+#: repository/vacuum.rs:103
+msgid "Checking index"
+msgstr ""
+
+#: repository/vacuum.rs:109
+msgid ""
+"Removed bundle is still referenced in index: hash:{}, bundle:{}, chunk:{}"
+msgstr ""
+
+#: repository/vacuum.rs:116
+msgid "Deleting {} bundles"
+msgstr ""
+
+#: translation.rs:109 translation.rs:123
+msgid "Invalid translation data"
+msgstr ""
+
+#: translation.rs:186 translation.rs:191
+msgid "invalid format"
+msgstr ""
+
+#: util/chunk.rs:64
+msgid "Reading truncated chunk list"
+msgstr ""
+
+#: util/chunk.rs:132
+msgid "Invalid chunk list length"
+msgstr ""
+
+#: util/cli.rs:76
+msgid "done."
+msgstr ""
+
+#: util/encryption.rs:24
+msgid "Failed to initialize sodiumoxide"
+msgstr ""
+
+#: util/encryption.rs:35
+msgid "Missing key"
+msgstr ""
+
+#: util/encryption.rs:36
+msgid "Missing key: {}"
+msgstr ""
+
+#: util/encryption.rs:71
+msgid "Unsupported encryption method"
+msgstr ""
+
+#: util/encryption.rs:288
+msgid "Libsodium failed"
+msgstr ""
+
+#: util/hash.rs:98
+msgid "Invalid key length"
+msgstr ""
+
+#: util/hash.rs:144
+msgid "Unsupported hash method"
+msgstr ""
+
+#: util/lock.rs:19
+msgid ""
+"Lock error: IO error\n"
+"\tcaused by: {}"
+msgstr ""
+
+#: util/lock.rs:25
+msgid ""
+"Lock error: yaml format error\n"
+"\tcaused by: {}"
+msgstr ""
+
+#: util/lock.rs:28
+msgid "Invalid lock state"
+msgstr ""
+
+#: util/lock.rs:29
+msgid "Lock error: invalid lock state: {}"
+msgstr ""
+
+#: util/lock.rs:32
+msgid "Locked"
+msgstr ""
+
+#: util/lock.rs:33
+msgid "Lock error: locked"
+msgstr ""
+
+#: util/lock.rs:125
+msgid "multiple exclusive locks"
+msgstr ""
+
+#: util/lock.rs:131
+msgid "exclusive lock and shared locks"
+msgstr ""

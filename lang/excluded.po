@@ -1582,3 +1582,11 @@ msgstr ""
 msgid "secret"
 msgstr ""
 
+#: bundledb/db.rs:43 bundledb/reader.rs:17 bundledb/writer.rs:39
+msgid "a Path, err: io::Error) -> (err, path.to_path_buf())"
+msgstr ""
+
+#: bundledb/writer.rs:33 repository/backup_file.rs:34
+msgid "a Path, err: msgpack::EncodeError) -> (err, path.to_path_buf())"
+msgstr ""
+
