@@ -1,0 +1,1584 @@
+#: cli/args.rs:358 cli/args.rs:360 cli/args.rs:362 cli/args.rs:364
+#: cli/mod.rs:96 util/hex.rs:17
+msgid "0"
+msgstr ""
+
+#: cli/args.rs:441 cli/args.rs:718 cli/args.rs:733 cli/args.rs:744
+msgid "FILE"
+msgstr ""
+
+#: cli/args.rs:478 cli/args.rs:539 cli/args.rs:556 cli/args.rs:592
+#: cli/args.rs:601 cli/args.rs:646 cli/args.rs:672 cli/args.rs:681
+#: cli/args.rs:696 cli/args.rs:724
+msgid "REPO"
+msgstr ""
+
+#: cli/args.rs:496 cli/args.rs:518 cli/args.rs:529
+msgid "BACKUP"
+msgstr ""
+
+#: cli/args.rs:510 cli/args.rs:622
+msgid "SRC"
+msgstr ""
+
+#: cli/args.rs:512
+msgid "no_default_excludes"
+msgstr ""
+
+#: cli/args.rs:513 cli/args.rs:524
+msgid "tar"
+msgstr ""
+
+#: cli/args.rs:523 cli/args.rs:625
+msgid "DST"
+msgstr ""
+
+#: cli/args.rs:534 cli/args.rs:547 cli/args.rs:563
+msgid "force"
+msgstr ""
+
+#: cli/args.rs:546
+msgid "prefix"
+msgstr ""
+
+#: cli/args.rs:570 cli/args.rs:583 cli/args.rs:613 cli/args.rs:636
+#: cli/args.rs:653
+msgid "PATH"
+msgstr ""
+
+#: cli/args.rs:576
+msgid "bundle_data"
+msgstr ""
+
+#: cli/args.rs:577 repository/layout.rs:30
+msgid "index"
+msgstr ""
+
+#: cli/args.rs:578
+msgid "repair"
+msgstr ""
+
+#: cli/args.rs:608
+msgid "BUNDLE"
+msgstr ""
+
+#: cli/args.rs:641
+msgid "MOUNTPOINT"
+msgstr ""
+
+#: cli/args.rs:658
+msgid "OLD"
+msgstr ""
+
+#: cli/args.rs:660
+msgid "NEW"
+msgstr ""
+
+#: cli/args.rs:688
+msgid "REMOTE"
+msgstr ""
+
+#: cli/args.rs:689 repository/config.rs:119
+msgid "key"
+msgstr ""
+
+#: cli/args.rs:709 repository/config.rs:144
+msgid "encryption"
+msgstr ""
+
+#: cli/args.rs:719 cli/args.rs:732
+msgid "password"
+msgstr ""
+
+#: cli/args.rs:731
+msgid "set_default"
+msgstr ""
+
+#: cli/logger.rs:28 cli/logger.rs:32 cli/logger.rs:38 cli/logger.rs:41
+#: cli/logger.rs:43
+msgid "{}: {}"
+msgstr ""
+
+#: cli/mod.rs:92 repository/config.rs:166
+msgid "fastcdc/16"
+msgstr ""
+
+#: cli/mod.rs:93 repository/config.rs:138 util/hash.rs:142 util/hash.rs:151
+#: util/hash.rs:167 util/hash.rs:174
+msgid "blake2"
+msgstr ""
+
+#: cli/mod.rs:94 repository/config.rs:163 util/compression.rs:572
+#: util/compression.rs:627
+msgid "brotli/3"
+msgstr ""
+
+#: cli/mod.rs:95
+msgid "25"
+msgstr ""
+
+#: cli/mod.rs:99
+msgid ".zvault"
+msgstr ""
+
+#: cli/mod.rs:213
+msgid "{}/"
+msgstr ""
+
+#: cli/mod.rs:219
+msgid "{:25}\t{:>10}\t{}"
+msgstr ""
+
+#: cli/mod.rs:227
+msgid "{:25}\t -> {}"
+msgstr ""
+
+#: cli/mod.rs:230 cli/mod.rs:543
+msgid "?"
+msgstr ""
+
+#: cli/mod.rs:237
+msgid "{:25}\t{:12}\t{}:{}"
+msgstr ""
+
+#: cli/mod.rs:268 repository/backup.rs:172
+msgid "  - {}"
+msgstr ""
+
+#: cli/mod.rs:275
+msgid "  - {} = '{}'"
+msgstr ""
+
+#: cli/mod.rs:277
+msgid "  - {} = 0x{}"
+msgstr ""
+
+#: cli/mod.rs:539
+msgid "#"
+msgstr ""
+
+#: cli/mod.rs:543 mount.rs:131
+msgid "."
+msgstr ""
+
+#: cli/mod.rs:544
+msgid ".*"
+msgstr ""
+
+#: cli/mod.rs:544
+msgid "\\*\\*"
+msgstr ""
+
+#: cli/mod.rs:545
+msgid "[^/]*"
+msgstr ""
+
+#: cli/mod.rs:545
+msgid "\\*"
+msgstr ""
+
+#: cli/mod.rs:547
+msgid "^{}($|/)"
+msgstr ""
+
+#: cli/mod.rs:549
+msgid "/{}($|/)"
+msgstr ""
+
+#: cli/mod.rs:687
+msgid "  - {}/{}"
+msgstr ""
+
+#: cli/mod.rs:822
+msgid "- {}"
+msgstr ""
+
+#: cli/mod.rs:966
+msgid "{}::{}"
+msgstr ""
+
+#: cli/mod.rs:1008
+msgid "{} {:?}"
+msgstr ""
+
+#: mount.rs:134 mount.rs:136
+msgid ".."
+msgstr ""
+
+#: mount.rs:151 repository/basic_io.rs:9
+msgid "a> {"
+msgstr ""
+
+#: mount.rs:153 mount.rs:167 mount.rs:199 mount.rs:209
+msgid "a mut Repository,"
+msgstr ""
+
+#: mount.rs:157
+msgid "a> FuseFilesystem<"
+msgstr ""
+
+#: mount.rs:158
+msgid "a mut Repository) -> Result<Self, RepositoryError> {"
+msgstr ""
+
+#: mount.rs:267 mount.rs:783
+msgid "default_permissions"
+msgstr ""
+
+#: mount.rs:268
+msgid "kernel_cache"
+msgstr ""
+
+#: mount.rs:269
+msgid "auto_cache"
+msgstr ""
+
+#: mount.rs:270
+msgid "readonly"
+msgstr ""
+
+#: mount.rs:357
+msgid "a> fuse::Filesystem for FuseFilesystem<"
+msgstr ""
+
+#: mount.rs:376
+msgid "t need to"
+msgstr ""
+
+#: mount.rs:380
+msgid "forget {:?}"
+msgstr ""
+
+#: repository/backup_file.rs:9
+msgid "zvault\003"
+msgstr ""
+
+#: repository/basic_io.rs:13
+msgid "a mut Repository"
+msgstr ""
+
+#: repository/basic_io.rs:16
+msgid "a> ChunkReader<"
+msgstr ""
+
+#: repository/basic_io.rs:17
+msgid "a mut Repository, chunks: ChunkList) -> Self {"
+msgstr ""
+
+#: repository/basic_io.rs:27
+msgid "a> Read for ChunkReader<"
+msgstr ""
+
+#: repository/bundle_map.rs:9
+msgid "zbunmap"
+msgstr ""
+
+#: repository/config.rs:58 repository/config.rs:118
+msgid "method"
+msgstr ""
+
+#: repository/config.rs:59
+msgid "avg_size"
+msgstr ""
+
+#: repository/config.rs:60
+msgid "seed"
+msgstr ""
+
+#: repository/config.rs:112 util/encryption.rs:70 util/encryption.rs:77
+msgid "sodium"
+msgstr ""
+
+#: repository/config.rs:134 util/compression.rs:582 util/compression.rs:637
+msgid "brotli/5"
+msgstr ""
+
+#: repository/integrity.rs:195
+msgid "backup.broken"
+msgstr ""
+
+#: repository/integrity.rs:198
+msgid "backup.{}.broken"
+msgstr ""
+
+#: repository/integrity.rs:355
+msgid "{}::"
+msgstr ""
+
+#: repository/layout.rs:25
+msgid "excludes"
+msgstr ""
+
+#: repository/layout.rs:35
+msgid "keys"
+msgstr ""
+
+#: repository/layout.rs:40
+msgid "bundles.map"
+msgstr ""
+
+#: repository/layout.rs:45
+msgid "locks"
+msgstr ""
+
+#: repository/layout.rs:50
+msgid "remote/backups"
+msgstr ""
+
+#: repository/layout.rs:55
+msgid "{}.backup"
+msgstr ""
+
+#: repository/layout.rs:71
+msgid "remote/README.md"
+msgstr ""
+
+#: repository/layout.rs:76
+msgid "remote/locks"
+msgstr ""
+
+#: repository/layout.rs:81
+msgid "remote/bundles"
+msgstr ""
+
+#: repository/layout.rs:86
+msgid "bundles/cached"
+msgstr ""
+
+#: repository/layout.rs:95 repository/layout.rs:129
+msgid ".bundle"
+msgstr ""
+
+#: repository/layout.rs:122
+msgid "bundles/temp"
+msgstr ""
+
+#: repository/layout.rs:135
+msgid "bundles/local.cache"
+msgstr ""
+
+#: repository/layout.rs:140
+msgid "bundles/remote.cache"
+msgstr ""
+
+#: repository/layout.rs:145
+msgid "dirty"
+msgstr ""
+
+#: repository/metadata.rs:172
+msgid "_"
+msgstr ""
+
+#: repository/mod.rs:35
+msgid "../../docs/repository_readme.md"
+msgstr ""
+
+#: repository/mod.rs:36
+msgid "../../docs/excludes.default"
+msgstr ""
+
+#: repository/mod.rs:38
+msgid "zvault\002"
+msgstr ""
+
+#: repository/tarfile.rs:34
+msgid "{} {}={}\n"
+msgstr ""
+
+#: repository/tarfile.rs:78
+msgid "static str = \"SCHILY.xattr.\";"
+msgstr ""
+
+#: repository/tarfile.rs:250
+msgid "archive"
+msgstr ""
+
+#: repository/tarfile.rs:333
+msgid "{}{}"
+msgstr ""
+
+#: translation.rs:10
+msgid "static, str>;"
+msgstr ""
+
+#: translation.rs:12
+msgid "static [u8], reorder: bool) -> u32 {"
+msgstr ""
+
+#: translation.rs:20
+msgid "static [u8]) -> Result<Vec<TransItem>, ()> {"
+msgstr ""
+
+#: translation.rs:75
+msgid "o"
+msgstr ""
+
+#: translation.rs:76
+msgid "t"
+msgstr ""
+
+#: translation.rs:94
+msgid "static[u8]) -> Self {"
+msgstr ""
+
+#: util/chunk.rs:128 util/hash.rs:94
+msgid "a>,"
+msgstr ""
+
+#: util/cli.rs:10
+msgid "{:.0} Byte"
+msgstr ""
+
+#: util/cli.rs:15
+msgid "{:.1} KiB"
+msgstr ""
+
+#: util/cli.rs:20
+msgid "{:.1} MiB"
+msgstr ""
+
+#: util/cli.rs:25
+msgid "{:.1} GiB"
+msgstr ""
+
+#: util/cli.rs:27
+msgid "{:.1} TiB"
+msgstr ""
+
+#: util/cli.rs:32
+msgid "/s"
+msgstr ""
+
+#: util/cli.rs:41
+msgid "{}:{:02}:{:04.1}"
+msgstr ""
+
+#: util/cli.rs:55
+msgid "{}: "
+msgstr ""
+
+#: util/cli.rs:96
+msgid "0 Byte"
+msgstr ""
+
+#: util/cli.rs:97
+msgid "1 Byte"
+msgstr ""
+
+#: util/cli.rs:98
+msgid "15 Byte"
+msgstr ""
+
+#: util/cli.rs:99
+msgid "456 Byte"
+msgstr ""
+
+#: util/cli.rs:100
+msgid "0.7 KiB"
+msgstr ""
+
+#: util/cli.rs:101
+msgid "237.0 KiB"
+msgstr ""
+
+#: util/cli.rs:102
+msgid "442.5 KiB"
+msgstr ""
+
+#: util/cli.rs:103
+msgid "0.7 MiB"
+msgstr ""
+
+#: util/cli.rs:104
+msgid "12.2 MiB"
+msgstr ""
+
+#: util/cli.rs:105
+msgid "222.0 MiB"
+msgstr ""
+
+#: util/cli.rs:106
+msgid "5.1 GiB"
+msgstr ""
+
+#: util/cli.rs:107
+msgid "291.1 GiB"
+msgstr ""
+
+#: util/cli.rs:108
+msgid "3.9 TiB"
+msgstr ""
+
+#: util/cli.rs:113
+msgid "0 Byte/s"
+msgstr ""
+
+#: util/cli.rs:114
+msgid "100 Byte/s"
+msgstr ""
+
+#: util/cli.rs:115
+msgid "1.0 KiB/s"
+msgstr ""
+
+#: util/cli.rs:116
+msgid "10 Byte/s"
+msgstr ""
+
+#: util/cli.rs:117
+msgid "237.0 KiB/s"
+msgstr ""
+
+#: util/cli.rs:118
+msgid "0.7 MiB/s"
+msgstr ""
+
+#: util/cli.rs:119
+msgid "222.0 MiB/s"
+msgstr ""
+
+#: util/cli.rs:120
+msgid "291.1 GiB/s"
+msgstr ""
+
+#: util/cli.rs:121
+msgid "3.9 TiB/s"
+msgstr ""
+
+#: util/cli.rs:126
+msgid "0:00:00.0"
+msgstr ""
+
+#: util/cli.rs:127
+msgid "0:00:00.1"
+msgstr ""
+
+#: util/cli.rs:128
+msgid "0:00:01.0"
+msgstr ""
+
+#: util/cli.rs:129
+msgid "0:01:00.0"
+msgstr ""
+
+#: util/cli.rs:130
+msgid "1:00:00.0"
+msgstr ""
+
+#: util/cli.rs:131
+msgid "2:02:02.2"
+msgstr ""
+
+#: util/compression.rs:14
+msgid "Unsupported codec"
+msgstr ""
+
+#: util/compression.rs:15
+msgid "Unsupported codec: {}"
+msgstr ""
+
+#: util/compression.rs:18
+msgid "Failed to initialize codec"
+msgstr ""
+
+#: util/compression.rs:21
+msgid "Failed to set codec options"
+msgstr ""
+
+#: util/compression.rs:24
+msgid "Failed to create stream"
+msgstr ""
+
+#: util/compression.rs:27 util/encryption.rs:39
+msgid "Operation failed"
+msgstr ""
+
+#: util/compression.rs:28 util/encryption.rs:40
+msgid "Operation failed: {}"
+msgstr ""
+
+#: util/compression.rs:33
+msgid "Failed to write to output"
+msgstr ""
+
+#: util/compression.rs:89 util/compression.rs:103 util/compression.rs:302
+#: util/compression.rs:304 util/compression.rs:306 util/compression.rs:357
+#: util/compression.rs:400
+msgid "deflate"
+msgstr ""
+
+#: util/compression.rs:89
+msgid "gzip"
+msgstr ""
+
+#: util/compression.rs:89
+msgid "zlib"
+msgstr ""
+
+#: util/compression.rs:90 util/compression.rs:104 util/compression.rs:308
+#: util/compression.rs:362 util/compression.rs:405
+msgid "brotli"
+msgstr ""
+
+#: util/compression.rs:91 util/compression.rs:105 util/compression.rs:310
+#: util/compression.rs:312 util/compression.rs:314 util/compression.rs:367
+#: util/compression.rs:410
+msgid "lzma"
+msgstr ""
+
+#: util/compression.rs:91
+msgid "lzma2"
+msgstr ""
+
+#: util/compression.rs:91
+msgid "xz"
+msgstr ""
+
+#: util/compression.rs:92 util/compression.rs:106 util/compression.rs:316
+#: util/compression.rs:372 util/compression.rs:415
+msgid "lz4"
+msgstr ""
+
+#: util/compression.rs:130
+msgid "level"
+msgstr ""
+
+#: util/compression.rs:172
+msgid "{:?}"
+msgstr ""
+
+#: util/compression.rs:173
+msgid "{}, {}"
+msgstr ""
+
+#: util/compression.rs:301 util/compression.rs:326 util/compression.rs:471
+#: util/compression.rs:516
+msgid "deflate/1"
+msgstr ""
+
+#: util/compression.rs:303
+msgid "zlib/2"
+msgstr ""
+
+#: util/compression.rs:305
+msgid "gzip/3"
+msgstr ""
+
+#: util/compression.rs:307 util/compression.rs:322 util/compression.rs:323
+#: util/compression.rs:562 util/compression.rs:617
+msgid "brotli/1"
+msgstr ""
+
+#: util/compression.rs:309 util/compression.rs:673 util/compression.rs:718
+msgid "lzma/1"
+msgstr ""
+
+#: util/compression.rs:311
+msgid "lzma2/2"
+msgstr ""
+
+#: util/compression.rs:313
+msgid "xz/3"
+msgstr ""
+
+#: util/compression.rs:315 util/compression.rs:764 util/compression.rs:819
+msgid "lz4/1"
+msgstr ""
+
+#: util/compression.rs:327
+msgid "gzip/1"
+msgstr ""
+
+#: util/compression.rs:476 util/compression.rs:521
+msgid "deflate/2"
+msgstr ""
+
+#: util/compression.rs:481 util/compression.rs:526
+msgid "deflate/3"
+msgstr ""
+
+#: util/compression.rs:486 util/compression.rs:531
+msgid "deflate/4"
+msgstr ""
+
+#: util/compression.rs:491 util/compression.rs:536
+msgid "deflate/5"
+msgstr ""
+
+#: util/compression.rs:496 util/compression.rs:541
+msgid "deflate/6"
+msgstr ""
+
+#: util/compression.rs:501 util/compression.rs:546
+msgid "deflate/7"
+msgstr ""
+
+#: util/compression.rs:506 util/compression.rs:551
+msgid "deflate/8"
+msgstr ""
+
+#: util/compression.rs:511 util/compression.rs:556
+msgid "deflate/9"
+msgstr ""
+
+#: util/compression.rs:567 util/compression.rs:622
+msgid "brotli/2"
+msgstr ""
+
+#: util/compression.rs:577 util/compression.rs:632
+msgid "brotli/4"
+msgstr ""
+
+#: util/compression.rs:587 util/compression.rs:642
+msgid "brotli/6"
+msgstr ""
+
+#: util/compression.rs:592 util/compression.rs:647
+msgid "brotli/7"
+msgstr ""
+
+#: util/compression.rs:597 util/compression.rs:652
+msgid "brotli/8"
+msgstr ""
+
+#: util/compression.rs:602 util/compression.rs:657
+msgid "brotli/9"
+msgstr ""
+
+#: util/compression.rs:607 util/compression.rs:662
+msgid "brotli/10"
+msgstr ""
+
+#: util/compression.rs:612 util/compression.rs:667
+msgid "brotli/11"
+msgstr ""
+
+#: util/compression.rs:678 util/compression.rs:723
+msgid "lzma/2"
+msgstr ""
+
+#: util/compression.rs:683 util/compression.rs:728
+msgid "lzma/3"
+msgstr ""
+
+#: util/compression.rs:688 util/compression.rs:733
+msgid "lzma/4"
+msgstr ""
+
+#: util/compression.rs:693 util/compression.rs:738
+msgid "lzma/5"
+msgstr ""
+
+#: util/compression.rs:698 util/compression.rs:743
+msgid "lzma/6"
+msgstr ""
+
+#: util/compression.rs:703 util/compression.rs:748
+msgid "lzma/7"
+msgstr ""
+
+#: util/compression.rs:708 util/compression.rs:753
+msgid "lzma/8"
+msgstr ""
+
+#: util/compression.rs:713 util/compression.rs:758
+msgid "lzma/9"
+msgstr ""
+
+#: util/compression.rs:769 util/compression.rs:824
+msgid "lz4/2"
+msgstr ""
+
+#: util/compression.rs:774 util/compression.rs:829
+msgid "lz4/3"
+msgstr ""
+
+#: util/compression.rs:779 util/compression.rs:834
+msgid "lz4/4"
+msgstr ""
+
+#: util/compression.rs:784 util/compression.rs:839
+msgid "lz4/5"
+msgstr ""
+
+#: util/compression.rs:789 util/compression.rs:844
+msgid "lz4/6"
+msgstr ""
+
+#: util/compression.rs:794 util/compression.rs:849
+msgid "lz4/7"
+msgstr ""
+
+#: util/compression.rs:799 util/compression.rs:854
+msgid "lz4/8"
+msgstr ""
+
+#: util/compression.rs:804 util/compression.rs:859
+msgid "lz4/9"
+msgstr ""
+
+#: util/compression.rs:809 util/compression.rs:864
+msgid "lz4/10"
+msgstr ""
+
+#: util/compression.rs:814 util/compression.rs:869
+msgid "lz4/11"
+msgstr ""
+
+#: util/encryption.rs:219
+msgid ".yaml"
+msgstr ""
+
+#: util/encryption.rs:271
+msgid "the_great_zvault_password_salt_1"
+msgstr ""
+
+#: util/encryption.rs:314 util/encryption.rs:315 util/hash.rs:169
+msgid "foo"
+msgstr ""
+
+#: util/encryption.rs:317
+msgid "bar"
+msgstr ""
+
+#: util/encryption.rs:347 util/encryption.rs:364 util/encryption.rs:384
+msgid "test123"
+msgstr ""
+
+#: util/hash.rs:34 util/hash.rs:67 util/hash.rs:74
+msgid "{:016x}{:016x}"
+msgstr ""
+
+#: util/hash.rs:143 util/hash.rs:152 util/hash.rs:168 util/hash.rs:175
+msgid "murmur3"
+msgstr ""
+
+#: util/hash.rs:181
+msgid "abc"
+msgstr ""
+
+#: util/hash.rs:192
+msgid "123"
+msgstr ""
+
+#: util/hex.rs:3
+msgid "{:02x}"
+msgstr ""
+
+#: util/hex.rs:15
+msgid "A"
+msgstr ""
+
+#: util/hex.rs:15
+msgid "F"
+msgstr ""
+
+#: util/hex.rs:16
+msgid "a"
+msgstr ""
+
+#: util/hex.rs:16
+msgid "f"
+msgstr ""
+
+#: util/hex.rs:17
+msgid "9"
+msgstr ""
+
+#: util/hex.rs:18
+msgid "\t"
+msgstr ""
+
+#: util/hex.rs:18
+msgid "\n"
+msgstr ""
+
+#: util/hex.rs:18
+msgid "\r"
+msgstr ""
+
+#: util/hex.rs:18
+msgid " "
+msgstr ""
+
+#: util/hex.rs:46 util/hex.rs:56
+msgid "00"
+msgstr ""
+
+#: util/hex.rs:47 util/hex.rs:57
+msgid "01"
+msgstr ""
+
+#: util/hex.rs:48 util/hex.rs:58
+msgid "0f"
+msgstr ""
+
+#: util/hex.rs:49
+msgid "10"
+msgstr ""
+
+#: util/hex.rs:50
+msgid "ff"
+msgstr ""
+
+#: util/hex.rs:51
+msgid "05ff"
+msgstr ""
+
+#: util/hex.rs:59
+msgid "0fff"
+msgstr ""
+
+#: util/hex.rs:60
+msgid "0F"
+msgstr ""
+
+#: util/hex.rs:61
+msgid ""
+"01 02\n"
+"03\t04"
+msgstr ""
+
+#: util/hostname.rs:4
+msgid "C"
+msgstr ""
+
+#: util/lock.rs:47
+msgid "hostname"
+msgstr ""
+
+#: util/lock.rs:48
+msgid "processid"
+msgstr ""
+
+#: util/lock.rs:49
+msgid "date"
+msgstr ""
+
+#: util/lock.rs:50
+msgid "exclusive"
+msgstr ""
+
+#: util/lock.rs:152 util/lock.rs:179 util/lock.rs:199
+msgid "{}-{}.lock"
+msgstr ""
+
+#: util/msgpack.rs:28 util/msgpack.rs:35
+msgid "a, T: Deserialize<"
+msgstr ""
+
+#: bundledb/cache.rs:18 bundledb/cache.rs:23 bundledb/cache.rs:27
+#: bundledb/cache.rs:31 bundledb/cache.rs:37 bundledb/cache.rs:43
+#: bundledb/db.rs:18 bundledb/db.rs:24 bundledb/db.rs:30 bundledb/db.rs:36
+#: bundledb/db.rs:45 bundledb/db.rs:49 bundledb/db.rs:54 bundledb/mod.rs:60
+#: bundledb/mod.rs:67 bundledb/reader.rs:19 bundledb/reader.rs:23
+#: bundledb/reader.rs:27 bundledb/reader.rs:31 bundledb/reader.rs:37
+#: bundledb/reader.rs:43 bundledb/reader.rs:49 bundledb/reader.rs:53
+#: bundledb/reader.rs:305 bundledb/writer.rs:18 bundledb/writer.rs:23
+#: bundledb/writer.rs:29 bundledb/writer.rs:35 bundledb/writer.rs:41
+#: cli/mod.rs:814 cli/mod.rs:967 repository/backup.rs:19
+#: repository/backup.rs:23 repository/backup_file.rs:19
+#: repository/backup_file.rs:24 repository/backup_file.rs:30
+#: repository/backup_file.rs:36 repository/backup_file.rs:40
+#: repository/backup_file.rs:44 repository/backup_file.rs:50
+#: repository/backup_file.rs:56 repository/backup_file.rs:60
+#: repository/bundle_map.rs:36 repository/config.rs:20 repository/config.rs:26
+#: repository/error.rs:19 repository/error.rs:25 repository/error.rs:31
+#: repository/error.rs:37 repository/error.rs:43 repository/error.rs:49
+#: repository/error.rs:55 repository/error.rs:61 repository/error.rs:67
+#: repository/error.rs:73 repository/error.rs:79 repository/error.rs:83
+#: repository/error.rs:89 repository/error.rs:95 repository/error.rs:102
+#: repository/error.rs:106 repository/integrity.rs:16
+#: repository/integrity.rs:20 repository/integrity.rs:24
+#: repository/integrity.rs:28 repository/integrity.rs:39
+#: repository/integrity.rs:44 repository/metadata.rs:23
+#: repository/metadata.rs:28 repository/metadata.rs:33
+#: repository/metadata.rs:38 repository/metadata.rs:43
+#: repository/metadata.rs:47 repository/metadata.rs:53
+#: repository/metadata.rs:59 repository/metadata.rs:85
+#: repository/metadata.rs:86 repository/metadata.rs:87
+#: repository/metadata.rs:88 repository/metadata.rs:89
+#: repository/metadata.rs:90 translation.rs:190 translation.rs:195
+#: translation.rs:199 translation.rs:203 translation.rs:207 translation.rs:211
+#: translation.rs:215 util/compression.rs:15 util/compression.rs:28
+#: util/compression.rs:131 util/compression.rs:345 util/compression.rs:380
+#: util/encryption.rs:36 util/encryption.rs:40 util/encryption.rs:46
+#: util/encryption.rs:52 util/lock.rs:19 util/lock.rs:25 util/lock.rs:29
+#: util/lock.rs:33
+msgid "{}"
+msgstr ""
+
+#: bundledb/db.rs:76
+msgid "bundle"
+msgstr ""
+
+#: bundledb/db.rs:446
+msgid "bundle.broken"
+msgstr ""
+
+#: bundledb/db.rs:449
+msgid "bundle.{}.broken"
+msgstr ""
+
+#: bundledb/mod.rs:20
+msgid "zvault\001"
+msgstr ""
+
+#: bundledb/mod.rs:34 util/chunk.rs:124 util/hash.rs:91
+msgid "a> Deserialize<"
+msgstr ""
+
+#: bundledb/mod.rs:36
+msgid "a>>(de: D) -> Result<Self, D::Error> {"
+msgstr ""
+
+#: bundledb/reader.rs:35 repository/backup_file.rs:28
+msgid "a Path, err: msgpack::DecodeError) -> (err, path.to_path_buf())"
+msgstr ""
+
+#: bundledb/reader.rs:41
+msgid "a Path, err: CompressionError) -> (err, path.to_path_buf())"
+msgstr ""
+
+#: bundledb/reader.rs:47 repository/backup_file.rs:48
+msgid "a Path, err: EncryptionError) -> (err, path.to_path_buf())"
+msgstr ""
+
+#: bundledb/reader.rs:51 repository/config.rs:17 repository/metadata.rs:45
+#: util/compression.rs:26 util/encryption.rs:38 util/lock.rs:27
+msgid "static str) {"
+msgstr ""
+
+#: bundledb/uploader.rs:32
+msgid "uploader"
+msgstr ""
+
+#: chunker.rs:22 chunker.rs:32 util/encryption.rs:68 util/hash.rs:140
+msgid "static str> {"
+msgstr ""
+
+#: chunker.rs:24 chunker.rs:58
+msgid "ae"
+msgstr ""
+
+#: chunker.rs:25 chunker.rs:59
+msgid "rabin"
+msgstr ""
+
+#: chunker.rs:26 chunker.rs:60 repository/config.rs:51
+msgid "fastcdc"
+msgstr ""
+
+#: chunker.rs:27 chunker.rs:61
+msgid "fixed"
+msgstr ""
+
+#: chunker.rs:33 cli/mod.rs:546 cli/mod.rs:809 cli/mod.rs:991 cli/mod.rs:997
+#: mount.rs:183 repository/backup.rs:536 repository/tarfile.rs:99
+#: util/compression.rs:79
+msgid "/"
+msgstr ""
+
+#: chunker.rs:56 util/compression.rs:101 util/hash.rs:149
+msgid "static str {"
+msgstr ""
+
+#: chunker.rs:75 cli/mod.rs:679 util/compression.rs:75 util/compression.rs:344
+#: util/compression.rs:379
+msgid "{}/{}"
+msgstr ""
+
+#: cli/algotest.rs:63 cli/algotest.rs:85 cli/algotest.rs:114
+#: cli/algotest.rs:162 cli/algotest.rs:201 cli/algotest.rs:215
+#: cli/algotest.rs:237
+msgid "- {}, {}"
+msgstr ""
+
+#: cli/args.rs:141
+msgid "default"
+msgstr ""
+
+#: cli/args.rs:147
+msgid "repos"
+msgstr ""
+
+#: cli/args.rs:157
+msgid "::"
+msgstr ""
+
+#: cli/args.rs:159 repository/layout.rs:20
+msgid "config.yaml"
+msgstr ""
+
+#: cli/args.rs:303 cli/mod.rs:486 repository/tarfile.rs:290
+#: repository/tarfile.rs:429
+msgid "-"
+msgstr ""
+
+#: cli/args.rs:313
+msgid "zvault"
+msgstr ""
+
+#: cli/args.rs:315
+msgid ",\n"
+msgstr ""
+
+#: cli/args.rs:319
+msgid "-v --verbose"
+msgstr ""
+
+#: cli/args.rs:325
+msgid "-q --quiet"
+msgstr ""
+
+#: cli/args.rs:328 cli/args.rs:584 cli/args.rs:585
+msgid "verbose"
+msgstr ""
+
+#: cli/args.rs:329 cli/args.rs:597
+msgid "init"
+msgstr ""
+
+#: cli/args.rs:331 cli/args.rs:520 cli/args.rs:562
+msgid "[bundle_size] --bundle-size [SIZE]"
+msgstr ""
+
+#: cli/args.rs:335 cli/args.rs:523 cli/args.rs:566
+msgid "--chunker [CHUNKER]"
+msgstr ""
+
+#: cli/args.rs:339 cli/args.rs:526
+msgid "-c --compression [COMPRESSION]"
+msgstr ""
+
+#: cli/args.rs:343 cli/args.rs:573
+msgid "-e --encrypt"
+msgstr ""
+
+#: cli/args.rs:345 cli/args.rs:532 cli/args.rs:575
+msgid "--hash [HASH]"
+msgstr ""
+
+#: cli/args.rs:349
+msgid "-r --remote <REMOTE>"
+msgstr ""
+
+#: cli/args.rs:352 cli/args.rs:418 cli/args.rs:430 cli/args.rs:464
+#: cli/args.rs:469 cli/args.rs:481 cli/args.rs:491 cli/args.rs:496
+#: cli/args.rs:535 cli/args.rs:557
+msgid "<REPO>"
+msgstr ""
+
+#: cli/args.rs:355 cli/args.rs:615 repository/backup_file.rs:199
+msgid "backup"
+msgstr ""
+
+#: cli/args.rs:357
+msgid "--full"
+msgstr ""
+
+#: cli/args.rs:359
+msgid "[reference] --ref [REF]"
+msgstr ""
+
+#: cli/args.rs:361 cli/args.rs:625
+msgid "full"
+msgstr ""
+
+#: cli/args.rs:362
+msgid "[cross_device] -x --xdev"
+msgstr ""
+
+#: cli/args.rs:364
+msgid "-e --exclude [PATTERN]..."
+msgstr ""
+
+#: cli/args.rs:366
+msgid "[excludes_from] --excludes-from [FILE]"
+msgstr ""
+
+#: cli/args.rs:368
+msgid "[no_default_excludes] --no-default-excludes"
+msgstr ""
+
+#: cli/args.rs:370 cli/args.rs:381
+msgid "--tar"
+msgstr ""
+
+#: cli/args.rs:372 cli/args.rs:627
+msgid "exclude"
+msgstr ""
+
+#: cli/args.rs:372 cli/args.rs:630
+msgid "excludes_from"
+msgstr ""
+
+#: cli/args.rs:372 cli/args.rs:632
+msgid "reference"
+msgstr ""
+
+#: cli/args.rs:373 cli/args.rs:512
+msgid "<SRC>"
+msgstr ""
+
+#: cli/args.rs:376 cli/args.rs:383 cli/args.rs:393
+msgid "<BACKUP>"
+msgstr ""
+
+#: cli/args.rs:379 cli/args.rs:637
+msgid "restore"
+msgstr ""
+
+#: cli/args.rs:386 cli/args.rs:515
+msgid "<DST>"
+msgstr ""
+
+#: cli/args.rs:388 cli/args.rs:648
+msgid "remove"
+msgstr ""
+
+#: cli/args.rs:389 cli/mod.rs:1012
+msgid "del"
+msgstr ""
+
+#: cli/args.rs:389
+msgid "delete"
+msgstr ""
+
+#: cli/args.rs:389
+msgid "rm"
+msgstr ""
+
+#: cli/args.rs:391 cli/args.rs:416 cli/args.rs:428
+msgid "-f --force"
+msgstr ""
+
+#: cli/args.rs:396 cli/args.rs:658
+msgid "prune"
+msgstr ""
+
+#: cli/args.rs:398
+msgid "-p --prefix [PREFIX]"
+msgstr ""
+
+#: cli/args.rs:400
+msgid "-d --daily [NUM]"
+msgstr ""
+
+#: cli/args.rs:404
+msgid "-w --weekly [NUM]"
+msgstr ""
+
+#: cli/args.rs:408
+msgid "-m --monthly [NUM]"
+msgstr ""
+
+#: cli/args.rs:412
+msgid "-y --yearly [NUM]"
+msgstr ""
+
+#: cli/args.rs:421 cli/args.rs:675 cli/mod.rs:732
+msgid "vacuum"
+msgstr ""
+
+#: cli/args.rs:423
+msgid "-r --ratio [NUM]"
+msgstr ""
+
+#: cli/args.rs:426
+msgid "--combine"
+msgstr ""
+
+#: cli/args.rs:433 cli/args.rs:689
+msgid "check"
+msgstr ""
+
+#: cli/args.rs:435
+msgid "-b --bundles"
+msgstr ""
+
+#: cli/args.rs:437
+msgid "[bundle_data] --bundle-data"
+msgstr ""
+
+#: cli/args.rs:439 cli/args.rs:696
+msgid "bundles"
+msgstr ""
+
+#: cli/args.rs:440
+msgid "data"
+msgstr ""
+
+#: cli/args.rs:441
+msgid "-i --index"
+msgstr ""
+
+#: cli/args.rs:443
+msgid "-r --repair"
+msgstr ""
+
+#: cli/args.rs:445 cli/args.rs:451 cli/args.rs:456 cli/args.rs:486
+#: cli/args.rs:499
+msgid "<PATH>"
+msgstr ""
+
+#: cli/args.rs:448 cli/args.rs:702
+msgid "list"
+msgstr ""
+
+#: cli/args.rs:449
+msgid "ls"
+msgstr ""
+
+#: cli/args.rs:454 cli/args.rs:755
+msgid "mount"
+msgstr ""
+
+#: cli/args.rs:459
+msgid "<MOUNTPOINT>"
+msgstr ""
+
+#: cli/args.rs:462 cli/args.rs:711
+msgid "bundlelist"
+msgstr ""
+
+#: cli/args.rs:467 cli/args.rs:720
+msgid "bundleinfo"
+msgstr ""
+
+#: cli/args.rs:472
+msgid "<BUNDLE>"
+msgstr ""
+
+#: cli/args.rs:474 cli/args.rs:800
+msgid "import"
+msgstr ""
+
+#: cli/args.rs:476
+msgid "-k --key [FILE]..."
+msgstr ""
+
+#: cli/args.rs:478
+msgid "<REMOTE>"
+msgstr ""
+
+#: cli/args.rs:484 cli/args.rs:732 cli/logger.rs:38
+msgid "info"
+msgstr ""
+
+#: cli/args.rs:489 cli/args.rs:791
+msgid "analyze"
+msgstr ""
+
+#: cli/args.rs:494 cli/args.rs:765
+msgid "versions"
+msgstr ""
+
+#: cli/args.rs:501 cli/args.rs:777
+msgid "diff"
+msgstr ""
+
+#: cli/args.rs:503
+msgid "<OLD>"
+msgstr ""
+
+#: cli/args.rs:506
+msgid "<NEW>"
+msgstr ""
+
+#: cli/args.rs:509 cli/args.rs:741
+msgid "copy"
+msgstr ""
+
+#: cli/args.rs:510
+msgid "cp"
+msgstr ""
+
+#: cli/args.rs:518 cli/args.rs:815
+msgid "config"
+msgstr ""
+
+#: cli/args.rs:529
+msgid "-e --encryption [PUBLIC_KEY]"
+msgstr ""
+
+#: cli/args.rs:538 cli/args.rs:837
+msgid "genkey"
+msgstr ""
+
+#: cli/args.rs:540 cli/args.rs:551
+msgid "-p --password [PASSWORD]"
+msgstr ""
+
+#: cli/args.rs:542 cli/args.rs:554
+msgid "[FILE]"
+msgstr ""
+
+#: cli/args.rs:544 cli/args.rs:843
+msgid "addkey"
+msgstr ""
+
+#: cli/args.rs:546
+msgid "-g --generate"
+msgstr ""
+
+#: cli/args.rs:549
+msgid "[set_default] --default -d"
+msgstr ""
+
+#: cli/args.rs:553
+msgid "generate"
+msgstr ""
+
+#: cli/args.rs:560 cli/args.rs:857
+msgid "algotest"
+msgstr ""
+
+#: cli/args.rs:579
+msgid "<FILE>"
+msgstr ""
+
+#: cli/args.rs:588 cli/args.rs:589
+msgid "quiet"
+msgstr ""
+
+#: cli/args.rs:605 cli/args.rs:823 cli/args.rs:859 repository/config.rs:145
+msgid "bundle_size"
+msgstr ""
+
+#: cli/args.rs:607 cli/args.rs:826 cli/args.rs:861 repository/config.rs:146
+msgid "chunker"
+msgstr ""
+
+#: cli/args.rs:608 cli/args.rs:827 cli/args.rs:862 repository/config.rs:143
+msgid "compression"
+msgstr ""
+
+#: cli/args.rs:609 cli/args.rs:863
+msgid "encrypt"
+msgstr ""
+
+#: cli/args.rs:610 cli/args.rs:833 cli/args.rs:864 repository/config.rs:147
+msgid "hash"
+msgstr ""
+
+#: cli/args.rs:612 repository/layout.rs:60
+msgid "remote"
+msgstr ""
+
+#: cli/args.rs:626
+msgid "cross_device"
+msgstr ""
+
+#: cli/args.rs:669
+msgid "daily"
+msgstr ""
+
+#: cli/args.rs:670
+msgid "weekly"
+msgstr ""
+
+#: cli/args.rs:671
+msgid "monthly"
+msgstr ""
+
+#: cli/args.rs:672
+msgid "yearly"
+msgstr ""
+
+#: cli/args.rs:685
+msgid "combine"
+msgstr ""
+
+#: cli/args.rs:686
+msgid "ratio"
+msgstr ""
+
+#: cli/logger.rs:28
+msgid "error"
+msgstr ""
+
+#: cli/logger.rs:33
+msgid "warning"
+msgstr ""
+
+#: cli/logger.rs:41
+msgid "debug"
+msgstr ""
+
+#: cli/logger.rs:43
+msgid "trace"
+msgstr ""
+
+#: translation.rs:25
+msgid "a [u8],"
+msgstr ""
+
+#: translation.rs:33
+msgid "a> MoFile<"
+msgstr ""
+
+#: translation.rs:34
+msgid "a [u8]) -> Result<Self, ()> {"
+msgstr ""
+
+#: translation.rs:71
+msgid "a> Iterator for MoFile<"
+msgstr ""
+
+#: translation.rs:72
+msgid "a str, &"
+msgstr ""
+
+#: translation.rs:137
+msgid "a str) -> &"
+msgstr ""
+
+#: translation.rs:137
+msgid "a, "
+msgstr ""
+
+#: translation.rs:137
+msgid "a>(&"
+msgstr ""
+
+#: translation.rs:138
+msgid "a str).unwrap_or(orig)"
+msgstr ""
+
+#: translation.rs:157
+msgid "/usr/share/locale/{}/LC_MESSAGES/zvault.mo"
+msgstr ""
+
+#: translation.rs:161
+msgid "lang/{}.mo"
+msgstr ""
+
+#: translation.rs:169
+msgid "static str, &"
+msgstr ""
+
+#: translation.rs:171
+msgid "../lang/de.mo"
+msgstr ""
+
+#: translation.rs:171
+msgid "de"
+msgstr ""
+
+#: translation.rs:171
+msgid "static [u8]);"
+msgstr ""
+
+#: mount.rs:369
+msgid "destroy"
+msgstr ""
+
+#: util/encryption.rs:99
+msgid "public"
+msgstr ""
+
+#: util/encryption.rs:100
+msgid "secret"
+msgstr ""
+
