@@ -1,8 +1,3 @@
-#![feature(test)]
-
-extern crate test;
-extern crate chunking;
-
 use chunking::*;
 
 use std::io::{self, Write, Cursor};

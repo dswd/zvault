@@ -1,11 +1,11 @@
-#[macro_use] extern crate quick_error;
-
 use std::io::{self, Write, Read};
 
 mod fixed;
 mod ae;
 mod rabin;
 mod fastcdc;
+#[cfg(test)] mod test;
+#[cfg(feature = "bench")] mod benches;
 
 pub use self::fixed::FixedChunker;
 pub use self::ae::AeChunker;
@@ -25,18 +25,18 @@ quick_error!{
     pub enum ChunkerError {
         Read(err: io::Error) {
             cause(err)
-            description("Failed to read input")
-            display("Chunker error: failed to read input\n\tcaused by: {}", err)
+            description(tr!("Failed to read input"))
+            display("{}", tr_format!("Chunker error: failed to read input\n\tcaused by: {}", err))
         }
         Write(err: io::Error) {
             cause(err)
-            description("Failed to write to output")
-            display("Chunker error: failed to write to output\n\tcaused by: {}", err)
+            description(tr!("Failed to write to output"))
+            display("{}", tr_format!("Chunker error: failed to write to output\n\tcaused by: {}", err))
         }
         Custom(reason: &'static str) {
             from()
-            description("Custom error")
-            display("Chunker error: {}", reason)
+            description(tr!("Custom error"))
+            display("{}", tr_format!("Chunker error: {}", reason))
         }
     }
 }

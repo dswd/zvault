@@ -34,7 +34,7 @@ fn create_table(alpha: u32, window_size: usize) -> [u32; 256] {
 
 
 pub struct RabinChunker {
-    buffer: [u8; 4096],
+    buffer: [u8; 0x1000],
     buffered: usize,
     seed: u32,
     alpha: u32,
@@ -50,9 +50,9 @@ impl RabinChunker {
     pub fn new(avg_size: usize, seed: u32) -> Self {
         let chunk_mask = (avg_size as u32).next_power_of_two() - 1;
         let window_size = avg_size/4-1;
-        let alpha = 1664525;//153191;
+        let alpha = 1_664_525;//153191;
         RabinChunker {
-            buffer: [0; 4096],
+            buffer: [0; 0x1000],
             buffered: 0,
             table: create_table(alpha, window_size),
             alpha: alpha,
@@ -88,7 +88,7 @@ impl Chunker for RabinChunker {
                     return Ok(ChunkerStatus::Continue);
                 }
                 // Hash update
-                hash = hash.wrapping_mul(self.alpha).wrapping_add(val as u32);
+                hash = hash.wrapping_mul(self.alpha).wrapping_add(u32::from(val));
                 if pos >= self.window_size {
                     let take = window.pop_front().unwrap();
                     hash = hash.wrapping_sub(self.table[take as usize]);

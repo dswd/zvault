@@ -1,6 +1,3 @@
-extern crate mmap;
-#[macro_use] extern crate quick_error;
-
 use std::path::Path;
 use std::fs::{File, OpenOptions};
 use std::mem;
@@ -17,36 +14,37 @@ pub const MIN_USAGE: f64 = 0.35;
 pub const INITIAL_SIZE: usize = 1024;
 
 
+//TODO: translate
 quick_error!{
     #[derive(Debug)]
     pub enum IndexError {
         Io(err: io::Error) {
             from()
             cause(err)
-            description("Failed to open index file")
-            display("Index error: failed to open the index file\n\tcaused by: {}", err)
+            description(tr!("Failed to open index file"))
+            display("{}", tr_format!("Index error: failed to open the index file\n\tcaused by: {}", err))
         }
         Mmap(err: MapError) {
             from()
             cause(err)
-            description("Failed to memory-map the index file")
-            display("Index error: failed to memory-map the index file\n\tcaused by: {}", err)
+            description(tr!("Failed to memory-map the index file"))
+            display("{}", tr_format!("Index error: failed to memory-map the index file\n\tcaused by: {}", err))
         }
         WrongMagic {
-            description("Wrong header")
-            display("Index error: file has the wrong magic header")
+            description(tr!("Wrong header"))
+            display("{}", tr!("Index error: file has the wrong magic header"))
         }
         UnsupportedVersion(version: u8) {
-            description("Unsupported version")
-            display("Index error: index file has unsupported version: {}", version)
+            description(tr!("Unsupported version"))
+            display("{}", tr_format!("Index error: index file has unsupported version: {}", version))
         }
         WrongPosition(should: usize, is: LocateResult) {
-            description("Key at wrong position")
-            display("Index error: key has wrong position, expected at: {}, but is at: {:?}", should, is)
+            description(tr!("Key at wrong position"))
+            display("{}", tr_format!("Index error: key has wrong position, expected at: {}, but is at: {:?}", should, is))
         }
         WrongEntryCount(header: usize, actual: usize) {
-            description("Wrong entry count")
-            display("Index error: index has wrong entry count, expected {}, but is {}", header, actual)
+            description(tr!("Wrong entry count"))
+            display("{}", tr_format!("Index error: index has wrong entry count, expected {}, but is {}", header, actual))
         }
     }
 }
@@ -72,7 +70,7 @@ pub trait Value: Clone + Copy + Default {}
 
 
 #[repr(packed)]
-#[derive(Clone, Default)]
+#[derive(Default)]
 pub struct Entry<K, V> {
     pub key: K,
     pub data: V
@@ -81,12 +79,23 @@ pub struct Entry<K, V> {
 impl<K: Key, V> Entry<K, V> {
     #[inline]
     fn is_used(&self) -> bool {
-        self.key.is_used()
+        unsafe { self.key.is_used() }
     }
 
     #[inline]
     fn clear(&mut self) {
-        self.key.clear()
+        unsafe { self.key.clear() }
+    }
+}
+
+impl<K: Clone, V: Clone> Clone for Entry<K, V> {
+    fn clone(&self) -> Self {
+        unsafe {
+            Entry {
+                key: self.key.clone(),
+                data: self.data.clone()
+            }
+        }
     }
 }
 
@@ -106,13 +115,14 @@ impl<'a, K: Key, V> Iterator for Iter<'a, K, V> {
         while let Some((first, rest)) = self.0.split_first() {
             self.0 = rest;
             if first.is_used() {
-                return Some((&first.key, &first.data));
+                unsafe { return Some((&first.key, &first.data)) }
             }
         }
         None
     }
 }
 
+#[allow(dead_code)]
 pub struct IterMut<'a, K: 'static, V: 'static> (&'a mut [Entry<K, V>]);
 
 impl<'a, K: Key, V> Iterator for IterMut<'a, K, V> {
@@ -125,7 +135,7 @@ impl<'a, K: Key, V> Iterator for IterMut<'a, K, V> {
                 Some((first, rest)) => {
                     self.0 = rest;
                     if first.is_used() {
-                        return Some((&first.key, &mut first.data))
+                        unsafe { return Some((&first.key, &mut first.data)) }
                     }
                 }
             }
@@ -137,7 +147,7 @@ impl<'a, K: Key, V> Iterator for IterMut<'a, K, V> {
 /// This method is unsafe as it potentially creates references to uninitialized memory
 unsafe fn mmap_as_ref<K, V>(mmap: &MemoryMap, len: usize) -> (&'static mut Header, &'static mut [Entry<K, V>]) {
     if mmap.len() < mem::size_of::<Header>() + len * mem::size_of::<Entry<K, V>>() {
-        panic!("Memory map too small");
+        tr_panic!("Memory map too small");
     }
     let header = &mut *(mmap.data() as *mut Header);
     let ptr = mmap.data().offset(mem::size_of::<Header>() as isize) as *mut Entry<K, V>;
@@ -197,7 +207,7 @@ impl<K: Key, V: Value> Index<K, V> {
             data: data,
             header: header
         };
-        debug_assert!(index.check().is_ok(), "Inconsistent after creation");
+        debug_assert!(index.check().is_ok(), tr!("Inconsistent after creation"));
         Ok(index)
     }
 
@@ -302,7 +312,7 @@ impl<K: Key, V: Value> Index<K, V> {
                 continue;
             }
             entries += 1;
-            match self.locate(&entry.key) {
+            match unsafe { self.locate(&entry.key) } {
                 LocateResult::Found(p) if p == pos => true,
                 found => return Err(IndexError::WrongPosition(pos, found))
             };
@@ -431,7 +441,7 @@ impl<K: Key, V: Value> Index<K, V> {
 
     #[inline]
     pub fn contains(&self, key: &K) -> bool {
-        debug_assert!(self.check().is_ok(), "Inconsistent before get");
+        debug_assert!(self.check().is_ok(), tr!("Inconsistent before get"));
         match self.locate(key) {
             LocateResult::Found(_) => true,
             _ => false
@@ -440,7 +450,7 @@ impl<K: Key, V: Value> Index<K, V> {
 
     #[inline]
     pub fn pos(&self, key: &K) -> Option<usize> {
-        debug_assert!(self.check().is_ok(), "Inconsistent before get");
+        debug_assert!(self.check().is_ok(), tr!("Inconsistent before get"));
         match self.locate(key) {
             LocateResult::Found(pos) => Some(pos),
             _ => None
@@ -449,7 +459,7 @@ impl<K: Key, V: Value> Index<K, V> {
 
     #[inline]
     pub fn get(&self, key: &K) -> Option<V> {
-        debug_assert!(self.check().is_ok(), "Inconsistent before get");
+        debug_assert!(self.check().is_ok(), tr!("Inconsistent before get"));
         match self.locate(key) {
             LocateResult::Found(pos) => Some(self.data[pos].data),
             _ => None
@@ -457,11 +467,12 @@ impl<K: Key, V: Value> Index<K, V> {
     }
 
     #[inline]
+    #[allow(dead_code)]
     pub fn modify<F>(&mut self, key: &K, mut f: F) -> bool where F: FnMut(&mut V) {
-        debug_assert!(self.check().is_ok(), "Inconsistent before get");
+        debug_assert!(self.check().is_ok(), tr!("Inconsistent before get"));
         match self.locate(key) {
             LocateResult::Found(pos) => {
-                f(&mut self.data[pos].data);
+                unsafe { f(&mut self.data[pos].data) };
                 true
             },
             _ => false

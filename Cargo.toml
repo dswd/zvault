@@ -4,6 +4,9 @@ version = "0.4.0"
 authors = ["Dennis Schwerdel <schwerdel@googlemail.com>"]
 description = "Deduplicating backup tool"
 
+[profile.release]
+lto = true
+
 [dependencies]
 serde = "1.0"
 rmp-serde = "0.13"
@@ -35,8 +38,7 @@ time = "*"
 libc = "0.2"
 runtime-fmt = "0.3"
 locale_config = "^0.2.2"
-index = {path="index"}
-chunking = {path="chunking"}
+mmap = "0.1"
 
 [features]
 default = []

@@ -13,8 +13,8 @@ use std::cmp;
 // Creating 256 pseudo-random values (based on Knuth's MMIX)
 fn create_gear(seed: u64) -> [u64; 256] {
     let mut table = [0u64; 256];
-    let a = 6364136223846793005;
-    let c = 1442695040888963407;
+    let a = 6_364_136_223_846_793_005;
+    let c = 1_442_695_040_888_963_407;
     let mut v = seed;
     for t in &mut table.iter_mut() {
         v = v.wrapping_mul(a).wrapping_add(c);
@@ -27,12 +27,12 @@ fn get_masks(avg_size: usize, nc_level: usize, seed: u64) -> (u64, u64) {
     let bits = (avg_size.next_power_of_two() - 1).count_ones();
     if bits == 13 {
         // From the paper
-        return (0x0003590703530000, 0x0000d90003530000);
+        return (0x0003_5907_0353_0000, 0x0000_d900_0353_0000);
     }
     let mut mask = 0u64;
     let mut v = seed;
-    let a = 6364136223846793005;
-    let c = 1442695040888963407;
+    let a = 6_364_136_223_846_793_005;
+    let c = 1_442_695_040_888_963_407;
     while mask.count_ones() < bits - nc_level as u32 {
         v = v.wrapping_mul(a).wrapping_add(c);
         mask = (mask | 1).rotate_left(v as u32 & 0x3f);
@@ -47,7 +47,7 @@ fn get_masks(avg_size: usize, nc_level: usize, seed: u64) -> (u64, u64) {
 }
 
 pub struct FastCdcChunker {
-    buffer: [u8; 4096],
+    buffer: [u8; 0x1000],
     buffered: usize,
     gear: [u64; 256],
     min_size: usize,
@@ -61,7 +61,7 @@ impl FastCdcChunker {
     pub fn new(avg_size: usize, seed: u64) -> Self {
         let (mask_short, mask_long) = get_masks(avg_size, 2, seed);
         FastCdcChunker {
-            buffer: [0; 4096],
+            buffer: [0; 0x1000],
             buffered: 0,
             gear: create_gear(seed),
             min_size: avg_size/4,

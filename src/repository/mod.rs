@@ -39,7 +39,6 @@ const INDEX_MAGIC: [u8; 7] = *b"zvault\x02";
 const INDEX_VERSION: u8 = 1;
 
 
-#[repr(packed)]
 #[derive(Clone, Copy, PartialEq, Debug, Default)]
 pub struct Location {
     pub bundle: u32,
@@ -178,7 +177,7 @@ impl Repository {
         if !rebuild_bundle_map {
             let mut save_bundle_map = false;
             if !gone.is_empty() {
-                tr_info!("Removig {} old bundles from index", gone.len());
+                tr_info!("Removing {} old bundles from index", gone.len());
                 try!(repo.write_mode());
                 for bundle in gone {
                     try!(repo.remove_gone_remote_bundle(&bundle))

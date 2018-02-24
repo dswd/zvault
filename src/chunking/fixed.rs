@@ -4,14 +4,14 @@ use std::cmp::min;
 
 
 pub struct FixedChunker {
-    buffer: [u8; 4096],
+    buffer: [u8; 0x1000],
     size: usize
 }
 
 impl FixedChunker {
     pub fn new(avg_size: usize) -> FixedChunker {
         FixedChunker{
-            buffer: [0; 4096],
+            buffer: [0; 0x1000],
             size: avg_size,
         }
     }

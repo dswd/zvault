@@ -7,7 +7,7 @@ use std::ptr;
 
 
 pub struct AeChunker {
-    buffer: [u8; 4096],
+    buffer: [u8; 0x1000],
     buffered: usize,
     window_size: usize
 }
@@ -18,7 +18,7 @@ impl AeChunker {
         //let window_size = (avg_size as f64 / (consts::E - 1.0)) as usize;
         let window_size = avg_size - 256;
         AeChunker{
-            buffer: [0; 4096],
+            buffer: [0; 0x1000],
             buffered: 0,
             window_size: window_size,
         }

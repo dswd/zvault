@@ -1,7 +1,0 @@
-[package]
-name = "chunking"
-version = "0.1.0"
-authors = ["Dennis Schwerdel <schwerdel@googlemail.com>"]
-
-[dependencies]
-quick-error = "1.1"

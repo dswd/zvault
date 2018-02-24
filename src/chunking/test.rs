@@ -1,6 +1,4 @@
-extern crate chunking;
-
-use chunking::*;
+use super::*;
 
 use std::io::Cursor;
 

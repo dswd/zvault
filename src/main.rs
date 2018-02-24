@@ -36,11 +36,10 @@ extern crate pbr;
 extern crate users;
 extern crate libc;
 extern crate tar;
-extern crate index;
-extern crate chunking;
 #[macro_use]
 extern crate runtime_fmt;
 extern crate locale_config;
+extern crate mmap;
 
 #[macro_use] mod translation;
 pub mod util;
@@ -50,6 +49,8 @@ mod cli;
 mod prelude;
 mod mount;
 mod chunker;
+mod chunking;
+mod index;
 
 use std::process::exit;
 
