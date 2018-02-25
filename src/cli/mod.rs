@@ -112,9 +112,9 @@ macro_rules! checked {
     };
 }
 
-fn open_repository(path: &Path) -> Result<Repository, ErrorCode> {
+fn open_repository(path: &Path, online: bool) -> Result<Repository, ErrorCode> {
     Ok(checked!(
-        Repository::open(path),
+        Repository::open(path, online),
         "load repository",
         ErrorCode::LoadRepository
     ))
@@ -478,7 +478,7 @@ pub fn run() -> Result<(), ErrorCode> {
             no_default_excludes,
             tar
         } => {
-            let mut repo = try!(open_repository(&repo_path));
+            let mut repo = try!(open_repository(&repo_path, true));
             if repo.has_backup(&backup_name) {
                 tr_error!("A backup with that name already exists");
                 return Err(ErrorCode::BackupAlreadyExists);
@@ -595,7 +595,7 @@ pub fn run() -> Result<(), ErrorCode> {
             dst_path,
             tar
         } => {
-            let mut repo = try!(open_repository(&repo_path));
+            let mut repo = try!(open_repository(&repo_path, true));
             let backup = try!(get_backup(&repo, &backup_name));
             let inode = if let Some(inode) = inode {
                 checked!(
@@ -635,7 +635,7 @@ pub fn run() -> Result<(), ErrorCode> {
                 tr_error!("Can only run copy on same repository");
                 return Err(ErrorCode::InvalidArgs);
             }
-            let mut repo = try!(open_repository(&repo_path_src));
+            let mut repo = try!(open_repository(&repo_path_src, false));
             if repo.has_backup(&backup_name_dst) {
                 tr_error!("A backup with that name already exists");
                 return Err(ErrorCode::BackupAlreadyExists);
@@ -653,7 +653,7 @@ pub fn run() -> Result<(), ErrorCode> {
             inode,
             force
         } => {
-            let mut repo = try!(open_repository(&repo_path));
+            let mut repo = try!(open_repository(&repo_path, true));
             if let Some(inode) = inode {
                 let mut backup = try!(get_backup(&repo, &backup_name));
                 checked!(
@@ -705,7 +705,7 @@ pub fn run() -> Result<(), ErrorCode> {
             yearly,
             force
         } => {
-            let mut repo = try!(open_repository(&repo_path));
+            let mut repo = try!(open_repository(&repo_path, true));
             if daily + weekly + monthly + yearly == 0 {
                 tr_error!("This would remove all those backups");
                 return Err(ErrorCode::UnsafeArgs);
@@ -725,7 +725,7 @@ pub fn run() -> Result<(), ErrorCode> {
             force,
             combine
         } => {
-            let mut repo = try!(open_repository(&repo_path));
+            let mut repo = try!(open_repository(&repo_path, true));
             let info_before = repo.info();
             checked!(
                 repo.vacuum(ratio, combine, force),
@@ -751,7 +751,7 @@ pub fn run() -> Result<(), ErrorCode> {
             bundle_data,
             repair
         } => {
-            let mut repo = try!(open_repository(&repo_path));
+            let mut repo = try!(open_repository(&repo_path, true));
             checked!(
                 repo.check_repository(repair),
                 "check repository",
@@ -797,7 +797,7 @@ pub fn run() -> Result<(), ErrorCode> {
             backup_name,
             inode
         } => {
-            let mut repo = try!(open_repository(&repo_path));
+            let mut repo = try!(open_repository(&repo_path, false));
             let backup_map = if let Some(backup_name) = backup_name {
                 if repo.layout.backups_path().join(&backup_name).is_dir() {
                     repo.get_backups(&backup_name)
@@ -845,7 +845,7 @@ pub fn run() -> Result<(), ErrorCode> {
             backup_name,
             inode
         } => {
-            let mut repo = try!(open_repository(&repo_path));
+            let mut repo = try!(open_repository(&repo_path, false));
             if let Some(backup_name) = backup_name {
                 let backup = try!(get_backup(&repo, &backup_name));
                 if let Some(inode) = inode {
@@ -868,7 +868,7 @@ pub fn run() -> Result<(), ErrorCode> {
             inode,
             mount_point
         } => {
-            let mut repo = try!(open_repository(&repo_path));
+            let mut repo = try!(open_repository(&repo_path, true));
             let fs = if let Some(backup_name) = backup_name {
                 if repo.layout.backups_path().join(&backup_name).is_dir() {
                     checked!(
@@ -916,7 +916,7 @@ pub fn run() -> Result<(), ErrorCode> {
             );
         }
         Arguments::Analyze { repo_path } => {
-            let mut repo = try!(open_repository(&repo_path));
+            let mut repo = try!(open_repository(&repo_path, true));
             print_analysis(&checked!(
                 repo.analyze_usage(),
                 "analyze repository",
@@ -924,7 +924,7 @@ pub fn run() -> Result<(), ErrorCode> {
             ));
         }
         Arguments::BundleList { repo_path } => {
-            let repo = try!(open_repository(&repo_path));
+            let repo = try!(open_repository(&repo_path, true));
             for bundle in repo.list_bundles() {
                 print_bundle_one_line(bundle);
             }
@@ -933,7 +933,7 @@ pub fn run() -> Result<(), ErrorCode> {
             repo_path,
             bundle_id
         } => {
-            let repo = try!(open_repository(&repo_path));
+            let repo = try!(open_repository(&repo_path, true));
             if let Some(bundle) = repo.get_bundle(&bundle_id) {
                 print_bundle(bundle);
             } else {
@@ -954,7 +954,7 @@ pub fn run() -> Result<(), ErrorCode> {
             tr_info!("Import finished");
         }
         Arguments::Versions { repo_path, path } => {
-            let mut repo = try!(open_repository(&repo_path));
+            let mut repo = try!(open_repository(&repo_path, true));
             let mut found = false;
             for (name, mut inode) in
                 checked!(
@@ -983,7 +983,7 @@ pub fn run() -> Result<(), ErrorCode> {
                 tr_error!("Can only run diff on same repository");
                 return Err(ErrorCode::InvalidArgs);
             }
-            let mut repo = try!(open_repository(&repo_path_old));
+            let mut repo = try!(open_repository(&repo_path_old, true));
             let backup_old = try!(get_backup(&repo, &backup_name_old));
             let backup_new = try!(get_backup(&repo, &backup_name_new));
             let inode1 =
@@ -1026,7 +1026,7 @@ pub fn run() -> Result<(), ErrorCode> {
             encryption,
             hash
         } => {
-            let mut repo = try!(open_repository(&repo_path));
+            let mut repo = try!(open_repository(&repo_path, false));
             let mut changed = false;
             if let Some(bundle_size) = bundle_size {
                 repo.config.bundle_size = bundle_size;
@@ -1083,7 +1083,7 @@ pub fn run() -> Result<(), ErrorCode> {
             password,
             file
         } => {
-            let mut repo = try!(open_repository(&repo_path));
+            let mut repo = try!(open_repository(&repo_path, false));
             let (public, secret) = if let Some(file) = file {
                 checked!(
                     Crypto::load_keypair_from_file(file),

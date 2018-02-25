@@ -140,6 +140,7 @@ impl BundleDb {
 
     fn load_bundle_list(
         &mut self,
+        online: bool
     ) -> Result<(Vec<StoredBundle>, Vec<StoredBundle>), BundleDbError> {
         if let Ok(list) = StoredBundle::read_list_from(&self.layout.local_bundle_cache_path()) {
             for bundle in list {
@@ -168,6 +169,9 @@ impl BundleDb {
                 &bundles,
                 &self.layout.local_bundle_cache_path()
             ));
+        }
+        if !online {
+            return Ok((vec![], vec![]))
         }
         let (new, gone) = try!(load_bundles(
             &self.layout.remote_bundles_path(),
@@ -237,9 +241,10 @@ impl BundleDb {
     pub fn open(
         layout: RepositoryLayout,
         crypto: Arc<Mutex<Crypto>>,
+        online: bool
     ) -> Result<(Self, Vec<BundleInfo>, Vec<BundleInfo>), BundleDbError> {
         let mut self_ = Self::new(layout, crypto);
-        let (new, gone) = try!(self_.load_bundle_list());
+        let (new, gone) = try!(self_.load_bundle_list(online));
         try!(self_.update_cache());
         let new = new.into_iter().map(|s| s.info).collect();
         let gone = gone.into_iter().map(|s| s.info).collect();

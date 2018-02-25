@@ -118,11 +118,11 @@ impl Repository {
         ));
         try!(BundleMap::create().save(layout.bundle_map_path()));
         try!(fs::create_dir_all(layout.backups_path()));
-        Self::open(path)
+        Self::open(path, true)
     }
 
     #[allow(unknown_lints, useless_let_if_seq)]
-    pub fn open<P: AsRef<Path>>(path: P) -> Result<Self, RepositoryError> {
+    pub fn open<P: AsRef<Path>>(path: P, online: bool) -> Result<Self, RepositoryError> {
         let layout = RepositoryLayout::new(path.as_ref().to_path_buf());
         if !layout.remote_exists() {
             return Err(RepositoryError::NoRemote);
@@ -133,7 +133,7 @@ impl Repository {
         let local_locks = LockFolder::new(layout.local_locks_path());
         let lock = try!(local_locks.lock(false));
         let crypto = Arc::new(Mutex::new(try!(Crypto::open(layout.keys_path()))));
-        let (bundles, new, gone) = try!(BundleDb::open(layout.clone(), crypto.clone()));
+        let (bundles, new, gone) = try!(BundleDb::open(layout.clone(), crypto.clone(), online));
         let (index, mut rebuild_index) =
             match unsafe { Index::open(layout.index_path(), &INDEX_MAGIC, INDEX_VERSION) } {
                 Ok(index) => (index, false),
@@ -227,7 +227,7 @@ impl Repository {
         for file in key_files {
             try!(repo.crypto.lock().unwrap().register_keyfile(file));
         }
-        repo = try!(Repository::open(path));
+        repo = try!(Repository::open(path, true));
         let mut backups: Vec<(String, Backup)> = try!(repo.get_all_backups()).into_iter().collect();
         backups.sort_by_key(|&(_, ref b)| b.timestamp);
         if let Some((name, backup)) = backups.pop() {

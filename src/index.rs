@@ -72,8 +72,8 @@ pub trait Value: Clone + Copy + Default {}
 #[repr(packed)]
 #[derive(Default)]
 pub struct Entry<K, V> {
-    pub key: K,
-    pub data: V
+    key: K,
+    data: V
 }
 
 impl<K: Key, V> Entry<K, V> {
@@ -86,15 +86,43 @@ impl<K: Key, V> Entry<K, V> {
     fn clear(&mut self) {
         unsafe { self.key.clear() }
     }
+
+    #[inline]
+    fn get(&self) -> (&K, &V) {
+        unsafe { (&self.key, &self.data) }
+    }
+
+    #[inline]
+    fn get_mut(&mut self) -> (&K, &mut V) {
+        unsafe { (&self.key, &mut self.data) }
+    }
+
+    #[inline]
+    fn get_key(&self) -> &K {
+        unsafe { &self.key }
+    }
+
+    #[inline]
+    fn get_mut_key(&mut self) -> &mut K {
+        unsafe { &mut self.key }
+    }
+
+    #[inline]
+    fn get_data(&self) -> &V {
+        unsafe { &self.data }
+    }
+
+    #[inline]
+    fn get_mut_data(&mut self) -> &mut V {
+        unsafe { &mut self.data }
+    }
 }
 
-impl<K: Clone, V: Clone> Clone for Entry<K, V> {
+impl<K: Clone + Key, V: Clone> Clone for Entry<K, V> {
     fn clone(&self) -> Self {
-        unsafe {
-            Entry {
-                key: self.key.clone(),
-                data: self.data.clone()
-            }
+        Entry {
+            key: *self.get_key(),
+            data: self.get_data().clone()
         }
     }
 }
@@ -115,7 +143,7 @@ impl<'a, K: Key, V> Iterator for Iter<'a, K, V> {
         while let Some((first, rest)) = self.0.split_first() {
             self.0 = rest;
             if first.is_used() {
-                unsafe { return Some((&first.key, &first.data)) }
+                return Some(first.get())
             }
         }
         None
@@ -135,7 +163,7 @@ impl<'a, K: Key, V> Iterator for IterMut<'a, K, V> {
                 Some((first, rest)) => {
                     self.0 = rest;
                     if first.is_used() {
-                        unsafe { return Some((&first.key, &mut first.data)) }
+                        return Some(first.get_mut())
                     }
                 }
             }
@@ -312,7 +340,7 @@ impl<K: Key, V: Value> Index<K, V> {
                 continue;
             }
             entries += 1;
-            match unsafe { self.locate(&entry.key) } {
+            match self.locate(entry.get_key()) {
                 LocateResult::Found(p) if p == pos => true,
                 found => return Err(IndexError::WrongPosition(pos, found))
             };
@@ -356,10 +384,10 @@ impl<K: Key, V: Value> Index<K, V> {
             if !entry.is_used() {
                 return LocateResult::Hole(pos);
             }
-            if entry.key == *key {
+            if entry.get_key() == key {
                 return LocateResult::Found(pos);
             }
-            let odist = (pos + self.capacity - (entry.key.hash() as usize & self.mask)) & self.mask;
+            let odist = (pos + self.capacity - (entry.get_key().hash() as usize & self.mask)) & self.mask;
             if dist > odist {
                 return LocateResult::Steal(pos);
             }
@@ -382,7 +410,7 @@ impl<K: Key, V: Value> Index<K, V> {
                     // we found a hole, stop shifting here
                     break;
                 }
-                if entry.key.hash() as usize & self.mask == pos {
+                if entry.get_key().hash() as usize & self.mask == pos {
                     // we found an entry at the right position, stop shifting here
                     break;
                 }
@@ -398,7 +426,7 @@ impl<K: Key, V: Value> Index<K, V> {
         match self.locate(key) {
             LocateResult::Found(pos) => {
                 let mut old = *data;
-                mem::swap(&mut old, &mut self.data[pos].data);
+                mem::swap(&mut old, self.data[pos].get_mut_data());
                 Ok(Some(old))
             },
             LocateResult::Hole(pos) => {
@@ -425,8 +453,8 @@ impl<K: Key, V: Value> Index<K, V> {
                     cur_pos = (cur_pos + 1) & self.mask;
                     let entry = &mut self.data[cur_pos];
                     if entry.is_used() {
-                        mem::swap(&mut stolen_key, &mut entry.key);
-                        mem::swap(&mut stolen_data, &mut entry.data);
+                        mem::swap(&mut stolen_key, entry.get_mut_key());
+                        mem::swap(&mut stolen_data, entry.get_mut_data());
                     } else {
                         entry.key = stolen_key;
                         entry.data = stolen_data;
@@ -472,7 +500,7 @@ impl<K: Key, V: Value> Index<K, V> {
         debug_assert!(self.check().is_ok(), tr!("Inconsistent before get"));
         match self.locate(key) {
             LocateResult::Found(pos) => {
-                unsafe { f(&mut self.data[pos].data) };
+                f(self.data[pos].get_mut_data());
                 true
             },
             _ => false
@@ -498,7 +526,7 @@ impl<K: Key, V: Value> Index<K, V> {
         while pos < self.capacity {
             {
                 let entry = &mut self.data[pos];
-                if !entry.is_used() || f(&entry.key, &entry.data) {
+                if !entry.is_used() || f(entry.get_key(), entry.get_data()) {
                     pos += 1;
                     continue;
                 }
@@ -518,6 +546,7 @@ impl<K: Key, V: Value> Index<K, V> {
     }
 
     #[inline]
+    #[allow(dead_code)]
     pub fn iter_mut(&mut self) -> IterMut<K, V> {
         IterMut(self.data)
     }
@@ -533,6 +562,7 @@ impl<K: Key, V: Value> Index<K, V> {
     }
 
     #[inline]
+    #[allow(dead_code)]
     pub fn is_empty(&self) -> bool {
         self.entries == 0
     }
