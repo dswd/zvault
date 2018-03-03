@@ -45,8 +45,8 @@ impl Hash {
         let high = try!(src.read_u64::<LittleEndian>());
         let low = try!(src.read_u64::<LittleEndian>());
         Ok(Hash {
-            high: high,
-            low: low
+            high,
+            low
         })
     }
 
@@ -55,8 +55,8 @@ impl Hash {
         let high = try!(u64::from_str_radix(&val[..16], 16).map_err(|_| ()));
         let low = try!(u64::from_str_radix(&val[16..], 16).map_err(|_| ()));
         Ok(Self {
-            high: high,
-            low: low
+            high,
+            low
         })
     }
 }

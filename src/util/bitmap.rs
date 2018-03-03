@@ -11,7 +11,7 @@ impl Bitmap {
         let len = (len + 7) / 8;
         let mut bytes = Vec::with_capacity(len);
         bytes.resize(len, 0);
-        Self { bytes: bytes }
+        Self { bytes }
     }
 
     /// Returns the number of bits in the bitmap
@@ -67,7 +67,7 @@ impl Bitmap {
 
     #[inline]
     pub fn from_bytes(bytes: Vec<u8>) -> Self {
-        Self { bytes: bytes }
+        Self { bytes }
     }
 }
 

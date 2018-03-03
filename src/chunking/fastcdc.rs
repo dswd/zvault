@@ -66,9 +66,9 @@ impl FastCdcChunker {
             gear: create_gear(seed),
             min_size: avg_size/4,
             max_size: avg_size*8,
-            avg_size: avg_size,
-            mask_long: mask_long,
-            mask_short: mask_short,
+            avg_size,
+            mask_long,
+            mask_short,
         }
     }
 }

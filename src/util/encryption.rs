@@ -152,7 +152,7 @@ impl Crypto {
         }
         Ok(Crypto {
             path: Some(path),
-            keys: keys
+            keys
         })
     }
 

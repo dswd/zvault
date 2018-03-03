@@ -14,7 +14,6 @@ pub const MIN_USAGE: f64 = 0.35;
 pub const INITIAL_SIZE: usize = 1024;
 
 
-//TODO: translate
 quick_error!{
     #[derive(Debug)]
     pub enum IndexError {
@@ -230,10 +229,10 @@ impl<K: Key, V: Value> Index<K, V> {
             max_entries: (header.capacity as f64 * MAX_USAGE) as usize,
             min_entries: (header.capacity as f64 * MIN_USAGE) as usize,
             entries: header.entries as usize,
-            fd: fd,
-            mmap: mmap,
-            data: data,
-            header: header
+            fd,
+            mmap,
+            data,
+            header
         };
         debug_assert!(index.check().is_ok(), tr!("Inconsistent after creation"));
         Ok(index)
@@ -276,6 +275,7 @@ impl<K: Key, V: Value> Index<K, V> {
         self.max_entries = (capacity as f64 * MAX_USAGE) as usize;
     }
 
+    #[allow(redundant_field_names)]
     fn reinsert(&mut self, start: usize, end: usize) -> Result<(), IndexError> {
         for pos in start..end {
             let key;

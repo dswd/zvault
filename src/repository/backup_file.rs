@@ -164,7 +164,7 @@ impl Backup {
         try!(file.write_all(&[HEADER_VERSION]).map_err(|err| {
             BackupFileError::Write(err, path.to_path_buf())
         }));
-        let header = BackupHeader { encryption: encryption };
+        let header = BackupHeader { encryption };
         try!(msgpack::encode_to_stream(&header, &mut file).context(path));
         try!(file.write_all(&data).map_err(|err| {
             BackupFileError::Write(err, path.to_path_buf())

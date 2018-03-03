@@ -16,7 +16,7 @@ pub struct ChunkReader<'a> {
 impl<'a> ChunkReader<'a> {
     pub fn new(repo: &'a mut Repository, chunks: ChunkList) -> Self {
         ChunkReader {
-            repo: repo,
+            repo,
             chunks: chunks.into_inner().into(),
             data: vec![],
             pos: 0

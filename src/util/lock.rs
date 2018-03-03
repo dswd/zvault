@@ -146,7 +146,7 @@ impl LockFolder {
             hostname: get_hostname().unwrap(),
             processid: unsafe { libc::getpid() } as usize,
             date: Utc::now().timestamp(),
-            exclusive: exclusive
+            exclusive
         };
         let path = self.path.join(format!(
             "{}-{}.lock",
@@ -156,7 +156,7 @@ impl LockFolder {
         try!(lockfile.save(&path));
         let handle = LockHandle {
             lock: lockfile,
-            path: path
+            path
         };
         if self.get_lock_level().is_err() {
             try!(handle.release());

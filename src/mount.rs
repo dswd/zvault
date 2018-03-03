@@ -113,8 +113,8 @@ impl FuseInode {
             kind: convert_file_type(self.inode.file_type),
             perm: self.inode.mode as u16,
             nlink: 1,
-            uid: uid,
-            gid: gid,
+            uid,
+            gid,
             rdev: self.inode.device.map_or(
                 0,
                 |(major, minor)| (major << 8) + minor
@@ -158,7 +158,7 @@ impl<'a> FuseFilesystem<'a> {
     pub fn new(repository: &'a mut Repository) -> Result<Self, RepositoryError> {
         Ok(FuseFilesystem {
             next_id: 1,
-            repository: repository,
+            repository,
             inodes: HashMap::new()
         })
     }
@@ -222,7 +222,7 @@ impl<'a> FuseFilesystem<'a> {
     ) -> FuseInodeRef {
         self.add_inode(
             Inode {
-                name: name,
+                name,
                 file_type: FileType::Directory,
                 ..Default::default()
             },
@@ -240,7 +240,7 @@ impl<'a> FuseFilesystem<'a> {
         group_names: HashMap<u32, String>,
     ) -> FuseInodeRef {
         let inode = FuseInode {
-            inode: inode,
+            inode,
             num: self.next_id,
             parent: parent.clone(),
             chunks: None,

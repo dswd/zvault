@@ -193,8 +193,8 @@ impl Config {
             None
         };
         Ok(Config {
-            compression: compression,
-            encryption: encryption,
+            compression,
+            encryption,
             bundle_size: yaml.bundle_size,
             chunker: try!(ChunkerType::from_yaml(&yaml.chunker)),
             hash: try!(HashMethod::from_yaml(&yaml.hash))

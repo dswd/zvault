@@ -105,7 +105,7 @@ macro_rules! checked {
         match $expr {
             Ok(val) => val,
             Err(err) => {
-                tr_error!("Failed to {}\n\tcaused by: {}", $msg, err);
+                tr_error!("Failed to {}\n\tcaused by: {}", tr!($msg), err);
                 return Err($code)
             }
         }
@@ -187,16 +187,16 @@ fn print_backup(backup: &Backup) {
     );
     let dedup_ratio = backup.deduplicated_data_size as f32 / backup.changed_data_size as f32;
     tr_println!(
-        "Deduplicated size: {}, {:.1}% saved",
+        "Deduplicated size: {}, {:.1}%",
         to_file_size(backup.deduplicated_data_size),
-        (1.0 - dedup_ratio) * 100.0
+        (dedup_ratio - 1.0) * 100.0
     );
     let compress_ratio = backup.encoded_data_size as f32 / backup.deduplicated_data_size as f32;
     tr_println!(
-        "Compressed size: {} in {} bundles, {:.1}% saved",
+        "Compressed size: {} in {} bundles, {:.1}%",
         to_file_size(backup.encoded_data_size),
         backup.bundle_count,
-        (1.0 - compress_ratio) * 100.0
+        (compress_ratio - 1.0) * 100.0
     );
     tr_println!(
         "Chunk count: {}, avg size: {}",
@@ -299,7 +299,7 @@ fn print_repoinfo(info: &RepositoryInfo) {
     tr_println!("Bundles: {}", info.bundle_count);
     tr_println!("Total size: {}", to_file_size(info.encoded_data_size));
     tr_println!("Uncompressed size: {}", to_file_size(info.raw_data_size));
-    tr_println!("Compression ratio: {:.1}%", info.compression_ratio * 100.0);
+    tr_println!("Compression ratio: {:.1}%", (info.compression_ratio - 1.0) * 100.0);
     tr_println!("Chunk count: {}", info.chunk_count);
     tr_println!(
         "Average chunk size: {}",
@@ -346,7 +346,7 @@ fn print_bundle(bundle: &StoredBundle) {
     tr_println!(
         "  - Compression: {}, ratio: {:.1}%",
         compression,
-        ratio * 100.0
+        (ratio - 1.0) * 100.0
     );
 }
 
@@ -436,11 +436,11 @@ pub fn run() -> Result<(), ErrorCode> {
                 Repository::create(
                     repo_path,
                     &Config {
-                        bundle_size: bundle_size,
-                        chunker: chunker,
-                        compression: compression,
+                        bundle_size,
+                        chunker,
+                        compression,
                         encryption: None,
-                        hash: hash
+                        hash
                     },
                     remote_path
                 ),
@@ -559,8 +559,8 @@ pub fn run() -> Result<(), ErrorCode> {
                 ))
             };
             let options = BackupOptions {
-                same_device: same_device,
-                excludes: excludes
+                same_device,
+                excludes
             };
             let result = if tar {
                 repo.import_tarfile(&src_path)

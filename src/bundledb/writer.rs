@@ -72,13 +72,13 @@ impl BundleWriter {
             None => None,
         };
         Ok(BundleWriter {
-            mode: mode,
-            hash_method: hash_method,
+            mode,
+            hash_method,
             data: vec![],
-            compression: compression,
-            compression_stream: compression_stream,
-            encryption: encryption,
-            crypto: crypto,
+            compression,
+            compression_stream,
+            encryption,
+            crypto,
             raw_size: 0,
             chunk_count: 0,
             chunks: ChunkList::new()
@@ -127,7 +127,7 @@ impl BundleWriter {
             chunk_count: self.chunk_count,
             id: id.clone(),
             raw_size: self.raw_size,
-            encoded_size: encoded_size,
+            encoded_size,
             chunk_list_size: chunk_data.len(),
             timestamp: Local::now().timestamp()
         };
@@ -149,8 +149,8 @@ impl BundleWriter {
             .unwrap()
             .to_path_buf();
         Ok(StoredBundle {
-            path: path,
-            info: info
+            path,
+            info
         })
     }
 

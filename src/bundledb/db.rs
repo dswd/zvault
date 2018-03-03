@@ -99,8 +99,8 @@ fn load_bundles(
             }
         };
         let bundle = StoredBundle {
-            info: info,
-            path: path
+            info,
+            path
         };
         let id = bundle.info.id.clone();
         if !bundles.contains_key(&id) {
@@ -129,8 +129,8 @@ pub struct BundleDb {
 impl BundleDb {
     fn new(layout: RepositoryLayout, crypto: Arc<Mutex<Crypto>>) -> Self {
         BundleDb {
-            layout: layout,
-            crypto: crypto,
+            layout,
+            crypto,
             uploader: None,
             local_bundles: HashMap::new(),
             remote_bundles: HashMap::new(),

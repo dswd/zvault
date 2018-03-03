@@ -93,8 +93,8 @@ impl Compression {
             _ => return Err(CompressionError::UnsupportedCodec(name.to_string())),
         };
         Ok(Compression {
-            method: method,
-            level: level
+            method,
+            level
         })
     }
 
@@ -234,7 +234,7 @@ impl CompressionStream {
     #[inline]
     fn new(stream: *mut SquashStream) -> Self {
         CompressionStream {
-            stream: stream,
+            stream,
             buffer: [0; 16 * 1024]
         }
     }

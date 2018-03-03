@@ -2,15 +2,7 @@ use log;
 pub use log::SetLoggerError;
 
 use ansi_term::{Color, Style};
-use std::io::Write;
 
-
-macro_rules! println_stderr(
-    ($($arg:tt)*) => { {
-        let r = writeln!(&mut ::std::io::stderr(), $($arg)*);
-        r.expect("failed printing to stderr");
-    } }
-);
 
 struct Logger(log::Level);
 
@@ -25,22 +17,22 @@ impl log::Log for Logger {
         if self.enabled(record.metadata()) {
             match record.level() {
                 log::Level::Error => {
-                    println_stderr!("{}: {}", Color::Red.bold().paint("error"), record.args())
+                    eprintln!("{}: {}", Color::Red.bold().paint("error"), record.args())
                 }
                 log::Level::Warn => {
-                    println_stderr!(
+                    eprintln!(
                         "{}: {}",
                         Color::Yellow.bold().paint("warning"),
                         record.args()
                     )
                 }
                 log::Level::Info => {
-                    println_stderr!("{}: {}", Color::Green.bold().paint("info"), record.args())
+                    eprintln!("{}: {}", Color::Green.bold().paint("info"), record.args())
                 }
                 log::Level::Debug => {
-                    println_stderr!("{}: {}", Style::new().bold().paint("debug"), record.args())
+                    eprintln!("{}: {}", Style::new().bold().paint("debug"), record.args())
                 }
-                log::Level::Trace => println_stderr!("{}: {}", "trace", record.args()),
+                log::Level::Trace => eprintln!("{}: {}", "trace", record.args()),
             }
         }
     }

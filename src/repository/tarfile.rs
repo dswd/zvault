@@ -93,7 +93,7 @@ fn inode_from_entry<R: Read>(entry: &mut tar::Entry<R>) -> Result<Inode, Reposit
             _ => return Err(InodeError::UnsupportedFiletype(path.to_path_buf()).into()),
         };
         Inode {
-            file_type: file_type,
+            file_type,
             name: path.file_name()
                 .map(|s| s.to_string_lossy().to_string())
                 .unwrap_or_else(|| "/".to_string()),

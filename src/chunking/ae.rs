@@ -20,7 +20,7 @@ impl AeChunker {
         AeChunker{
             buffer: [0; 0x1000],
             buffered: 0,
-            window_size: window_size,
+            window_size,
         }
     }
 }

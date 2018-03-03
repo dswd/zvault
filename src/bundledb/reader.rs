@@ -75,12 +75,12 @@ impl BundleReader {
         info: BundleInfo,
     ) -> Self {
         BundleReader {
-            info: info,
+            info,
             chunks: None,
-            version: version,
-            path: path,
-            crypto: crypto,
-            content_start: content_start,
+            version,
+            path,
+            crypto,
+            content_start,
             chunk_positions: None
         }
     }

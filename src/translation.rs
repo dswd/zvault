@@ -58,11 +58,11 @@ impl<'a> MoFile<'a> {
             return Err(());
         }
         Ok(MoFile{
-            data: data,
-            count: count,
-            orig_pos: orig_pos,
-            trans_pos: trans_pos,
-            reorder: reorder,
+            data,
+            count,
+            orig_pos,
+            trans_pos,
+            reorder,
             i: 0
         })
     }

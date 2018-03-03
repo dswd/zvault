@@ -47,8 +47,8 @@ pub struct Location {
 impl Location {
     pub fn new(bundle: u32, chunk: u32) -> Self {
         Location {
-            bundle: bundle,
-            chunk: chunk
+            bundle,
+            chunk
         }
     }
 }
@@ -158,21 +158,21 @@ impl Repository {
         };
         let dirty = layout.dirtyfile_path().exists();
         let mut repo = Repository {
-            layout: layout,
+            layout,
             dirty: true,
             chunker: config.chunker.create(),
-            config: config,
-            index: index,
-            crypto: crypto,
-            bundle_map: bundle_map,
+            config,
+            index,
+            crypto,
+            bundle_map,
             next_data_bundle: 0,
             next_meta_bundle: 0,
-            bundles: bundles,
+            bundles,
             data_bundle: None,
             meta_bundle: None,
-            lock: lock,
-            remote_locks: remote_locks,
-            local_locks: local_locks
+            lock,
+            remote_locks,
+            local_locks
         };
         if !rebuild_bundle_map {
             let mut save_bundle_map = false;

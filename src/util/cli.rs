@@ -56,9 +56,9 @@ impl<T> ProgressIter<T> {
         bar.message(&msg);
         bar.set_max_refresh_rate(Some(Duration::from_millis(100)));
         ProgressIter {
-            inner: inner,
-            bar: bar,
-            msg: msg
+            inner,
+            bar,
+            msg
         }
     }
 }

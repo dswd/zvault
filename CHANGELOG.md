@@ -3,6 +3,12 @@
 This project follows [semantic versioning](http://semver.org).
 
 
+### UNRELEASED
+* [added] Translation infrastructure (**requires nightly rust**)
+* [fixed] Also including the first min_size bytes in hash
+* [modified] Updated dependencies
+
+
 ### v0.4.0 (2017-07-21)
 * [added] Added `copy` subcommand
 * [added] Added support for xattrs in fuse mount

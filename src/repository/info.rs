@@ -137,9 +137,9 @@ impl Repository {
         let chunk_count = bundles.iter().map(|b| b.chunk_count).sum();
         RepositoryInfo {
             bundle_count: bundles.len(),
-            chunk_count: chunk_count,
-            encoded_data_size: encoded_data_size,
-            raw_data_size: raw_data_size,
+            chunk_count,
+            encoded_data_size,
+            raw_data_size,
             compression_ratio: encoded_data_size as f32 / raw_data_size as f32,
             avg_chunk_size: raw_data_size as f32 / chunk_count as f32,
             index_size: self.index.size(),

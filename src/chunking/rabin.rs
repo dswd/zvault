@@ -55,12 +55,12 @@ impl RabinChunker {
             buffer: [0; 0x1000],
             buffered: 0,
             table: create_table(alpha, window_size),
-            alpha: alpha,
-            seed: seed,
+            alpha,
+            seed,
             min_size: avg_size/4,
             max_size: avg_size*4,
-            window_size: window_size,
-            chunk_mask: chunk_mask,
+            window_size,
+            chunk_mask,
         }
     }
 }

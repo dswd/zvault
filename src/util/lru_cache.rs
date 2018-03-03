@@ -15,8 +15,8 @@ impl<K: Eq + Hash, V> LruCache<K, V> {
     pub fn new(min_size: usize, max_size: usize) -> Self {
         LruCache {
             items: HashMap::default(),
-            min_size: min_size,
-            max_size: max_size,
+            min_size,
+            max_size,
             next: 0
         }
     }
