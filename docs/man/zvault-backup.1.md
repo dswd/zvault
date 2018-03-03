@@ -161,5 +161,5 @@ the case of directories) will be left out of the backup.
 
 ## COPYRIGHT
 
-Copyright (C) 2017  Dennis Schwerdel
+Copyright (C) 2017-2018  Dennis Schwerdel
 This software is licensed under GPL-3 or newer (see LICENSE.md)

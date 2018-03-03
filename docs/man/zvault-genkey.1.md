@@ -41,5 +41,5 @@ writes it to the given file `FILE`.
 
 ## COPYRIGHT
 
-Copyright (C) 2017  Dennis Schwerdel
+Copyright (C) 2017-2018  Dennis Schwerdel
 This software is licensed under GPL-3 or newer (see LICENSE.md)

@@ -92,5 +92,5 @@ configuration can be changed by _zvault-config(1)_ later.
 
 ## COPYRIGHT
 
-Copyright (C) 2017  Dennis Schwerdel
+Copyright (C) 2017-2018  Dennis Schwerdel
 This software is licensed under GPL-3 or newer (see LICENSE.md)

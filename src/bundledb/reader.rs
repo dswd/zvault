@@ -295,7 +295,17 @@ impl BundleReader {
                 tr!("Raw data size does not match size in header, truncated bundle")
             ));
         }
-        //TODO: verify checksum
+        let mut pos = 0;
+        for chunk in self.chunks.as_ref().unwrap().as_ref() {
+            let data = &contents[pos..pos+chunk.1 as usize];
+            if self.info.hash_method.hash(data) != chunk.0 {
+                return Err(BundleReaderError::Integrity(
+                    self.id(),
+                    tr!("Stored hash does not match hash in header, modified data")
+                ));
+            }
+            pos += chunk.1 as usize;
+        }
         Ok(())
     }
 }

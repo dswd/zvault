@@ -7,8 +7,8 @@ msgid ""
 msgstr ""
 "Project-Id-Version: \n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2018-02-24 23:55+0100\n"
-"PO-Revision-Date: 2018-02-25 00:08+0100\n"
+"POT-Creation-Date: 2018-03-03 16:10+0100\n"
+"PO-Revision-Date: 2018-03-03 16:18+0100\n"
 "Last-Translator: \n"
 "Language-Team: \n"
 "Language: de\n"
@@ -43,7 +43,7 @@ msgstr ""
 "schreiben\n"
 "\tverursacht durch: {}"
 
-#: ../src/bundledb/cache.rs:26 ../src/bundledb/reader.rs:22 ../src/index.rs:34
+#: ../src/bundledb/cache.rs:26 ../src/bundledb/reader.rs:22 ../src/index.rs:33
 #: ../src/repository/backup_file.rs:39 ../src/repository/bundle_map.rs:32
 msgid "Wrong header"
 msgstr "Falsche Kopfdaten"
@@ -66,33 +66,42 @@ msgstr ""
 
 #: ../src/bundledb/cache.rs:36
 msgid "Failed to decode bundle cache"
-msgstr ""
+msgstr "Konnte Zwischenspeicher für Paketdateien nicht dekodieren"
 
 #: ../src/bundledb/cache.rs:37
 msgid ""
 "Bundle cache error: failed to decode bundle cache\n"
 "\tcaused by: {}"
 msgstr ""
+"Fehler im Zwischenspeicher für Paketdateien: konnte Zwischenspeicher nicht "
+"dekodieren\n"
+"\tverursacht durch: {}"
 
 #: ../src/bundledb/cache.rs:42
 msgid "Failed to encode bundle cache"
-msgstr ""
+msgstr "Konnte Zwischenspeicher für Paketdateien nicht kodieren"
 
 #: ../src/bundledb/cache.rs:43
 msgid ""
 "Bundle cache error: failed to encode bundle cache\n"
 "\tcaused by: {}"
 msgstr ""
+"Fehler im Zwischenspeicher für Paketdateien: konnte Zwischenspeicher nicht "
+"kodieren\n"
+"\tverursacht durch: {}"
 
 #: ../src/bundledb/db.rs:17
 msgid "Failed to list bundles"
-msgstr ""
+msgstr "Konnte Liste von Paketdateien nicht laden"
 
 #: ../src/bundledb/db.rs:18
 msgid ""
 "Bundle db error: failed to list bundles\n"
 "\tcaused by: {}"
 msgstr ""
+"Fehler im Zwischenspeicher für Paketdateien: konnte Liste der Paketdateien "
+"nicht laden\n"
+"\tverursacht durch: {}"
 
 #: ../src/bundledb/db.rs:23
 msgid "Failed to read bundle"
@@ -166,57 +175,57 @@ msgstr ""
 msgid "Ignoring unreadable bundle"
 msgstr ""
 
-#: ../src/bundledb/db.rs:149
+#: ../src/bundledb/db.rs:150
 msgid "Failed to read local bundle cache, rebuilding cache"
 msgstr ""
 
-#: ../src/bundledb/db.rs:156
+#: ../src/bundledb/db.rs:157
 msgid "Failed to read remote bundle cache, rebuilding cache"
 msgstr ""
 
-#: ../src/bundledb/db.rs:222
+#: ../src/bundledb/db.rs:226
 msgid "Copying new meta bundle to local cache: {}"
 msgstr ""
 
-#: ../src/bundledb/db.rs:410
+#: ../src/bundledb/db.rs:415
 msgid "checking bundles"
 msgstr ""
 
-#: ../src/bundledb/db.rs:436
+#: ../src/bundledb/db.rs:441
 msgid "repairing bundles"
 msgstr ""
 
-#: ../src/bundledb/db.rs:452
+#: ../src/bundledb/db.rs:457
 msgid "Moving bundle to {:?}"
 msgstr ""
 
-#: ../src/bundledb/db.rs:464
+#: ../src/bundledb/db.rs:469
 msgid ""
 "Problem detected: failed to read bundle header: {}\n"
 "\tcaused by: {}"
 msgstr ""
 
-#: ../src/bundledb/db.rs:475
+#: ../src/bundledb/db.rs:480
 msgid ""
 "Problem detected: failed to read bundle chunks: {}\n"
 "\tcaused by: {}"
 msgstr ""
 
-#: ../src/bundledb/db.rs:486
+#: ../src/bundledb/db.rs:491
 msgid ""
 "Problem detected: failed to read bundle data: {}\n"
 "\tcaused by: {}"
 msgstr ""
 
-#: ../src/bundledb/db.rs:493
+#: ../src/bundledb/db.rs:498
 msgid "Problem detected: bundle data was truncated: {}"
 msgstr ""
 
-#: ../src/bundledb/db.rs:494
+#: ../src/bundledb/db.rs:499
 msgid "Copying readable data into new bundle"
 msgstr ""
 
-#: ../src/bundledb/db.rs:512
+#: ../src/bundledb/db.rs:517
 msgid "New bundle id is {}"
 msgstr ""
 
@@ -317,7 +326,11 @@ msgstr ""
 msgid "Raw data size does not match size in header, truncated bundle"
 msgstr ""
 
-#: ../src/bundledb/reader.rs:306
+#: ../src/bundledb/reader.rs:304
+msgid "Stored hash does not match hash in header, modified data"
+msgstr ""
+
+#: ../src/bundledb/reader.rs:316
 msgid ""
 "Bundle(\n"
 "\tid: {}\n"
@@ -851,10 +864,6 @@ msgstr ""
 msgid "No subcommand given"
 msgstr ""
 
-#: ../src/cli/logger.rs:11
-msgid "failed printing to stderr"
-msgstr ""
-
 #: ../src/cli/mod.rs:108
 msgid ""
 "Failed to {}\n"
@@ -911,13 +920,11 @@ msgid "Modified data size: {}"
 msgstr ""
 
 #: ../src/cli/mod.rs:190
-#, python-format
-msgid "Deduplicated size: {}, {:.1}% saved"
+msgid "Deduplicated size: {}, {:.1}%"
 msgstr ""
 
 #: ../src/cli/mod.rs:196
-#, python-format
-msgid "Compressed size: {} in {} bundles, {:.1}% saved"
+msgid "Compressed size: {} in {} bundles, {:.1}%"
 msgstr ""
 
 #: ../src/cli/mod.rs:202
@@ -1367,64 +1374,64 @@ msgstr ""
 msgid "add key pair"
 msgstr "Hinzufügen eines Schlüsselpaars"
 
-#: ../src/index.rs:24
+#: ../src/index.rs:23
 msgid "Failed to open index file"
 msgstr ""
 
-#: ../src/index.rs:25
+#: ../src/index.rs:24
 msgid ""
 "Index error: failed to open the index file\n"
 "\tcaused by: {}"
 msgstr ""
 
-#: ../src/index.rs:30
+#: ../src/index.rs:29
 msgid "Failed to memory-map the index file"
 msgstr ""
 
-#: ../src/index.rs:31
+#: ../src/index.rs:30
 msgid ""
 "Index error: failed to memory-map the index file\n"
 "\tcaused by: {}"
 msgstr ""
 
-#: ../src/index.rs:35
+#: ../src/index.rs:34
 msgid "Index error: file has the wrong magic header"
 msgstr ""
 
-#: ../src/index.rs:38
+#: ../src/index.rs:37
 msgid "Unsupported version"
 msgstr ""
 
-#: ../src/index.rs:39
+#: ../src/index.rs:38
 msgid "Index error: index file has unsupported version: {}"
 msgstr ""
 
-#: ../src/index.rs:42
+#: ../src/index.rs:41
 msgid "Key at wrong position"
 msgstr ""
 
-#: ../src/index.rs:43
+#: ../src/index.rs:42
 msgid "Index error: key has wrong position, expected at: {}, but is at: {:?}"
 msgstr ""
 
-#: ../src/index.rs:46
+#: ../src/index.rs:45
 msgid "Wrong entry count"
 msgstr "Falsche Anzahl an Einträgen"
 
-#: ../src/index.rs:47
+#: ../src/index.rs:46
 msgid "Index error: index has wrong entry count, expected {}, but is {}"
 msgstr ""
 
-#: ../src/index.rs:150
+#: ../src/index.rs:177
 msgid "Memory map too small"
 msgstr ""
 
-#: ../src/index.rs:210
+#: ../src/index.rs:237
 msgid "Inconsistent after creation"
 msgstr ""
 
-#: ../src/index.rs:444 ../src/index.rs:453 ../src/index.rs:462
-#: ../src/index.rs:472
+#: ../src/index.rs:472 ../src/index.rs:481 ../src/index.rs:490
+#: ../src/index.rs:500
 msgid "Inconsistent before get"
 msgstr ""
 

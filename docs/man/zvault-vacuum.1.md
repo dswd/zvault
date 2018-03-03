@@ -81,5 +81,5 @@ should be avoided when the storage space permits it.
 
 ## COPYRIGHT
 
-Copyright (C) 2017  Dennis Schwerdel
+Copyright (C) 2017-2018  Dennis Schwerdel
 This software is licensed under GPL-3 or newer (see LICENSE.md)

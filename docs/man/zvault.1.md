@@ -341,5 +341,5 @@ To reclaim storage space after removing some backups vacuum needs to be run
 
 ## COPYRIGHT
 
-Copyright (C) 2017  Dennis Schwerdel
+Copyright (C) 2017-2018  Dennis Schwerdel
 This software is licensed under GPL-3 or newer (see LICENSE.md)

@@ -5,8 +5,9 @@ This project follows [semantic versioning](http://semver.org).
 
 ### UNRELEASED
 * [added] Translation infrastructure (**requires nightly rust**)
-* [fixed] Also including the first min_size bytes in hash
 * [modified] Updated dependencies
+* [modified] Updated copyright date
+* [fixed] Also including the first min_size bytes in hash
 
 
 ### v0.4.0 (2017-07-21)
