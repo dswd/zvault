@@ -33,162 +33,165 @@ Initializing cache...
 ++ borg init -e none repos/borg
 ++ borg init -e none repos/borg-zlib
 ++ zbackup init --non-encrypted repos/zbackup
-++ cat
+++ find test_data/silesia -type f
+++ xargs cat
 +++ pwd
-++ target/release/zvault backup test_data/silesia.tar /home/dschwerdel/shared/projekte/zvault.rs/repos/zvault_brotli3::silesia1
+++ target/release/zvault backup test_data/silesia /home/dschwerdel/shared/projekte/zvault.rs/repos/zvault_brotli3::silesia1
 [1;32minfo[0m: No reference backup found, doing a full scan instead
 [1;32minfo[0m: Backup finished
-Date: Sat,  3 Mar 2018 23:49:23 +0100
-Source: lap-it-032:test_data/silesia.tar
-Duration: 0:00:04.3
-Entries: 1 files, 0 dirs
+Date: Sun,  4 Mar 2018 16:44:37 +0100
+Source: lap-it-032:test_data/silesia
+Duration: 0:00:04.0
+Entries: 12 files, 1 dirs
 Total backup size: 202.3 MiB
 Modified data size: 202.3 MiB
 Deduplicated size: 202.3 MiB, -0.0%
 Compressed size: 64.5 MiB in 4 bundles, -68.1%
-Chunk count: 10988, avg size: 18.9 KiB
+Chunk count: 11017, avg size: 18.8 KiB
 
-real	0m4.347s
-user	0m3.960s
-sys	0m0.576s
+real	0m4.049s
+user	0m3.714s
+sys	0m0.504s
 +++ pwd
-++ target/release/zvault backup test_data/silesia.tar /home/dschwerdel/shared/projekte/zvault.rs/repos/zvault_brotli3::silesia2
+++ target/release/zvault backup test_data/silesia /home/dschwerdel/shared/projekte/zvault.rs/repos/zvault_brotli3::silesia2
 [1;32minfo[0m: Using backup silesia1 as reference
 [1;32minfo[0m: Backup finished
-Date: Sat,  3 Mar 2018 23:49:27 +0100
-Source: lap-it-032:test_data/silesia.tar
+Date: Sun,  4 Mar 2018 16:44:41 +0100
+Source: lap-it-032:test_data/silesia
 Duration: 0:00:00.0
-Entries: 1 files, 0 dirs
+Entries: 12 files, 1 dirs
 Total backup size: 202.3 MiB
 Modified data size: 0 Byte
 Deduplicated size: 0 Byte, NaN%
 Compressed size: 0 Byte in 0 bundles, NaN%
 Chunk count: 0, avg size: 0 Byte
 
-real	0m0.013s
-user	0m0.006s
-sys	0m0.006s
+real	0m0.009s
+user	0m0.004s
+sys	0m0.004s
 +++ pwd
-++ target/release/zvault backup test_data/silesia.tar /home/dschwerdel/shared/projekte/zvault.rs/repos/zvault_brotli6::silesia1
+++ target/release/zvault backup test_data/silesia /home/dschwerdel/shared/projekte/zvault.rs/repos/zvault_brotli6::silesia1
 [1;32minfo[0m: No reference backup found, doing a full scan instead
 [1;32minfo[0m: Backup finished
-Date: Sat,  3 Mar 2018 23:49:27 +0100
-Source: lap-it-032:test_data/silesia.tar
-Duration: 0:00:19.2
-Entries: 1 files, 0 dirs
+Date: Sun,  4 Mar 2018 16:44:41 +0100
+Source: lap-it-032:test_data/silesia
+Duration: 0:00:16.1
+Entries: 12 files, 1 dirs
 Total backup size: 202.3 MiB
 Modified data size: 202.3 MiB
 Deduplicated size: 202.3 MiB, -0.0%
-Compressed size: 57.0 MiB in 4 bundles, -71.8%
-Chunk count: 10988, avg size: 18.9 KiB
+Compressed size: 56.9 MiB in 4 bundles, -71.9%
+Chunk count: 11017, avg size: 18.8 KiB
 
-real	0m19.235s
-user	0m18.342s
-sys	0m0.931s
+real	0m16.100s
+user	0m15.441s
+sys	0m0.833s
 +++ pwd
-++ target/release/zvault backup test_data/silesia.tar /home/dschwerdel/shared/projekte/zvault.rs/repos/zvault_brotli6::silesia2
+++ target/release/zvault backup test_data/silesia /home/dschwerdel/shared/projekte/zvault.rs/repos/zvault_brotli6::silesia2
 [1;32minfo[0m: Using backup silesia1 as reference
 [1;32minfo[0m: Backup finished
-Date: Sat,  3 Mar 2018 23:49:47 +0100
-Source: lap-it-032:test_data/silesia.tar
+Date: Sun,  4 Mar 2018 16:44:57 +0100
+Source: lap-it-032:test_data/silesia
 Duration: 0:00:00.0
-Entries: 1 files, 0 dirs
+Entries: 12 files, 1 dirs
 Total backup size: 202.3 MiB
 Modified data size: 0 Byte
 Deduplicated size: 0 Byte, NaN%
 Compressed size: 0 Byte in 0 bundles, NaN%
 Chunk count: 0, avg size: 0 Byte
 
-real	0m0.020s
-user	0m0.011s
-sys	0m0.000s
+real	0m0.008s
+user	0m0.000s
+sys	0m0.008s
 +++ pwd
-++ target/release/zvault backup test_data/silesia.tar /home/dschwerdel/shared/projekte/zvault.rs/repos/zvault_lzma2::silesia1
+++ target/release/zvault backup test_data/silesia /home/dschwerdel/shared/projekte/zvault.rs/repos/zvault_lzma2::silesia1
 [1;32minfo[0m: No reference backup found, doing a full scan instead
 [1;32minfo[0m: Backup finished
-Date: Sat,  3 Mar 2018 23:49:47 +0100
-Source: lap-it-032:test_data/silesia.tar
-Duration: 0:00:44.6
-Entries: 1 files, 0 dirs
+Date: Sun,  4 Mar 2018 16:44:57 +0100
+Source: lap-it-032:test_data/silesia
+Duration: 0:00:45.1
+Entries: 12 files, 1 dirs
 Total backup size: 202.3 MiB
 Modified data size: 202.3 MiB
 Deduplicated size: 202.3 MiB, -0.0%
 Compressed size: 53.9 MiB in 4 bundles, -73.3%
-Chunk count: 10988, avg size: 18.9 KiB
+Chunk count: 11017, avg size: 18.8 KiB
 
-real	0m44.594s
-user	0m44.006s
-sys	0m0.764s
+real	0m45.068s
+user	0m44.571s
+sys	0m0.628s
 +++ pwd
-++ target/release/zvault backup test_data/silesia.tar /home/dschwerdel/shared/projekte/zvault.rs/repos/zvault_lzma2::silesia2
+++ target/release/zvault backup test_data/silesia /home/dschwerdel/shared/projekte/zvault.rs/repos/zvault_lzma2::silesia2
 [1;32minfo[0m: Using backup silesia1 as reference
 [1;32minfo[0m: Backup finished
-Date: Sat,  3 Mar 2018 23:50:31 +0100
-Source: lap-it-032:test_data/silesia.tar
+Date: Sun,  4 Mar 2018 16:45:42 +0100
+Source: lap-it-032:test_data/silesia
 Duration: 0:00:00.0
-Entries: 1 files, 0 dirs
+Entries: 12 files, 1 dirs
 Total backup size: 202.3 MiB
 Modified data size: 0 Byte
 Deduplicated size: 0 Byte, NaN%
 Compressed size: 0 Byte in 0 bundles, NaN%
 Chunk count: 0, avg size: 0 Byte
 
-real	0m0.032s
-user	0m0.020s
-sys	0m0.012s
-++ attic create repos/attic::silesia1 test_data/silesia.tar
+real	0m0.030s
+user	0m0.019s
+sys	0m0.011s
+++ attic create repos/attic::silesia1 test_data/silesia
 
-real	0m12.103s
-user	0m11.233s
-sys	0m0.420s
-++ attic create repos/attic::silesia2 test_data/silesia.tar
+real	0m12.686s
+user	0m11.810s
+sys	0m0.373s
+++ attic create repos/attic::silesia2 test_data/silesia
 
-real	0m1.411s
-user	0m1.282s
-sys	0m0.092s
-++ borg create -C none repos/borg::silesia1 test_data/silesia.tar
+real	0m0.265s
+user	0m0.185s
+sys	0m0.047s
+++ borg create -C none repos/borg::silesia1 test_data/silesia
 
-real	0m3.902s
-user	0m1.988s
-sys	0m0.891s
-++ borg create -C none repos/borg::silesia2 test_data/silesia.tar
+real	0m4.206s
+user	0m2.139s
+sys	0m0.870s
+++ borg create -C none repos/borg::silesia2 test_data/silesia
 
-real	0m1.831s
-user	0m1.553s
-sys	0m0.251s
-++ borg create -C zlib repos/borg-zlib::silesia1 test_data/silesia.tar
+real	0m0.455s
+user	0m0.357s
+sys	0m0.071s
+++ borg create -C zlib repos/borg-zlib::silesia1 test_data/silesia
 
-real	0m13.512s
-user	0m12.639s
-sys	0m0.483s
-++ borg create -C zlib repos/borg-zlib::silesia2 test_data/silesia.tar
+real	0m13.184s
+user	0m12.293s
+sys	0m0.500s
+++ borg create -C zlib repos/borg-zlib::silesia2 test_data/silesia
 
-real	0m2.141s
-user	0m1.837s
-sys	0m0.280s
+real	0m0.416s
+user	0m0.335s
+sys	0m0.059s
+++ tar -c test_data/silesia
 ++ zbackup backup --non-encrypted repos/zbackup/backups/silesia1
 Loading index...
 Index loaded.
 Using up to 4 thread(s) for compression
 
-real	0m47.798s
-user	2m50.518s
-sys	0m2.948s
+real	0m52.286s
+user	2m52.262s
+sys	0m3.453s
+++ tar -c test_data/silesia
 ++ zbackup backup --non-encrypted repos/zbackup/backups/silesia2
 Loading index...
-Loading index file dd219e5c2fc1c2705392504e560d1208b50dce5949ac3f91...
+Loading index file 6ff054dcc4af8c472a5fbd661a8f61409e44a4fafc287d4d...
 Index loaded.
 Using up to 4 thread(s) for compression
 
-real	0m1.760s
-user	0m1.698s
-sys	0m0.048s
+real	0m1.983s
+user	0m1.844s
+sys	0m0.315s
 ++ du -h test_data/silesia.tar
 203M	test_data/silesia.tar
-++ du -sh repos/zvault_brotli3/bundles repos/zvault_brotli6/bundles repos/zvault_lzma2/bundles repos/attic repos/borg repos/borg-zlib repos/zbackup
-252K	repos/zvault_brotli3/bundles
-248K	repos/zvault_brotli6/bundles
-248K	repos/zvault_lzma2/bundles
+++ du -sh repos/remotes/zvault_brotli3 repos/remotes/zvault_brotli6 repos/remotes/zvault_lzma2 repos/attic repos/borg repos/borg-zlib repos/zbackup
+65M	repos/remotes/zvault_brotli3
+58M	repos/remotes/zvault_brotli6
+55M	repos/remotes/zvault_lzma2
 68M	repos/attic
 203M	repos/borg
 66M	repos/borg-zlib
@@ -228,163 +231,166 @@ Initializing cache...
 ++ borg init -e none repos/borg
 ++ borg init -e none repos/borg-zlib
 ++ zbackup init --non-encrypted repos/zbackup
-++ cat
+++ find test_data/ubuntu -type f
+++ xargs cat
 +++ pwd
-++ target/release/zvault backup test_data/ubuntu.tar /home/dschwerdel/shared/projekte/zvault.rs/repos/zvault_brotli3::ubuntu1
+++ target/release/zvault backup test_data/ubuntu /home/dschwerdel/shared/projekte/zvault.rs/repos/zvault_brotli3::ubuntu1
 [1;32minfo[0m: No reference backup found, doing a full scan instead
 [1;32minfo[0m: Backup finished
-Date: Sat,  3 Mar 2018 23:51:57 +0100
-Source: lap-it-032:test_data/ubuntu.tar
-Duration: 0:00:02.1
-Entries: 1 files, 0 dirs
-Total backup size: 97.7 MiB
-Modified data size: 97.7 MiB
-Deduplicated size: 91.2 MiB, -6.7%
-Compressed size: 33.7 MiB in 3 bundles, -63.0%
-Chunk count: 5155, avg size: 18.1 KiB
+Date: Sun,  4 Mar 2018 16:47:09 +0100
+Source: lap-it-032:test_data/ubuntu
+Duration: 0:00:02.0
+Entries: 4418 files, 670 dirs
+Total backup size: 83.2 MiB
+Modified data size: 83.2 MiB
+Deduplicated size: 74.7 MiB, -10.2%
+Compressed size: 29.6 MiB in 3 bundles, -60.3%
+Chunk count: 12038, avg size: 6.4 KiB
 
-real	0m2.074s
-user	0m1.810s
-sys	0m0.349s
+real	0m2.009s
+user	0m1.718s
+sys	0m0.369s
 +++ pwd
-++ target/release/zvault backup test_data/ubuntu.tar /home/dschwerdel/shared/projekte/zvault.rs/repos/zvault_brotli3::ubuntu2
+++ target/release/zvault backup test_data/ubuntu /home/dschwerdel/shared/projekte/zvault.rs/repos/zvault_brotli3::ubuntu2
 [1;32minfo[0m: Using backup ubuntu1 as reference
 [1;32minfo[0m: Backup finished
-Date: Sat,  3 Mar 2018 23:51:59 +0100
-Source: lap-it-032:test_data/ubuntu.tar
-Duration: 0:00:00.0
-Entries: 1 files, 0 dirs
-Total backup size: 97.7 MiB
+Date: Sun,  4 Mar 2018 16:47:11 +0100
+Source: lap-it-032:test_data/ubuntu
+Duration: 0:00:00.1
+Entries: 4418 files, 670 dirs
+Total backup size: 83.2 MiB
 Modified data size: 0 Byte
 Deduplicated size: 0 Byte, NaN%
 Compressed size: 0 Byte in 0 bundles, NaN%
 Chunk count: 0, avg size: 0 Byte
 
-real	0m0.013s
-user	0m0.003s
-sys	0m0.007s
+real	0m0.112s
+user	0m0.032s
+sys	0m0.079s
 +++ pwd
-++ target/release/zvault backup test_data/ubuntu.tar /home/dschwerdel/shared/projekte/zvault.rs/repos/zvault_brotli6::ubuntu1
+++ target/release/zvault backup test_data/ubuntu /home/dschwerdel/shared/projekte/zvault.rs/repos/zvault_brotli6::ubuntu1
 [1;32minfo[0m: No reference backup found, doing a full scan instead
 [1;32minfo[0m: Backup finished
-Date: Sat,  3 Mar 2018 23:51:59 +0100
-Source: lap-it-032:test_data/ubuntu.tar
-Duration: 0:00:08.1
-Entries: 1 files, 0 dirs
-Total backup size: 97.7 MiB
-Modified data size: 97.7 MiB
-Deduplicated size: 91.2 MiB, -6.7%
-Compressed size: 27.8 MiB in 3 bundles, -69.5%
-Chunk count: 5155, avg size: 18.1 KiB
+Date: Sun,  4 Mar 2018 16:47:11 +0100
+Source: lap-it-032:test_data/ubuntu
+Duration: 0:00:07.6
+Entries: 4418 files, 670 dirs
+Total backup size: 83.2 MiB
+Modified data size: 83.2 MiB
+Deduplicated size: 74.7 MiB, -10.2%
+Compressed size: 24.1 MiB in 2 bundles, -67.7%
+Chunk count: 12038, avg size: 6.4 KiB
 
-real	0m8.065s
-user	0m7.641s
-sys	0m0.480s
+real	0m7.572s
+user	0m7.156s
+sys	0m0.424s
 +++ pwd
-++ target/release/zvault backup test_data/ubuntu.tar /home/dschwerdel/shared/projekte/zvault.rs/repos/zvault_brotli6::ubuntu2
+++ target/release/zvault backup test_data/ubuntu /home/dschwerdel/shared/projekte/zvault.rs/repos/zvault_brotli6::ubuntu2
 [1;32minfo[0m: Using backup ubuntu1 as reference
 [1;32minfo[0m: Backup finished
-Date: Sat,  3 Mar 2018 23:52:07 +0100
-Source: lap-it-032:test_data/ubuntu.tar
-Duration: 0:00:00.0
-Entries: 1 files, 0 dirs
-Total backup size: 97.7 MiB
+Date: Sun,  4 Mar 2018 16:47:19 +0100
+Source: lap-it-032:test_data/ubuntu
+Duration: 0:00:00.1
+Entries: 4418 files, 670 dirs
+Total backup size: 83.2 MiB
 Modified data size: 0 Byte
 Deduplicated size: 0 Byte, NaN%
 Compressed size: 0 Byte in 0 bundles, NaN%
 Chunk count: 0, avg size: 0 Byte
 
-real	0m0.007s
-user	0m0.004s
-sys	0m0.004s
+real	0m0.127s
+user	0m0.058s
+sys	0m0.065s
 +++ pwd
-++ target/release/zvault backup test_data/ubuntu.tar /home/dschwerdel/shared/projekte/zvault.rs/repos/zvault_lzma2::ubuntu1
+++ target/release/zvault backup test_data/ubuntu /home/dschwerdel/shared/projekte/zvault.rs/repos/zvault_lzma2::ubuntu1
 [1;32minfo[0m: No reference backup found, doing a full scan instead
 [1;32minfo[0m: Backup finished
-Date: Sat,  3 Mar 2018 23:52:07 +0100
-Source: lap-it-032:test_data/ubuntu.tar
-Duration: 0:00:18.7
-Entries: 1 files, 0 dirs
-Total backup size: 97.7 MiB
-Modified data size: 97.7 MiB
-Deduplicated size: 91.2 MiB, -6.7%
-Compressed size: 25.0 MiB in 3 bundles, -72.6%
-Chunk count: 5155, avg size: 18.1 KiB
+Date: Sun,  4 Mar 2018 16:47:19 +0100
+Source: lap-it-032:test_data/ubuntu
+Duration: 0:00:17.6
+Entries: 4418 files, 670 dirs
+Total backup size: 83.2 MiB
+Modified data size: 83.2 MiB
+Deduplicated size: 74.7 MiB, -10.2%
+Compressed size: 21.6 MiB in 2 bundles, -71.1%
+Chunk count: 12038, avg size: 6.4 KiB
 
-real	0m18.696s
-user	0m18.413s
-sys	0m0.352s
+real	0m17.619s
+user	0m17.223s
+sys	0m0.376s
 +++ pwd
-++ target/release/zvault backup test_data/ubuntu.tar /home/dschwerdel/shared/projekte/zvault.rs/repos/zvault_lzma2::ubuntu2
+++ target/release/zvault backup test_data/ubuntu /home/dschwerdel/shared/projekte/zvault.rs/repos/zvault_lzma2::ubuntu2
 [1;32minfo[0m: Using backup ubuntu1 as reference
 [1;32minfo[0m: Backup finished
-Date: Sat,  3 Mar 2018 23:52:26 +0100
-Source: lap-it-032:test_data/ubuntu.tar
-Duration: 0:00:00.0
-Entries: 1 files, 0 dirs
-Total backup size: 97.7 MiB
+Date: Sun,  4 Mar 2018 16:47:37 +0100
+Source: lap-it-032:test_data/ubuntu
+Duration: 0:00:00.1
+Entries: 4418 files, 670 dirs
+Total backup size: 83.2 MiB
 Modified data size: 0 Byte
 Deduplicated size: 0 Byte, NaN%
 Compressed size: 0 Byte in 0 bundles, NaN%
 Chunk count: 0, avg size: 0 Byte
 
-real	0m0.019s
-user	0m0.011s
-sys	0m0.008s
-++ attic create repos/attic::ubuntu1 test_data/ubuntu.tar
+real	0m0.136s
+user	0m0.080s
+sys	0m0.056s
+++ attic create repos/attic::ubuntu1 test_data/ubuntu
 
-real	0m6.763s
-user	0m6.355s
-sys	0m0.184s
-++ attic create repos/attic::ubuntu2 test_data/ubuntu.tar
+real	0m6.915s
+user	0m6.175s
+sys	0m0.503s
+++ attic create repos/attic::ubuntu2 test_data/ubuntu
 
-real	0m0.831s
-user	0m0.716s
-sys	0m0.062s
-++ borg create -C none repos/borg::ubuntu1 test_data/ubuntu.tar
+real	0m0.554s
+user	0m0.416s
+sys	0m0.107s
+++ borg create -C none repos/borg::ubuntu1 test_data/ubuntu
 
-real	0m2.049s
-user	0m1.111s
-sys	0m0.458s
-++ borg create -C none repos/borg::ubuntu2 test_data/ubuntu.tar
+real	0m3.047s
+user	0m1.872s
+sys	0m0.576s
+++ borg create -C none repos/borg::ubuntu2 test_data/ubuntu
 
-real	0m0.990s
-user	0m0.814s
-sys	0m0.154s
-++ borg create -C zlib repos/borg-zlib::ubuntu1 test_data/ubuntu.tar
+real	0m0.929s
+user	0m0.695s
+sys	0m0.175s
+++ borg create -C zlib repos/borg-zlib::ubuntu1 test_data/ubuntu
 
-real	0m7.660s
-user	0m7.164s
-sys	0m0.288s
-++ borg create -C zlib repos/borg-zlib::ubuntu2 test_data/ubuntu.tar
+real	0m7.859s
+user	0m7.100s
+sys	0m0.484s
+++ borg create -C zlib repos/borg-zlib::ubuntu2 test_data/ubuntu
 
-real	0m0.972s
-user	0m0.797s
-sys	0m0.143s
+real	0m0.955s
+user	0m0.720s
+sys	0m0.183s
+++ tar -c test_data/ubuntu
 ++ zbackup backup --non-encrypted repos/zbackup/backups/ubuntu1
 Loading index...
 Index loaded.
 Using up to 4 thread(s) for compression
 
-real	0m17.867s
-user	1m5.930s
-sys	0m1.103s
+real	0m17.229s
+user	0m58.868s
+sys	0m1.395s
 ++ zbackup backup --non-encrypted repos/zbackup/backups/ubuntu2
+++ tar -c test_data/ubuntu
 Loading index...
-Loading index file d43252abe35abc146aec679a090641fd27d35885d2068dd2...
+Loading index file 6429a26e69a74bb1ae139efc7fb1446881a15d3c4170c9b5...
 Index loaded.
 Using up to 4 thread(s) for compression
 
-real	0m0.720s
-user	0m0.700s
-sys	0m0.020s
+real	0m1.033s
+user	0m0.856s
+sys	0m0.177s
 ++ du -h test_data/ubuntu.tar
 98M	test_data/ubuntu.tar
-++ du -sh repos/zvault_brotli3/bundles repos/zvault_brotli6/bundles repos/zvault_lzma2/bundles repos/attic repos/borg repos/borg-zlib repos/zbackup
-148K	repos/zvault_brotli3/bundles
-140K	repos/zvault_brotli6/bundles
-140K	repos/zvault_lzma2/bundles
-40M	repos/attic
-98M	repos/borg
-41M	repos/borg-zlib
-27M	repos/zbackup
+++ du -sh repos/remotes/zvault_brotli3 repos/remotes/zvault_brotli6 repos/remotes/zvault_lzma2 repos/attic repos/borg repos/borg-zlib repos/zbackup
+30M	repos/remotes/zvault_brotli3
+25M	repos/remotes/zvault_brotli6
+22M	repos/remotes/zvault_lzma2
+35M	repos/attic
+83M	repos/borg
+36M	repos/borg-zlib
+24M	repos/zbackup
