@@ -38,7 +38,7 @@ impl ValueStats {
         for val in iter() {
             sum += f64::from(val - stats.avg) * f64::from(val - stats.avg);
         }
-        stats.stddev = (sum.sqrt() as f32)/(stats.count as f32-1.0);
+        stats.stddev = ((sum as f32)/(stats.count as f32-1.0)).sqrt();
         for val in iter() {
             if val < stats.avg - 2.0 * stats.stddev {
                 stats.count_xs += 1;

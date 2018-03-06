@@ -284,7 +284,9 @@ impl CompressionStream {
 impl Drop for CompressionStream {
     fn drop(&mut self) {
         unsafe {
-            squash_object_unref(self.stream as *mut ::std::os::raw::c_void);
+            //squash_object_unref(self.stream as *mut ::std::os::raw::c_void);
+            use libc;
+            squash_object_unref(self.stream as *mut libc::c_void);
         }
     }
 }

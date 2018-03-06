@@ -589,6 +589,9 @@ impl<K: Key, V: Value> Index<K, V> {
     #[allow(dead_code)]
     pub fn statistics(&self) -> IndexStatistics {
         IndexStatistics {
+            count: self.entries,
+            capacity: self.capacity,
+            size: self.size(),
             displacement: ValueStats::from_iter(|| self.data.iter().enumerate().filter(
                 |&(_, entry)| entry.is_used()).map(
                 |(index, entry)| self.get_displacement(entry, index) as f32))
@@ -600,5 +603,8 @@ impl<K: Key, V: Value> Index<K, V> {
 
 #[derive(Debug)]
 pub struct IndexStatistics {
+    pub count: usize,
+    pub capacity: usize,
+    pub size: usize,
     pub displacement: ValueStats
 }

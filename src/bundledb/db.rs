@@ -522,4 +522,13 @@ impl BundleDb {
     pub fn len(&self) -> usize {
         self.remote_bundles.len()
     }
+
+    pub fn statistics(&self) -> BundleStatistics {
+        let bundles = self.list_bundles();
+        BundleStatistics {
+            raw_size: ValueStats::from_iter(|| bundles.iter().map(|b| b.raw_size as f32)),
+            encoded_size: ValueStats::from_iter(|| bundles.iter().map(|b| b.encoded_size as f32)),
+            chunk_count: ValueStats::from_iter(|| bundles.iter().map(|b| b.chunk_count as f32))
+        }
+    }
 }

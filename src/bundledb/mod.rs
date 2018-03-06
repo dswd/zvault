@@ -133,3 +133,11 @@ impl Default for BundleInfo {
         }
     }
 }
+
+
+#[derive(Debug)]
+pub struct BundleStatistics {
+    raw_size: ValueStats,
+    encoded_size: ValueStats,
+    chunk_count: ValueStats
+}

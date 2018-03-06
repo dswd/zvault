@@ -1,6 +1,6 @@
 pub use util::*;
 pub use bundledb::{BundleReader, BundleMode, BundleWriter, BundleInfo, BundleId, BundleDbError,
-                   BundleDb, BundleWriterError, StoredBundle};
+                   BundleDb, BundleWriterError, StoredBundle, BundleStatistics};
 pub use chunker::{ChunkerType, Chunker, ChunkerStatus, ChunkerError};
 pub use repository::{Repository, Backup, Config, RepositoryError, RepositoryInfo, Inode, FileType,
                      IntegrityError, BackupFileError, BackupError, BackupOptions, BundleAnalysis,

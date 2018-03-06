@@ -41,7 +41,8 @@ pub struct RepositoryInfo {
 
 #[derive(Debug)]
 pub struct RepositoryStatistics {
-    pub index: IndexStatistics
+    pub index: IndexStatistics,
+    pub bundles: BundleStatistics
 }
 
 
@@ -157,7 +158,8 @@ impl Repository {
     #[allow(dead_code)]
     pub fn statistics(&self) -> RepositoryStatistics {
         RepositoryStatistics {
-            index: self.index.statistics()
+            index: self.index.statistics(),
+            bundles: self.bundles.statistics()
         }
     }
 }
