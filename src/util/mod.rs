@@ -9,6 +9,7 @@ mod cli;
 mod hostname;
 mod fs;
 mod lock;
+mod statistics;
 pub mod msgpack;
 
 pub use self::fs::*;
@@ -22,3 +23,4 @@ pub use self::hex::*;
 pub use self::cli::*;
 pub use self::hostname::*;
 pub use self::lock::*;
+pub use self::statistics::*;

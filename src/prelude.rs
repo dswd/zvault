@@ -4,8 +4,9 @@ pub use bundledb::{BundleReader, BundleMode, BundleWriter, BundleInfo, BundleId,
 pub use chunker::{ChunkerType, Chunker, ChunkerStatus, ChunkerError};
 pub use repository::{Repository, Backup, Config, RepositoryError, RepositoryInfo, Inode, FileType,
                      IntegrityError, BackupFileError, BackupError, BackupOptions, BundleAnalysis,
-                     FileData, DiffType, InodeError, RepositoryLayout, Location};
-pub use index::{Index, IndexError};
+                     FileData, DiffType, InodeError, RepositoryLayout, Location,
+                     RepositoryStatistics};
+pub use index::{Index, IndexError, IndexStatistics};
 pub use mount::FuseFilesystem;
 pub use translation::CowStr;
 

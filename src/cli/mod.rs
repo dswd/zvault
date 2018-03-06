@@ -859,6 +859,7 @@ pub fn run() -> Result<(), ErrorCode> {
                     print_backup(&backup);
                 }
             } else {
+                println!("{:?}", repo.statistics());
                 print_repoinfo(&repo.info());
             }
         }

@@ -100,8 +100,8 @@ regarded as not set at all.
 
 Examples:
 
-- `~/.zvault` references the repository in `~/.zvault` and is identical with
-  `::`.
+- `~/.zvault/repos/default` references the repository in 
+  `~/.zvault/repos/default` and is identical with `::`.
 - `::backup1` references the backup `backup1` in the default repository
 - `::backup1::/` references the root folder of the backup `backup1` in the
   default repository
@@ -189,7 +189,7 @@ The chunker algortihm and chunk size are configured together in the format
 `algorithm/size` where algorithm is one of `rabin`, `ae` and `fastcdc` and size
 is the size in KiB e.g. `16`. So the recommended configuration is `fastcdc/16`.
 
-Please not that since the chunker algorithm and chunk size affect the chunks
+Please note that since the chunker algorithm and chunk size affect the chunks
 created from the input data, any change to those values will make existing
 chunks inaccessible for deduplication purposes. The old data is still readable
 but new backups will have to store all data again.
@@ -198,7 +198,7 @@ but new backups will have to store all data again.
 ### Compression
 ZVault offers different compression algorithms that can be used to compress the
 stored data after deduplication. The compression ratio that can be achieved
-mostly depends on the input data (test data can be compressed well and media
+mostly depends on the input data (text data can be compressed well and media
 data like music and videos are already compressed and can not be compressed
 significantly).
 

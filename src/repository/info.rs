@@ -39,6 +39,12 @@ pub struct RepositoryInfo {
 }
 
 
+#[derive(Debug)]
+pub struct RepositoryStatistics {
+    pub index: IndexStatistics
+}
+
+
 impl Repository {
     fn mark_used(
         &self,
@@ -145,6 +151,13 @@ impl Repository {
             index_size: self.index.size(),
             index_capacity: self.index.capacity(),
             index_entries: self.index.len()
+        }
+    }
+
+    #[allow(dead_code)]
+    pub fn statistics(&self) -> RepositoryStatistics {
+        RepositoryStatistics {
+            index: self.index.statistics()
         }
     }
 }

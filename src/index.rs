@@ -8,6 +8,7 @@ use std::os::unix::io::AsRawFd;
 
 use mmap::{MemoryMap, MapOption, MapError};
 
+use ::prelude::*;
 
 pub const MAX_USAGE: f64 = 0.9;
 pub const MIN_USAGE: f64 = 0.35;
@@ -373,6 +374,11 @@ impl<K: Key, V: Value> Index<K, V> {
         self.header.capacity = self.capacity as u64;
     }
 
+    #[inline]
+    fn get_displacement(&self, entry: &Entry<K, V>, pos: usize) -> usize {
+        (pos + self.capacity - (entry.get_key().hash() as usize & self.mask)) & self.mask
+    }
+
     /// Finds the position for this key
     /// If the key is in the table, it will be the position of the key,
     /// otherwise it will be the position where this key should be inserted
@@ -387,7 +393,7 @@ impl<K: Key, V: Value> Index<K, V> {
             if entry.get_key() == key {
                 return LocateResult::Found(pos);
             }
-            let odist = (pos + self.capacity - (entry.get_key().hash() as usize & self.mask)) & self.mask;
+            let odist = self.get_displacement(entry, pos);
             if dist > odist {
                 return LocateResult::Steal(pos);
             }
@@ -579,4 +585,20 @@ impl<K: Key, V: Value> Index<K, V> {
         }
         self.entries = 0;
     }
+
+    #[allow(dead_code)]
+    pub fn statistics(&self) -> IndexStatistics {
+        IndexStatistics {
+            displacement: ValueStats::from_iter(|| self.data.iter().enumerate().filter(
+                |&(_, entry)| entry.is_used()).map(
+                |(index, entry)| self.get_displacement(entry, index) as f32))
+        }
+    }
+
+}
+
+
+#[derive(Debug)]
+pub struct IndexStatistics {
+    pub displacement: ValueStats
 }
