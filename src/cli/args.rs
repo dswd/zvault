@@ -75,6 +75,9 @@ pub enum Arguments {
         backup_name: Option<String>,
         inode: Option<String>
     },
+    Stats {
+        repo_path: PathBuf
+    },
     Copy {
         repo_path_src: PathBuf,
         backup_name_src: String,
@@ -464,6 +467,11 @@ pub fn parse() -> Result<(log::Level, Arguments), ErrorCode> {
             .arg(Arg::from_usage("<REPO>")
                 .help(tr!("Path of the repository"))
                 .validator(|val| validate_repo_path(val, true, Some(false), Some(false)))))
+        .subcommand(SubCommand::with_name("stats")
+            .about(tr!("Display statistics on a repository"))
+            .arg(Arg::from_usage("<REPO>")
+                .help(tr!("Path of the repository"))
+                .validator(|val| validate_repo_path(val, true, Some(false), Some(false)))))
         .subcommand(SubCommand::with_name("bundleinfo")
             .about(tr!("Display information on a bundle"))
             .arg(Arg::from_usage("<REPO>")
@@ -738,6 +746,15 @@ pub fn parse() -> Result<(log::Level, Arguments), ErrorCode> {
                 backup_name: backup.map(|v| v.to_string()),
                 inode: inode.map(|v| v.to_string())
             }
+        }
+        ("stats", Some(args)) => {
+            let (repository, _backup, _inode) = parse_repo_path(
+                args.value_of("REPO").unwrap(),
+                true,
+                Some(false),
+                Some(false)
+            ).unwrap();
+            Arguments::Stats { repo_path: repository }
         }
         ("copy", Some(args)) => {
             let (repository_src, backup_src, _inode) =

@@ -34,7 +34,7 @@ quick_error!{
     }
 }
 
-#[derive(Clone, Debug, Copy, Eq, PartialEq)]
+#[derive(Clone, Debug, Copy, Eq, PartialEq, Hash)]
 pub enum CompressionMethod {
     Deflate, // Standardized
     Brotli, // Good speed and ratio
@@ -49,7 +49,7 @@ serde_impl!(CompressionMethod(u8) {
 });
 
 
-#[derive(Clone, Debug, Eq, PartialEq)]
+#[derive(Clone, Debug, Eq, PartialEq, Hash)]
 pub struct Compression {
     method: CompressionMethod,
     level: u8

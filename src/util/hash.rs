@@ -105,7 +105,7 @@ impl<'a> Deserialize<'a> for Hash {
 }
 
 
-#[derive(Debug, Clone, Copy, Eq, PartialEq)]
+#[derive(Debug, Clone, Copy, Eq, PartialEq, Hash)]
 pub enum HashMethod {
     Blake2,
     Murmur3

@@ -13,6 +13,7 @@ pub use self::uploader::BundleUploader;
 use prelude::*;
 
 use std::fmt;
+use std::collections::HashMap;
 use serde;
 use rand;
 
@@ -137,7 +138,15 @@ impl Default for BundleInfo {
 
 #[derive(Debug)]
 pub struct BundleStatistics {
-    raw_size: ValueStats,
-    encoded_size: ValueStats,
-    chunk_count: ValueStats
+    pub raw_size: ValueStats,
+    pub encoded_size: ValueStats,
+    pub chunk_count: ValueStats,
+    pub raw_size_meta: ValueStats,
+    pub encoded_size_meta: ValueStats,
+    pub chunk_count_meta: ValueStats,
+    pub raw_size_data: ValueStats,
+    pub encoded_size_data: ValueStats,
+    pub chunk_count_data: ValueStats,
+    pub hash_methods: HashMap<HashMethod, usize>,
+    pub compressions: HashMap<Option<Compression>, usize>
 }

@@ -313,6 +313,61 @@ fn print_repoinfo(info: &RepositoryInfo) {
     );
 }
 
+fn print_repostats(stats: &RepositoryStatistics) {
+    tr_println!("Index\n=====");
+    let index_usage = stats.index.count as f32 / stats.index.capacity as f32;
+    tr_println!("Size: {}", to_file_size(stats.index.size as u64));
+    tr_println!("Entries: {} / {}, {:.0}%", stats.index.count, stats.index.capacity, index_usage*100.0);
+    let disp = &stats.index.displacement;
+    tr_println!("Displacement:\n  - average: {:.1}\n  - stddev: {:.1}\n  - over {:.1}: {:.0}, {:.1}%\n  - maximum: {:.0}",
+        disp.avg, disp.stddev, disp.avg + 2.0 * disp.stddev, disp.count_xl, disp.count_xl as f32 / disp.count as f32 * 100.0, disp.max);
+    println!("");
+    tr_println!("Bundles (all)\n=============");
+    let rsize = &stats.bundles.raw_size;
+    tr_println!("Raw size:\n  - average: {}\n  - stddev: {}\n  - maximum: {}",
+        to_file_size(rsize.avg as u64), to_file_size(rsize.stddev as u64), to_file_size(rsize.max as u64));
+    let esize = &stats.bundles.encoded_size;
+    tr_println!("Encoded size:\n  - average: {}\n  - stddev: {}\n  - maximum: {}",
+        to_file_size(esize.avg as u64), to_file_size(esize.stddev as u64), to_file_size(esize.max as u64));
+    let ccount = &stats.bundles.chunk_count;
+    tr_println!("Chunk count:\n  - average: {:.1}\n  - stddev: {:.1}\n  - minimum: {:.0}\n  - maximum: {:.0}", ccount.avg, ccount.stddev, ccount.min, ccount.max);
+    println!("");
+    tr_println!("Meta bundles\n============");
+    let rsize = &stats.bundles.raw_size_meta;
+    tr_println!("Raw size:\n  - average: {}\n  - stddev: {}\n  - maximum: {}",
+        to_file_size(rsize.avg as u64), to_file_size(rsize.stddev as u64), to_file_size(rsize.max as u64));
+    let esize = &stats.bundles.encoded_size_meta;
+    tr_println!("Encoded size:\n  - average: {}\n  - stddev: {}\n  - maximum: {}",
+        to_file_size(esize.avg as u64), to_file_size(esize.stddev as u64), to_file_size(esize.max as u64));
+    let ccount = &stats.bundles.chunk_count_meta;
+    tr_println!("Chunk count:\n  - average: {:.1}\n  - stddev: {:.1}\n  - minimum: {:.0}\n  - maximum: {:.0}", ccount.avg, ccount.stddev, ccount.min, ccount.max);
+    println!("");
+    tr_println!("Data bundles\n============");
+    let rsize = &stats.bundles.raw_size_data;
+    tr_println!("Raw size:\n  - average: {}\n  - stddev: {}\n  - maximum: {}",
+        to_file_size(rsize.avg as u64), to_file_size(rsize.stddev as u64), to_file_size(rsize.max as u64));
+    let esize = &stats.bundles.encoded_size_data;
+    tr_println!("Encoded size:\n  - average: {}\n  - stddev: {}\n  - maximum: {}",
+        to_file_size(esize.avg as u64), to_file_size(esize.stddev as u64), to_file_size(esize.max as u64));
+    let ccount = &stats.bundles.chunk_count_data;
+    tr_println!("Chunk count:\n  - average: {:.1}\n  - stddev: {:.1}\n  - minimum: {:.0}\n  - maximum: {:.0}", ccount.avg, ccount.stddev, ccount.min, ccount.max);
+    println!("");
+    tr_println!("Bundle methods\n==============");
+    tr_println!("Compression:");
+    for (compr, &count) in &stats.bundles.compressions {
+        let compr_name = if let &Some(ref compr) = compr {
+            compr.to_string()
+        } else {
+            tr!("none").to_string()
+        };
+        tr_println!("  - {}: {}, {:.1}%", compr_name, count, count as f32 / stats.bundles.raw_size.count as f32 * 100.0);
+    }
+    tr_println!("Hash:");
+    for (hash, &count) in &stats.bundles.hash_methods {
+        tr_println!("  - {}: {}, {:.1}%", hash.name(), count, count as f32 / stats.bundles.raw_size.count as f32 * 100.0);
+    }
+}
+
 fn print_bundle(bundle: &StoredBundle) {
     tr_println!("Bundle {}", bundle.info.id);
     tr_println!("  - Mode: {:?}", bundle.info.mode);
@@ -859,9 +914,14 @@ pub fn run() -> Result<(), ErrorCode> {
                     print_backup(&backup);
                 }
             } else {
-                println!("{:?}", repo.statistics());
                 print_repoinfo(&repo.info());
             }
+        }
+        Arguments::Stats {
+            repo_path
+        } => {
+            let mut repo = try!(open_repository(&repo_path, false));
+            print_repostats(&repo.statistics());
         }
         Arguments::Mount {
             repo_path,
