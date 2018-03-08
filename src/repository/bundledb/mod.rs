@@ -10,7 +10,7 @@ pub use self::reader::{BundleReader, BundleReaderError};
 pub use self::db::*;
 pub use self::uploader::BundleUploader;
 
-use prelude::*;
+use ::prelude::*;
 
 use std::fmt;
 use std::collections::HashMap;

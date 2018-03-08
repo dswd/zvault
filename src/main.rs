@@ -43,14 +43,10 @@ extern crate mmap;
 
 #[macro_use] mod translation;
 pub mod util;
-mod bundledb;
 mod repository;
 mod cli;
 mod prelude;
-mod mount;
-mod chunker;
-mod chunking;
-mod index;
+mod backups;
 
 use std::process::exit;
 

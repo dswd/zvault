@@ -150,12 +150,12 @@ impl FuseInode {
 
 pub struct FuseFilesystem<'a> {
     next_id: u64,
-    repository: &'a mut Repository,
+    repository: &'a mut BackupRepository,
     inodes: HashMap<u64, FuseInodeRef>
 }
 
 impl<'a> FuseFilesystem<'a> {
-    pub fn new(repository: &'a mut Repository) -> Result<Self, RepositoryError> {
+    pub fn new(repository: &'a mut BackupRepository) -> Result<Self, RepositoryError> {
         Ok(FuseFilesystem {
             next_id: 1,
             repository,
@@ -164,7 +164,7 @@ impl<'a> FuseFilesystem<'a> {
     }
 
     pub fn from_repository(
-        repository: &'a mut Repository,
+        repository: &'a mut BackupRepository,
         path: Option<&str>,
     ) -> Result<Self, RepositoryError> {
         let mut backups = vec![];
@@ -196,7 +196,7 @@ impl<'a> FuseFilesystem<'a> {
     }
 
     pub fn from_backup(
-        repository: &'a mut Repository,
+        repository: &'a mut BackupRepository,
         backup: Backup,
     ) -> Result<Self, RepositoryError> {
         let inode = try!(repository.get_inode(&backup.root));
@@ -206,7 +206,7 @@ impl<'a> FuseFilesystem<'a> {
     }
 
     pub fn from_inode(
-        repository: &'a mut Repository,
+        repository: &'a mut BackupRepository,
         backup: Backup,
         inode: Inode,
     ) -> Result<Self, RepositoryError> {

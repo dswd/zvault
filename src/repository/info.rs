@@ -116,7 +116,7 @@ impl Repository {
                     }
                 }
             }
-            // Put children in todo
+            // Put children in to do
             if let Some(children) = inode.children {
                 for (_name, chunks) in children {
                     todo.push_back(chunks);

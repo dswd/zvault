@@ -10,6 +10,9 @@ mod vacuum;
 mod backup_file;
 mod tarfile;
 mod layout;
+pub mod bundledb;
+pub mod index;
+pub mod chunking;
 
 use prelude::*;
 
@@ -53,9 +56,9 @@ impl Location {
     }
 }
 
-impl ::index::Value for Location {}
+impl index::Value for Location {}
 
-impl ::index::Key for Hash {
+impl index::Key for Hash {
     fn hash(&self) -> u64 {
         self.low
     }

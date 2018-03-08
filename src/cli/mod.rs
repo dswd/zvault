@@ -115,15 +115,15 @@ macro_rules! checked {
     };
 }
 
-fn open_repository(path: &Path, online: bool) -> Result<Repository, ErrorCode> {
+fn open_repository(path: &Path, online: bool) -> Result<BackupRepository, ErrorCode> {
     Ok(checked!(
-        Repository::open(path, online),
+        BackupRepository::open(path, online),
         "load repository",
         ErrorCode::LoadRepository
     ))
 }
 
-fn get_backup(repo: &Repository, backup_name: &str) -> Result<Backup, ErrorCode> {
+fn get_backup(repo: &BackupRepository, backup_name: &str) -> Result<Backup, ErrorCode> {
     if !repo.has_backup(backup_name) {
         tr_error!("A backup with that name does not exist");
         return Err(ErrorCode::NoSuchBackup);
@@ -135,7 +135,7 @@ fn get_backup(repo: &Repository, backup_name: &str) -> Result<Backup, ErrorCode>
     ))
 }
 
-fn get_inode(repo: &mut Repository, backup: &Backup, inode: Option<&String>) -> Result<Inode, ErrorCode> {
+fn get_inode(repo: &mut BackupRepository, backup: &Backup, inode: Option<&String>) -> Result<Inode, ErrorCode> {
     Ok(if let Some(inode) = inode {
         checked!(
                     repo.get_backup_inode(backup, &inode),
@@ -152,7 +152,7 @@ fn get_inode(repo: &mut Repository, backup: &Backup, inode: Option<&String>) -> 
 }
 
 fn find_reference_backup(
-    repo: &Repository,
+    repo: &BackupRepository,
     path: &str,
 ) -> Result<Option<(String, Backup)>, ErrorCode> {
     let mut matching = Vec::new();
@@ -523,7 +523,7 @@ pub fn run() -> Result<(), ErrorCode> {
                 return Err(ErrorCode::InvalidArgs);
             }
             let mut repo = checked!(
-                Repository::create(
+                BackupRepository::create(
                     repo_path,
                     &Config {
                         bundle_size,
@@ -554,7 +554,7 @@ pub fn run() -> Result<(), ErrorCode> {
                 );
                 println!();
             }
-            print_config(&repo.config);
+            print_config(repo.get_config());
         }
         Arguments::Backup {
             repo_path,
@@ -598,7 +598,7 @@ pub fn run() -> Result<(), ErrorCode> {
             let reference_backup = reference_backup.map(|(_, backup)| backup);
             if !no_default_excludes && !tar {
                 for line in BufReader::new(checked!(
-                    File::open(&repo.layout.excludes_path()),
+                    File::open(&repo.get_layout().excludes_path()),
                     "open default excludes file",
                     ErrorCode::LoadExcludes
                 )).lines()
@@ -745,7 +745,7 @@ pub fn run() -> Result<(), ErrorCode> {
                     ErrorCode::SaveBackup
                 );
                 tr_info!("The backup subpath has been deleted, run vacuum to reclaim space");
-            } else if repo.layout.backups_path().join(&backup_name).is_dir() {
+            } else if repo.get_layout().backups_path().join(&backup_name).is_dir() {
                 let backups = checked!(
                     repo.get_backups(&backup_name),
                     "retrieve backups",
@@ -877,7 +877,7 @@ pub fn run() -> Result<(), ErrorCode> {
         } => {
             let mut repo = try!(open_repository(&repo_path, false));
             let backup_map = if let Some(backup_name) = backup_name {
-                if repo.layout.backups_path().join(&backup_name).is_dir() {
+                if repo.get_layout().backups_path().join(&backup_name).is_dir() {
                     repo.get_backups(&backup_name)
                 } else {
                     let backup = try!(get_backup(&repo, &backup_name));
@@ -970,7 +970,7 @@ pub fn run() -> Result<(), ErrorCode> {
         } => {
             let mut repo = try!(open_repository(&repo_path, true));
             let fs = if let Some(backup_name) = backup_name {
-                if repo.layout.backups_path().join(&backup_name).is_dir() {
+                if repo.get_layout().backups_path().join(&backup_name).is_dir() {
                     checked!(
                         FuseFilesystem::from_repository(&mut repo, Some(&backup_name)),
                         "create fuse filesystem",
@@ -1047,7 +1047,7 @@ pub fn run() -> Result<(), ErrorCode> {
             key_files
         } => {
             checked!(
-                Repository::import(repo_path, remote_path, key_files),
+                BackupRepository::import(repo_path, remote_path, key_files),
                 "import repository",
                 ErrorCode::ImportRun
             );
@@ -1128,19 +1128,20 @@ pub fn run() -> Result<(), ErrorCode> {
         } => {
             let mut repo = try!(open_repository(&repo_path, false));
             let mut changed = false;
+            let mut config = repo.get_config().clone();
             if let Some(bundle_size) = bundle_size {
-                repo.config.bundle_size = bundle_size;
+                config.bundle_size = bundle_size;
                 changed = true;
             }
             if let Some(chunker) = chunker {
                 tr_warn!(
                     "Changing the chunker makes it impossible to use existing data for deduplication"
                 );
-                repo.config.chunker = chunker;
+                config.chunker = chunker;
                 changed = true;
             }
             if let Some(compression) = compression {
-                repo.config.compression = compression;
+                config.compression = compression;
                 changed = true;
             }
             if let Some(encryption) = encryption {
@@ -1151,14 +1152,15 @@ pub fn run() -> Result<(), ErrorCode> {
                 tr_warn!(
                     "Changing the hash makes it impossible to use existing data for deduplication"
                 );
-                repo.config.hash = hash;
+                config.hash = hash;
                 changed = true;
             }
             if changed {
+                repo.set_config(config);
                 checked!(repo.save_config(), "save config", ErrorCode::SaveConfig);
                 tr_info!("The configuration has been updated.");
             } else {
-                print_config(&repo.config);
+                print_config(repo.get_config());
             }
         }
         Arguments::GenKey { file, password } => {

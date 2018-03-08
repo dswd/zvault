@@ -149,7 +149,7 @@ impl Repository {
                 return Err(IntegrityError::MissingInodeData(path, Box::new(err)).into());
             }
         }
-        // Put children in todo
+        // Put children in to do
         if let Some(ref mut children) = inode.children {
             let mut removed = vec![];
             for (name, chunks) in children.iter_mut() {
