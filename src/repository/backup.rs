@@ -549,7 +549,7 @@ impl Repository {
         }
         if let Some(ref children) = inode.children {
             for chunks in children.values() {
-                let ch = try!(self.get_inode(&chunks));
+                let ch = try!(self.get_inode(chunks));
                 try!(self.count_sizes_recursive(&ch, sizes, min_size));
             }
         }
@@ -567,7 +567,7 @@ impl Repository {
         }
         if let Some(ref children) = inode.children {
             for chunks in children.values() {
-                let ch = try!(self.get_inode(&chunks));
+                let ch = try!(self.get_inode(chunks));
                 try!(self.find_duplicates_recursive(&ch, &path, sizes, hashes));
             }
         }
@@ -580,7 +580,7 @@ impl Repository {
         let mut hashes = HashMap::new();
         if let Some(ref children) = inode.children {
             for chunks in children.values() {
-                let ch = try!(self.get_inode(&chunks));
+                let ch = try!(self.get_inode(chunks));
                 try!(self.find_duplicates_recursive(&ch, Path::new(""), &sizes, &mut hashes));
             }
         }

@@ -214,7 +214,7 @@ fn validate_repo_path(
 
 
 fn parse_filesize(num: &str) -> Result<u64, String> {
-    let (num, suffix) = if num.len() > 0 {
+    let (num, suffix) = if !num.is_empty() {
         num.split_at(num.len() - 1)
     } else {
         (num, "b")

@@ -26,7 +26,7 @@ impl ValueStats {
             if stats.max < val {
                 stats.max = val;
             }
-            sum += val as f64;
+            sum += f64::from(val);
             stats.count += 1;
         }
         stats.avg = (sum as f32) / (stats.count as f32);

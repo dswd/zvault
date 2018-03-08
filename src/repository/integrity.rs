@@ -108,10 +108,11 @@ impl Repository {
                 try!(self.check_chunks(checked, chunks, true));
             }
             Some(FileData::ChunkedIndirect(ref chunks)) => {
-                if try!(self.check_chunks(checked, chunks, true)) {
+                if try!(self.check_chunks(checked, chunks, false)) {
                     let chunk_data = try!(self.get_data(chunks));
-                    let chunks = ChunkList::read_from(&chunk_data);
-                    try!(self.check_chunks(checked, &chunks, true));
+                    let chunks2 = ChunkList::read_from(&chunk_data);
+                    try!(self.check_chunks(checked, &chunks2, true));
+                    try!(self.check_chunks(checked, chunks, true));
                 }
             }
         }

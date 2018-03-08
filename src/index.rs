@@ -59,14 +59,14 @@ pub struct Header {
 }
 
 
-pub trait Key: Clone + Eq + Copy + Default {
+pub trait Key: Eq + Copy + Default {
     fn hash(&self) -> u64;
     fn is_used(&self) -> bool;
     fn clear(&mut self);
 }
 
 
-pub trait Value: Clone + Copy + Default {}
+pub trait Value: Copy + Default {}
 
 
 #[repr(packed)]
@@ -118,14 +118,6 @@ impl<K: Key, V> Entry<K, V> {
     }
 }
 
-impl<K: Clone + Key, V: Clone> Clone for Entry<K, V> {
-    fn clone(&self) -> Self {
-        Entry {
-            key: *self.get_key(),
-            data: self.get_data().clone()
-        }
-    }
-}
 
 #[derive(Debug)]
 pub enum LocateResult {
@@ -416,12 +408,12 @@ impl<K: Key, V: Value> Index<K, V> {
                     // we found a hole, stop shifting here
                     break;
                 }
-                if entry.get_key().hash() as usize & self.mask == pos {
+                if (entry.get_key().hash() as usize & self.mask) == pos {
                     // we found an entry at the right position, stop shifting here
                     break;
                 }
             }
-            self.data[last_pos] = self.data[pos].clone();
+            self.data.swap(last_pos, pos);
         }
         self.data[last_pos].clear();
     }

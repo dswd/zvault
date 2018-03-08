@@ -14,6 +14,7 @@ This project follows [semantic versioning](http://semver.org).
 * [fixed] Also including the first min_size bytes in hash
 * [fixed] Fixed some texts in manpages
 * [fixed] Calling strip on final binaries
+* [fixed] Fixed bug that caused repairs to miss some errors
 
 
 ### v0.4.0 (2017-07-21)

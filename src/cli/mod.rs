@@ -138,7 +138,7 @@ fn get_backup(repo: &Repository, backup_name: &str) -> Result<Backup, ErrorCode>
 fn get_inode(repo: &mut Repository, backup: &Backup, inode: Option<&String>) -> Result<Inode, ErrorCode> {
     Ok(if let Some(inode) = inode {
         checked!(
-                    repo.get_backup_inode(&backup, &inode),
+                    repo.get_backup_inode(backup, &inode),
                     "load subpath inode",
                     ErrorCode::LoadInode
                 )
@@ -340,7 +340,7 @@ fn print_repostats(stats: &RepositoryStatistics) {
     let disp = &stats.index.displacement;
     tr_println!("Displacement:\n  - average: {:.1}\n  - stddev: {:.1}\n  - over {:.1}: {:.0}, {:.1}%\n  - maximum: {:.0}",
         disp.avg, disp.stddev, disp.avg + 2.0 * disp.stddev, disp.count_xl, disp.count_xl as f32 / disp.count as f32 * 100.0, disp.max);
-    println!("");
+    println!();
     tr_println!("Bundles\n=======");
     let tsize = (stats.bundles.raw_size.count as f32 * stats.bundles.encoded_size.avg) as u64;
     tr_println!("All bundles: {} in {} bundles", to_file_size(tsize), stats.bundles.raw_size.count);
@@ -366,7 +366,7 @@ fn print_repostats(stats: &RepositoryStatistics) {
     tr_println!("  - encoded size: ø = {}, maximum: {}", to_file_size(esize.avg as u64), to_file_size(esize.max as u64));
     let ccount = &stats.bundles.chunk_count_data;
     tr_println!("  - chunk count: ø = {:.1}, maximum: {:.0}", ccount.avg, ccount.max);
-    println!("");
+    println!();
     tr_println!("Bundle methods\n==============");
     tr_println!("Hash:");
     for (hash, &count) in &stats.bundles.hash_methods {
@@ -374,7 +374,7 @@ fn print_repostats(stats: &RepositoryStatistics) {
     }
     tr_println!("Compression:");
     for (compr, &count) in &stats.bundles.compressions {
-        let compr_name = if let &Some(ref compr) = compr {
+        let compr_name = if let Some(ref compr) = *compr {
             compr.to_string()
         } else {
             tr!("none").to_string()
@@ -383,7 +383,7 @@ fn print_repostats(stats: &RepositoryStatistics) {
     }
     tr_println!("Encryption:");
     for (encr, &count) in &stats.bundles.encryptions {
-        let encr_name = if let &Some(ref encr) = encr {
+        let encr_name = if let Some(ref encr) = *encr {
             to_hex(&encr.1[..])
         } else {
             tr!("none").to_string()
