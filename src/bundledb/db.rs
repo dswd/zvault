@@ -529,12 +529,14 @@ impl BundleDb {
         let bundles_data: Vec<_> = bundles.iter().filter(|b| b.mode == BundleMode::Data).collect();
         let mut hash_methods = HashMap::new();
         let mut compressions = HashMap::new();
+        let mut encryptions = HashMap::new();
         for bundle in &bundles {
             *hash_methods.entry(bundle.hash_method).or_insert(0) += 1;
             *compressions.entry(bundle.compression.clone()).or_insert(0) += 1;
+            *encryptions.entry(bundle.encryption.clone()).or_insert(0) += 1;
         }
         BundleStatistics {
-            hash_methods, compressions,
+            hash_methods, compressions, encryptions,
             raw_size: ValueStats::from_iter(|| bundles.iter().map(|b| b.raw_size as f32)),
             encoded_size: ValueStats::from_iter(|| bundles.iter().map(|b| b.encoded_size as f32)),
             chunk_count: ValueStats::from_iter(|| bundles.iter().map(|b| b.chunk_count as f32)),

@@ -21,7 +21,9 @@ rust:
   - nightly
 matrix:
   allow_failures:
-    - rust: nightly
+    - rust: 
+      - beta
+      - stable
 script:
 - cargo clean
 - cargo build

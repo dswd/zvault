@@ -41,6 +41,12 @@ pub enum Arguments {
         inode: Option<String>,
         force: bool
     },
+    Duplicates {
+        repo_path: PathBuf,
+        backup_name: String,
+        inode: Option<String>,
+        min_size: u64
+    },
     Prune {
         repo_path: PathBuf,
         prefix: String,
@@ -75,7 +81,7 @@ pub enum Arguments {
         backup_name: Option<String>,
         inode: Option<String>
     },
-    Stats {
+    Statistics {
         repo_path: PathBuf
     },
     Copy {
@@ -205,6 +211,31 @@ fn validate_repo_path(
 ) -> Result<(), String> {
     parse_repo_path(&repo_path, existing, backup_restr, path_restr).map(|_| ())
 }
+
+
+fn parse_filesize(num: &str) -> Result<u64, String> {
+    let (num, suffix) = if num.len() > 0 {
+        num.split_at(num.len() - 1)
+    } else {
+        (num, "b")
+    };
+    let factor = match suffix {
+        "b" | "B" => 1,
+        "k" | "K" => 1024,
+        "m" | "M" => 1024*1024,
+        "g" | "G" => 1024*1024*1024,
+        "t" | "T" => 1024*1024*1024*1024,
+        _ => return Err(tr!("Unknown suffix").to_string())
+    };
+    let num = try!(parse_num(num));
+    Ok(num * factor)
+}
+
+#[allow(unknown_lints, needless_pass_by_value)]
+fn validate_filesize(val: String) -> Result<(), String> {
+    parse_filesize(&val).map(|_| ())
+}
+
 
 fn parse_num(num: &str) -> Result<u64, String> {
     if let Ok(num) = num.parse::<u64>() {
@@ -467,7 +498,8 @@ pub fn parse() -> Result<(log::Level, Arguments), ErrorCode> {
             .arg(Arg::from_usage("<REPO>")
                 .help(tr!("Path of the repository"))
                 .validator(|val| validate_repo_path(val, true, Some(false), Some(false)))))
-        .subcommand(SubCommand::with_name("stats")
+        .subcommand(SubCommand::with_name("statistics")
+            .alias("stats")
             .about(tr!("Display statistics on a repository"))
             .arg(Arg::from_usage("<REPO>")
                 .help(tr!("Path of the repository"))
@@ -513,6 +545,16 @@ pub fn parse() -> Result<(log::Level, Arguments), ErrorCode> {
                 .validator(|val| validate_repo_path(val, true, Some(true), None)))
             .arg(Arg::from_usage("<NEW>")
                 .help(tr!("New version, [repository]::backup[::subpath]"))
+                .validator(|val| validate_repo_path(val, true, Some(true), None))))
+        .subcommand(SubCommand::with_name("duplicates")
+            .aliases(&["dups"])
+            .about(tr!("Find duplicate files in a backup"))
+            .arg(Arg::from_usage("[min_size] --min-size [SIZE]")
+                .help(tr!("Set the minimum file size"))
+                .default_value(DEFAULT_DUPLICATES_MIN_SIZE_STR)
+                .validator(validate_filesize))
+            .arg(Arg::from_usage("<BACKUP>")
+                .help(tr!("The backup/subtree path, [repository]::backup[::subtree]"))
                 .validator(|val| validate_repo_path(val, true, Some(true), None))))
         .subcommand(SubCommand::with_name("copy")
             .alias("cp")
@@ -747,14 +789,14 @@ pub fn parse() -> Result<(log::Level, Arguments), ErrorCode> {
                 inode: inode.map(|v| v.to_string())
             }
         }
-        ("stats", Some(args)) => {
+        ("statistics", Some(args)) => {
             let (repository, _backup, _inode) = parse_repo_path(
                 args.value_of("REPO").unwrap(),
                 true,
                 Some(false),
                 Some(false)
             ).unwrap();
-            Arguments::Stats { repo_path: repository }
+            Arguments::Statistics { repo_path: repository }
         }
         ("copy", Some(args)) => {
             let (repository_src, backup_src, _inode) =
@@ -828,6 +870,18 @@ pub fn parse() -> Result<(log::Level, Arguments), ErrorCode> {
                 key_files: args.values_of("key")
                     .map(|v| v.map(|k| k.to_string()).collect())
                     .unwrap_or_else(|| vec![])
+            }
+        }
+        ("duplicates", Some(args)) => {
+            let (repository, backup, inode) =
+                parse_repo_path(args.value_of("BACKUP").unwrap(), true, Some(true), None).unwrap();
+            Arguments::Duplicates {
+                repo_path: repository,
+                backup_name: backup.unwrap().to_string(),
+                inode: inode.map(|v| v.to_string()),
+                min_size: args.value_of("min_size").map(|v| {
+                    parse_filesize(v).unwrap()
+                }).unwrap()
             }
         }
         ("config", Some(args)) => {

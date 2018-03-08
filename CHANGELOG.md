@@ -5,9 +5,15 @@ This project follows [semantic versioning](http://semver.org).
 
 ### UNRELEASED
 * [added] Translation infrastructure (**requires nightly rust**)
+* [added] Checking hashes of chunks in check --bundle-data
+* [added] Debian packet for libsodium23
 * [modified] Updated dependencies
 * [modified] Updated copyright date
+* [modified] Moved all code into one crate for easier translation
+* [modified] Compression ratio is now displayed in a clearer format
 * [fixed] Also including the first min_size bytes in hash
+* [fixed] Fixed some texts in manpages
+* [fixed] Calling strip on final binaries
 
 
 ### v0.4.0 (2017-07-21)

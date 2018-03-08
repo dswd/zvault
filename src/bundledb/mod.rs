@@ -148,5 +148,6 @@ pub struct BundleStatistics {
     pub encoded_size_data: ValueStats,
     pub chunk_count_data: ValueStats,
     pub hash_methods: HashMap<HashMethod, usize>,
-    pub compressions: HashMap<Option<Compression>, usize>
+    pub compressions: HashMap<Option<Compression>, usize>,
+    pub encryptions: HashMap<Option<Encryption>, usize>
 }

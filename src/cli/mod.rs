@@ -45,7 +45,8 @@ pub enum ErrorCode {
     DiffRun,
     VersionsRun,
     ImportRun,
-    FuseMount
+    FuseMount,
+    DuplicatesRun
 }
 impl ErrorCode {
     pub fn code(&self) -> i32 {
@@ -81,6 +82,7 @@ impl ErrorCode {
             ErrorCode::VersionsRun => 22,
             ErrorCode::ImportRun => 23,
             ErrorCode::FuseMount => 24,
+            ErrorCode::DuplicatesRun => 27,
             //
             ErrorCode::NoSuchBackup => 25,
             ErrorCode::BackupAlreadyExists => 26,
@@ -94,6 +96,7 @@ pub const DEFAULT_HASH: &str = "blake2";
 pub const DEFAULT_COMPRESSION: &str = "brotli/3";
 pub const DEFAULT_BUNDLE_SIZE_STR: &str = "25";
 pub const DEFAULT_VACUUM_RATIO_STR: &str = "0";
+pub const DEFAULT_DUPLICATES_MIN_SIZE_STR: &str = "1b";
 lazy_static! {
     pub static ref ZVAULT_FOLDER: PathBuf = {
         env::home_dir().unwrap().join(".zvault")
@@ -130,6 +133,22 @@ fn get_backup(repo: &Repository, backup_name: &str) -> Result<Backup, ErrorCode>
         "load backup",
         ErrorCode::LoadBackup
     ))
+}
+
+fn get_inode(repo: &mut Repository, backup: &Backup, inode: Option<&String>) -> Result<Inode, ErrorCode> {
+    Ok(if let Some(inode) = inode {
+        checked!(
+                    repo.get_backup_inode(&backup, &inode),
+                    "load subpath inode",
+                    ErrorCode::LoadInode
+                )
+    } else {
+        checked!(
+                    repo.get_inode(&backup.root),
+                    "load root inode",
+                    ErrorCode::LoadInode
+                )
+    })
 }
 
 fn find_reference_backup(
@@ -322,37 +341,37 @@ fn print_repostats(stats: &RepositoryStatistics) {
     tr_println!("Displacement:\n  - average: {:.1}\n  - stddev: {:.1}\n  - over {:.1}: {:.0}, {:.1}%\n  - maximum: {:.0}",
         disp.avg, disp.stddev, disp.avg + 2.0 * disp.stddev, disp.count_xl, disp.count_xl as f32 / disp.count as f32 * 100.0, disp.max);
     println!("");
-    tr_println!("Bundles (all)\n=============");
+    tr_println!("Bundles\n=======");
+    let tsize = (stats.bundles.raw_size.count as f32 * stats.bundles.encoded_size.avg) as u64;
+    tr_println!("All bundles: {} in {} bundles", to_file_size(tsize), stats.bundles.raw_size.count);
     let rsize = &stats.bundles.raw_size;
-    tr_println!("Raw size:\n  - average: {}\n  - stddev: {}\n  - maximum: {}",
-        to_file_size(rsize.avg as u64), to_file_size(rsize.stddev as u64), to_file_size(rsize.max as u64));
+    tr_println!("  - raw size: ø = {}, maximum: {}", to_file_size(rsize.avg as u64), to_file_size(rsize.max as u64));
     let esize = &stats.bundles.encoded_size;
-    tr_println!("Encoded size:\n  - average: {}\n  - stddev: {}\n  - maximum: {}",
-        to_file_size(esize.avg as u64), to_file_size(esize.stddev as u64), to_file_size(esize.max as u64));
+    tr_println!("  - encoded size: ø = {}, maximum: {}", to_file_size(esize.avg as u64), to_file_size(esize.max as u64));
     let ccount = &stats.bundles.chunk_count;
-    tr_println!("Chunk count:\n  - average: {:.1}\n  - stddev: {:.1}\n  - minimum: {:.0}\n  - maximum: {:.0}", ccount.avg, ccount.stddev, ccount.min, ccount.max);
-    println!("");
-    tr_println!("Meta bundles\n============");
+    tr_println!("  - chunk count: ø = {:.1}, maximum: {:.0}", ccount.avg, ccount.max);
+    let tsize = (stats.bundles.raw_size_meta.count as f32 * stats.bundles.encoded_size_meta.avg) as u64;
+    tr_println!("Meta bundles: {} in {} bundles", to_file_size(tsize), stats.bundles.raw_size_meta.count);
     let rsize = &stats.bundles.raw_size_meta;
-    tr_println!("Raw size:\n  - average: {}\n  - stddev: {}\n  - maximum: {}",
-        to_file_size(rsize.avg as u64), to_file_size(rsize.stddev as u64), to_file_size(rsize.max as u64));
+    tr_println!("  - raw size: ø = {}, maximum: {}", to_file_size(rsize.avg as u64), to_file_size(rsize.max as u64));
     let esize = &stats.bundles.encoded_size_meta;
-    tr_println!("Encoded size:\n  - average: {}\n  - stddev: {}\n  - maximum: {}",
-        to_file_size(esize.avg as u64), to_file_size(esize.stddev as u64), to_file_size(esize.max as u64));
+    tr_println!("  - encoded size: ø = {}, maximum: {}", to_file_size(esize.avg as u64), to_file_size(esize.max as u64));
     let ccount = &stats.bundles.chunk_count_meta;
-    tr_println!("Chunk count:\n  - average: {:.1}\n  - stddev: {:.1}\n  - minimum: {:.0}\n  - maximum: {:.0}", ccount.avg, ccount.stddev, ccount.min, ccount.max);
-    println!("");
-    tr_println!("Data bundles\n============");
+    tr_println!("  - chunk count: ø = {:.1}, maximum: {:.0}", ccount.avg, ccount.max);
+    let tsize = (stats.bundles.raw_size_data.count as f32 * stats.bundles.encoded_size_data.avg) as u64;
+    tr_println!("Data bundles: {} in {} bundles", to_file_size(tsize), stats.bundles.raw_size_data.count);
     let rsize = &stats.bundles.raw_size_data;
-    tr_println!("Raw size:\n  - average: {}\n  - stddev: {}\n  - maximum: {}",
-        to_file_size(rsize.avg as u64), to_file_size(rsize.stddev as u64), to_file_size(rsize.max as u64));
+    tr_println!("  - raw size: ø = {}, maximum: {}", to_file_size(rsize.avg as u64), to_file_size(rsize.max as u64));
     let esize = &stats.bundles.encoded_size_data;
-    tr_println!("Encoded size:\n  - average: {}\n  - stddev: {}\n  - maximum: {}",
-        to_file_size(esize.avg as u64), to_file_size(esize.stddev as u64), to_file_size(esize.max as u64));
+    tr_println!("  - encoded size: ø = {}, maximum: {}", to_file_size(esize.avg as u64), to_file_size(esize.max as u64));
     let ccount = &stats.bundles.chunk_count_data;
-    tr_println!("Chunk count:\n  - average: {:.1}\n  - stddev: {:.1}\n  - minimum: {:.0}\n  - maximum: {:.0}", ccount.avg, ccount.stddev, ccount.min, ccount.max);
+    tr_println!("  - chunk count: ø = {:.1}, maximum: {:.0}", ccount.avg, ccount.max);
     println!("");
     tr_println!("Bundle methods\n==============");
+    tr_println!("Hash:");
+    for (hash, &count) in &stats.bundles.hash_methods {
+        tr_println!("  - {}: {}, {:.1}%", hash.name(), count, count as f32 / stats.bundles.raw_size.count as f32 * 100.0);
+    }
     tr_println!("Compression:");
     for (compr, &count) in &stats.bundles.compressions {
         let compr_name = if let &Some(ref compr) = compr {
@@ -362,9 +381,14 @@ fn print_repostats(stats: &RepositoryStatistics) {
         };
         tr_println!("  - {}: {}, {:.1}%", compr_name, count, count as f32 / stats.bundles.raw_size.count as f32 * 100.0);
     }
-    tr_println!("Hash:");
-    for (hash, &count) in &stats.bundles.hash_methods {
-        tr_println!("  - {}: {}, {:.1}%", hash.name(), count, count as f32 / stats.bundles.raw_size.count as f32 * 100.0);
+    tr_println!("Encryption:");
+    for (encr, &count) in &stats.bundles.encryptions {
+        let encr_name = if let &Some(ref encr) = encr {
+            to_hex(&encr.1[..])
+        } else {
+            tr!("none").to_string()
+        };
+        tr_println!("  - {}: {}, {:.1}%", encr_name, count, count as f32 / stats.bundles.raw_size.count as f32 * 100.0);
     }
 }
 
@@ -464,6 +488,17 @@ fn print_analysis(analysis: &HashMap<u32, BundleAnalysis>) {
         );
     }
 }
+
+fn print_duplicates(dups: Vec<(Vec<PathBuf>, u64)>) {
+    for (group, size) in dups {
+        tr_println!("{} duplicates found, size: {}", group.len(), to_file_size(size));
+        for dup in group {
+            println!("  - {}", dup.to_string_lossy());
+        }
+        println!();
+    }
+}
+
 
 
 #[allow(unknown_lints, cyclomatic_complexity)]
@@ -652,19 +687,7 @@ pub fn run() -> Result<(), ErrorCode> {
         } => {
             let mut repo = try!(open_repository(&repo_path, true));
             let backup = try!(get_backup(&repo, &backup_name));
-            let inode = if let Some(inode) = inode {
-                checked!(
-                    repo.get_backup_inode(&backup, &inode),
-                    "load subpath inode",
-                    ErrorCode::LoadInode
-                )
-            } else {
-                checked!(
-                    repo.get_inode(&backup.root),
-                    "load root inode",
-                    ErrorCode::LoadInode
-                )
-            };
+            let inode = try!(get_inode(&mut repo, &backup, inode.as_ref()));
             if tar {
                 checked!(
                     repo.export_tarfile(&backup, inode, &dst_path),
@@ -917,11 +940,27 @@ pub fn run() -> Result<(), ErrorCode> {
                 print_repoinfo(&repo.info());
             }
         }
-        Arguments::Stats {
+        Arguments::Statistics {
             repo_path
         } => {
             let mut repo = try!(open_repository(&repo_path, false));
             print_repostats(&repo.statistics());
+        }
+        Arguments::Duplicates {
+            repo_path,
+            backup_name,
+            inode,
+            min_size
+        } => {
+            let mut repo = try!(open_repository(&repo_path, true));
+            let backup = try!(get_backup(&repo, &backup_name));
+            let inode = try!(get_inode(&mut repo, &backup, inode.as_ref()));
+            let dups = checked!(
+                repo.find_duplicates(&inode, min_size),
+                "find duplicates",
+                ErrorCode::DuplicatesRun
+            );
+            print_duplicates(dups);
         }
         Arguments::Mount {
             repo_path,

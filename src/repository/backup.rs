@@ -542,4 +542,49 @@ impl Repository {
         ));
         Ok(diffs)
     }
+
+    fn count_sizes_recursive(&mut self, inode: &Inode, sizes: &mut HashMap<u64, usize>, min_size: u64) -> Result<(), RepositoryError> {
+        if inode.size >= min_size {
+            *sizes.entry(inode.size).or_insert(0) += 1;
+        }
+        if let Some(ref children) = inode.children {
+            for chunks in children.values() {
+                let ch = try!(self.get_inode(&chunks));
+                try!(self.count_sizes_recursive(&ch, sizes, min_size));
+            }
+        }
+        Ok(())
+    }
+
+    fn find_duplicates_recursive(&mut self, inode: &Inode, path: &Path, sizes: &HashMap<u64, usize>, hashes: &mut HashMap<Hash, (Vec<PathBuf>, u64)>) -> Result<(), RepositoryError> {
+        let path = path.join(&inode.name);
+        if sizes.get(&inode.size).cloned().unwrap_or(0) > 1 {
+            if let Some(ref data) = inode.data {
+                let chunk_data = try!(msgpack::encode(data).map_err(InodeError::from));
+                let hash = HashMethod::Blake2.hash(&chunk_data);
+                hashes.entry(hash).or_insert((Vec::new(), inode.size)).0.push(path.clone());
+            }
+        }
+        if let Some(ref children) = inode.children {
+            for chunks in children.values() {
+                let ch = try!(self.get_inode(&chunks));
+                try!(self.find_duplicates_recursive(&ch, &path, sizes, hashes));
+            }
+        }
+        Ok(())
+    }
+
+    pub fn find_duplicates(&mut self, inode: &Inode, min_size: u64) -> Result<Vec<(Vec<PathBuf>, u64)>, RepositoryError> {
+        let mut sizes = HashMap::new();
+        try!(self.count_sizes_recursive(inode, &mut sizes, min_size));
+        let mut hashes = HashMap::new();
+        if let Some(ref children) = inode.children {
+            for chunks in children.values() {
+                let ch = try!(self.get_inode(&chunks));
+                try!(self.find_duplicates_recursive(&ch, Path::new(""), &sizes, &mut hashes));
+            }
+        }
+        let dups = hashes.into_iter().map(|(_,v)| v).filter(|&(ref v, _)| v.len() > 1).collect();
+        Ok(dups)
+    }
 }
