@@ -4,7 +4,7 @@ use super::*;
 use std::path::{Path, PathBuf};
 use std::collections::{HashMap, HashSet};
 use std::fs;
-use std::sync::{Arc, Mutex};
+use std::sync::Arc;
 use std::io;
 use std::mem;
 use std::cmp::min;
@@ -62,7 +62,7 @@ fn load_bundles(
     path: &Path,
     base: &Path,
     bundles: &mut HashMap<BundleId, StoredBundle>,
-    crypto: Arc<Mutex<Crypto>>,
+    crypto: Arc<Crypto>,
 ) -> Result<(Vec<StoredBundle>, Vec<StoredBundle>), BundleDbError> {
     let mut paths = vec![path.to_path_buf()];
     let mut bundle_paths = HashSet::new();
@@ -119,7 +119,7 @@ fn load_bundles(
 pub struct BundleDb {
     pub layout: Arc<ChunkRepositoryLayout>,
     uploader: Option<Arc<BundleUploader>>,
-    crypto: Arc<Mutex<Crypto>>,
+    crypto: Arc<Crypto>,
     local_bundles: HashMap<BundleId, StoredBundle>,
     remote_bundles: HashMap<BundleId, StoredBundle>,
     bundle_cache: LruCache<BundleId, (BundleReader, Vec<u8>)>
@@ -127,7 +127,7 @@ pub struct BundleDb {
 
 
 impl BundleDb {
-    fn new(layout: Arc<ChunkRepositoryLayout>, crypto: Arc<Mutex<Crypto>>) -> Self {
+    fn new(layout: Arc<ChunkRepositoryLayout>, crypto: Arc<Crypto>) -> Self {
         BundleDb {
             layout,
             crypto,
@@ -240,7 +240,7 @@ impl BundleDb {
 
     pub fn open(
         layout: Arc<ChunkRepositoryLayout>,
-        crypto: Arc<Mutex<Crypto>>,
+        crypto: Arc<Crypto>,
         online: bool
     ) -> Result<(Self, Vec<BundleInfo>, Vec<BundleInfo>), BundleDbError> {
         let mut self_ = Self::new(layout, crypto);

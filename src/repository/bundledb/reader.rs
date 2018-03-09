@@ -6,7 +6,7 @@ use std::fs::{self, File};
 use std::io::{self, Read, Seek, SeekFrom, BufReader};
 use std::cmp::max;
 use std::fmt::{self, Debug};
-use std::sync::{Arc, Mutex};
+use std::sync::Arc;
 
 
 quick_error!{
@@ -60,7 +60,7 @@ pub struct BundleReader {
     pub info: BundleInfo,
     pub version: u8,
     pub path: PathBuf,
-    crypto: Arc<Mutex<Crypto>>,
+    crypto: Arc<Crypto>,
     pub content_start: usize,
     pub chunks: Option<ChunkList>,
     pub chunk_positions: Option<Vec<usize>>
@@ -71,7 +71,7 @@ impl BundleReader {
         path: PathBuf,
         version: u8,
         content_start: usize,
-        crypto: Arc<Mutex<Crypto>>,
+        crypto: Arc<Crypto>,
         info: BundleInfo,
     ) -> Self {
         BundleReader {
@@ -93,7 +93,7 @@ impl BundleReader {
     #[allow(needless_pass_by_value)]
     fn load_header<P: AsRef<Path>>(
         path: P,
-        crypto: Arc<Mutex<Crypto>>,
+        crypto: Arc<Crypto>,
     ) -> Result<(BundleInfo, u8, usize), BundleReaderError> {
         let path = path.as_ref();
         let mut file = BufReader::new(try!(File::open(path).context(path)));
@@ -116,8 +116,6 @@ impl BundleReader {
         if let Some(ref encryption) = header.encryption {
             info_data = try!(
                 crypto
-                    .lock()
-                    .unwrap()
                     .decrypt(encryption, &info_data)
                     .context(path)
             );
@@ -133,13 +131,13 @@ impl BundleReader {
     #[inline]
     pub fn load_info<P: AsRef<Path>>(
         path: P,
-        crypto: Arc<Mutex<Crypto>>,
+        crypto: Arc<Crypto>,
     ) -> Result<BundleInfo, BundleReaderError> {
         Self::load_header(path, crypto).map(|b| b.0)
     }
 
     #[inline]
-    pub fn load(path: PathBuf, crypto: Arc<Mutex<Crypto>>) -> Result<Self, BundleReaderError> {
+    pub fn load(path: PathBuf, crypto: Arc<Crypto>) -> Result<Self, BundleReaderError> {
         let (header, version, content_start) = try!(Self::load_header(&path, crypto.clone()));
         Ok(BundleReader::new(
             path,
@@ -170,8 +168,6 @@ impl BundleReader {
         if let Some(ref encryption) = self.info.encryption {
             chunk_data = try!(
                 self.crypto
-                    .lock()
-                    .unwrap()
                     .decrypt(encryption, &chunk_data)
                     .context(&self.path as &Path)
             );
@@ -212,8 +208,6 @@ impl BundleReader {
         if let Some(ref encryption) = self.info.encryption {
             data = try!(
                 self.crypto
-                    .lock()
-                    .unwrap()
                     .decrypt(encryption, &data)
                     .context(&self.path as &Path)
             );

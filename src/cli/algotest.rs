@@ -187,7 +187,7 @@ pub fn run(
         println!();
 
         let (public, secret) = Crypto::gen_keypair();
-        let mut crypto = Crypto::dummy();
+        let crypto = Crypto::dummy();
         crypto.add_secret_key(public, secret);
         let encryption = (EncryptionMethod::Sodium, public[..].to_vec().into());
 

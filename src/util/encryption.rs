@@ -2,7 +2,7 @@ use std::collections::HashMap;
 use std::path::{Path, PathBuf};
 use std::io;
 use std::fs::{self, File};
-use std::sync::{Once, ONCE_INIT};
+use std::sync::{RwLock, Once, ONCE_INIT};
 
 use serde_yaml;
 use serde_bytes::ByteBuf;
@@ -116,7 +116,7 @@ impl KeyfileYaml {
 
 pub struct Crypto {
     path: Option<PathBuf>,
-    keys: HashMap<PublicKey, SecretKey>
+    keys: RwLock<HashMap<PublicKey, SecretKey>>
 }
 
 impl Crypto {
@@ -125,7 +125,7 @@ impl Crypto {
         sodium_init();
         Crypto {
             path: None,
-            keys: HashMap::new()
+            keys: RwLock::new(HashMap::new())
         }
     }
 
@@ -152,17 +152,17 @@ impl Crypto {
         }
         Ok(Crypto {
             path: Some(path),
-            keys
+            keys: RwLock::new(keys)
         })
     }
 
     #[inline]
-    pub fn add_secret_key(&mut self, public: PublicKey, secret: SecretKey) {
-        self.keys.insert(public, secret);
+    pub fn add_secret_key(&self, public: PublicKey, secret: SecretKey) {
+        self.keys.write().expect("Lock poisoned").insert(public, secret);
     }
 
     #[inline]
-    pub fn register_keyfile<P: AsRef<Path>>(&mut self, path: P) -> Result<(), EncryptionError> {
+    pub fn register_keyfile<P: AsRef<Path>>(&self, path: P) -> Result<(), EncryptionError> {
         let (public, secret) = try!(Self::load_keypair_from_file(path));
         self.register_secret_key(public, secret)
     }
@@ -211,7 +211,7 @@ impl Crypto {
 
     #[inline]
     pub fn register_secret_key(
-        &mut self,
+        &self,
         public: PublicKey,
         secret: SecretKey,
     ) -> Result<(), EncryptionError> {
@@ -219,17 +219,17 @@ impl Crypto {
             let path = path.join(to_hex(&public[..]) + ".yaml");
             try!(Self::save_keypair_to_file(&public, &secret, path));
         }
-        self.keys.insert(public, secret);
+        self.keys.write().expect("Lock poisoned").insert(public, secret);
         Ok(())
     }
 
     #[inline]
-    pub fn contains_secret_key(&mut self, public: &PublicKey) -> bool {
-        self.keys.contains_key(public)
+    pub fn contains_secret_key(&self, public: &PublicKey) -> bool {
+        self.keys.read().expect("Lock poisoned").contains_key(public)
     }
 
-    fn get_secret_key(&self, public: &PublicKey) -> Result<&SecretKey, EncryptionError> {
-        self.keys.get(public).ok_or_else(
+    fn get_secret_key(&self, public: &PublicKey) -> Result<SecretKey, EncryptionError> {
+        self.keys.read().expect("Lock poisoned").get(public).cloned().ok_or_else(
             || EncryptionError::MissingKey(*public)
         )
     }
@@ -254,7 +254,7 @@ impl Crypto {
         let secret = try!(self.get_secret_key(&public));
         match *method {
             EncryptionMethod::Sodium => {
-                sealedbox::open(data, &public, secret).map_err(|_| {
+                sealedbox::open(data, &public, &secret).map_err(|_| {
                     EncryptionError::Operation(tr!("Decryption failed"))
                 })
             }

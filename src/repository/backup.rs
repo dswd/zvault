@@ -42,7 +42,7 @@ pub enum DiffType {
 impl Repository {
     pub fn get_all_backups(&self) -> Result<HashMap<String, Backup>, RepositoryError> {
         Ok(try!(Backup::get_all_from(
-            &self.crypto.lock().unwrap(),
+            &self.crypto,
             self.layout.backups_path()
         )))
     }
@@ -52,7 +52,7 @@ impl Repository {
         path: P,
     ) -> Result<HashMap<String, Backup>, RepositoryError> {
         Ok(try!(Backup::get_all_from(
-            &self.crypto.lock().unwrap(),
+            &self.crypto,
             self.layout.backups_path().join(path)
         )))
     }
@@ -64,7 +64,7 @@ impl Repository {
 
     pub fn get_backup(&self, name: &str) -> Result<Backup, RepositoryError> {
         Ok(try!(Backup::read_from(
-            &self.crypto.lock().unwrap(),
+            &self.crypto,
             self.layout.backup_path(name)
         )))
     }
@@ -74,7 +74,7 @@ impl Repository {
         let path = self.layout.backup_path(name);
         try!(fs::create_dir_all(path.parent().unwrap()));
         try!(backup.save_to(
-            &self.crypto.lock().unwrap(),
+            &self.crypto,
             self.config.encryption.clone(),
             path
         ));

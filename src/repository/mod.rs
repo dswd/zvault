@@ -20,7 +20,7 @@ use std::mem;
 use std::cmp::max;
 use std::path::Path;
 use std::fs::{self, File};
-use std::sync::{Arc, Mutex};
+use std::sync::Arc;
 use std::os::unix::fs::symlink;
 use std::io::Write;
 
@@ -74,10 +74,10 @@ impl index::Key for Hash {
 }
 
 pub struct Repository {
-    pub layout: Arc<ChunkRepositoryLayout>,
+    layout: Arc<ChunkRepositoryLayout>,
     pub config: Config,
     index: Index<Hash, Location>,
-    crypto: Arc<Mutex<Crypto>>,
+    crypto: Arc<Crypto>,
     bundle_map: BundleMap,
     next_data_bundle: u32,
     next_meta_bundle: u32,
@@ -133,7 +133,7 @@ impl Repository {
         try!(fs::create_dir_all(layout.local_locks_path())); // Added after v0.1.0
         let local_locks = LockFolder::new(layout.local_locks_path());
         let lock = try!(local_locks.lock(false));
-        let crypto = Arc::new(Mutex::new(try!(Crypto::open(layout.keys_path()))));
+        let crypto = Arc::new(try!(Crypto::open(layout.keys_path())));
         let (bundles, new, gone) = try!(BundleDb::open(layout.clone(), crypto.clone(), online));
         let (index, mut rebuild_index) =
             match unsafe { Index::open(layout.index_path(), &INDEX_MAGIC, INDEX_VERSION) } {
@@ -225,7 +225,7 @@ impl Repository {
     ) -> Result<Self, RepositoryError> {
         let mut repo = try!(Repository::create(layout.clone(), &Config::default(), remote));
         for file in key_files {
-            try!(repo.crypto.lock().unwrap().register_keyfile(file));
+            try!(repo.crypto.register_keyfile(file));
         }
         repo = try!(Repository::open(layout, true));
         let mut backups: Vec<(String, Backup)> = try!(repo.get_all_backups()).into_iter().collect();
@@ -249,7 +249,7 @@ impl Repository {
         secret: SecretKey,
     ) -> Result<(), RepositoryError> {
         try!(self.write_mode());
-        try!(self.crypto.lock().unwrap().register_secret_key(
+        try!(self.crypto.register_secret_key(
             public,
             secret
         ));
@@ -266,7 +266,7 @@ impl Repository {
     #[inline]
     pub fn set_encryption(&mut self, public: Option<&PublicKey>) {
         if let Some(key) = public {
-            if !self.crypto.lock().unwrap().contains_secret_key(key) {
+            if !self.crypto.contains_secret_key(key) {
                 tr_warn!("The secret key for that public key is not stored in the repository.")
             }
             let mut key_bytes = Vec::new();

@@ -4,7 +4,7 @@ use super::*;
 use std::path::{Path, PathBuf};
 use std::fs::File;
 use std::io::{self, Write, BufWriter};
-use std::sync::{Arc, Mutex};
+use std::sync::Arc;
 
 use chrono::prelude::*;
 
@@ -51,7 +51,7 @@ pub struct BundleWriter {
     compression: Option<Compression>,
     compression_stream: Option<CompressionStream>,
     encryption: Option<Encryption>,
-    crypto: Arc<Mutex<Crypto>>,
+    crypto: Arc<Crypto>,
     raw_size: usize,
     chunk_count: usize,
     chunks: ChunkList
@@ -63,7 +63,7 @@ impl BundleWriter {
         hash_method: HashMethod,
         compression: Option<Compression>,
         encryption: Option<Encryption>,
-        crypto: Arc<Mutex<Crypto>>,
+        crypto: Arc<Crypto>,
     ) -> Result<Self, BundleWriterError> {
         let compression_stream = match compression {
             Some(ref compression) => Some(try!(compression.compress_stream().map_err(
@@ -106,14 +106,14 @@ impl BundleWriter {
             ))
         }
         if let Some(ref encryption) = self.encryption {
-            self.data = try!(self.crypto.lock().unwrap().encrypt(encryption, &self.data));
+            self.data = try!(self.crypto.encrypt(encryption, &self.data));
         }
         let encoded_size = self.data.len();
         let mut chunk_data = Vec::with_capacity(self.chunks.encoded_size());
         self.chunks.write_to(&mut chunk_data).unwrap();
         let id = BundleId(self.hash_method.hash(&chunk_data));
         if let Some(ref encryption) = self.encryption {
-            chunk_data = try!(self.crypto.lock().unwrap().encrypt(encryption, &chunk_data));
+            chunk_data = try!(self.crypto.encrypt(encryption, &chunk_data));
         }
         let mut path = db.layout.temp_bundle_path();
         let mut file = BufWriter::new(try!(File::create(&path).context(&path as &Path)));
@@ -133,7 +133,7 @@ impl BundleWriter {
         };
         let mut info_data = try!(msgpack::encode(&info).context(&path as &Path));
         if let Some(ref encryption) = self.encryption {
-            info_data = try!(self.crypto.lock().unwrap().encrypt(encryption, &info_data));
+            info_data = try!(self.crypto.encrypt(encryption, &info_data));
         }
         let header = BundleHeader {
             encryption: self.encryption,
