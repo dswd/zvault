@@ -5,7 +5,7 @@ pub use repository::chunking::{ChunkerType, Chunker, ChunkerStatus, ChunkerError
 pub use repository::{Repository, Backup, Config, RepositoryError, RepositoryInfo, Inode, FileType,
                      IntegrityError, BackupFileError, BackupError, BackupOptions, BundleAnalysis,
                      FileData, DiffType, InodeError, RepositoryLayout, Location,
-                     RepositoryStatistics};
+                     RepositoryStatistics, ChunkRepositoryLayout};
 pub use repository::index::{Index, IndexError, IndexStatistics};
 pub use backups::mount::FuseFilesystem;
 pub use translation::CowStr;

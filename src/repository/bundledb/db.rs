@@ -117,7 +117,7 @@ fn load_bundles(
 
 
 pub struct BundleDb {
-    pub layout: RepositoryLayout,
+    pub layout: Arc<ChunkRepositoryLayout>,
     uploader: Option<Arc<BundleUploader>>,
     crypto: Arc<Mutex<Crypto>>,
     local_bundles: HashMap<BundleId, StoredBundle>,
@@ -127,7 +127,7 @@ pub struct BundleDb {
 
 
 impl BundleDb {
-    fn new(layout: RepositoryLayout, crypto: Arc<Mutex<Crypto>>) -> Self {
+    fn new(layout: Arc<ChunkRepositoryLayout>, crypto: Arc<Mutex<Crypto>>) -> Self {
         BundleDb {
             layout,
             crypto,
@@ -239,7 +239,7 @@ impl BundleDb {
     }
 
     pub fn open(
-        layout: RepositoryLayout,
+        layout: Arc<ChunkRepositoryLayout>,
         crypto: Arc<Mutex<Crypto>>,
         online: bool
     ) -> Result<(Self, Vec<BundleInfo>, Vec<BundleInfo>), BundleDbError> {
@@ -251,7 +251,7 @@ impl BundleDb {
         Ok((self_, new, gone))
     }
 
-    pub fn create(layout: &RepositoryLayout) -> Result<(), BundleDbError> {
+    pub fn create(layout: Arc<ChunkRepositoryLayout>) -> Result<(), BundleDbError> {
         try!(fs::create_dir_all(layout.remote_bundles_path()).context(
             &layout.remote_bundles_path() as
                 &Path
@@ -332,11 +332,14 @@ impl BundleDb {
 
     fn copy_remote_bundle_to_cache(&mut self, bundle: &StoredBundle) -> Result<(), BundleDbError> {
         let id = bundle.id();
-        let (folder, filename) = self.layout.local_bundle_path(&id, self.local_bundles.len());
-        try!(fs::create_dir_all(&folder).context(&folder as &Path));
+        let dst_path = self.layout.local_bundle_path(&id, self.local_bundles.len());
+        {
+            let folder = dst_path.parent().unwrap();
+            try!(fs::create_dir_all(folder).context(folder as &Path));
+        }
         let bundle = try!(bundle.copy_to(
             self.layout.base_path(),
-            folder.join(filename)
+            dst_path
         ));
         self.local_bundles.insert(id, bundle);
         Ok(())
@@ -347,8 +350,7 @@ impl BundleDb {
         if bundle.info.mode == BundleMode::Meta {
             try!(self.copy_remote_bundle_to_cache(&bundle))
         }
-        let (folder, filename) = self.layout.remote_bundle_path(self.remote_bundles.len());
-        let dst_path = folder.join(filename);
+        let dst_path = self.layout.remote_bundle_path(&bundle.id(),self.remote_bundles.len());
         let src_path = self.layout.base_path().join(bundle.path);
         bundle.path = dst_path
             .strip_prefix(self.layout.base_path())

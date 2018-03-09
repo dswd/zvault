@@ -4,29 +4,37 @@ use ::prelude::*;
 
 use std::path::{Path, PathBuf};
 use std::collections::HashMap;
+use std::sync::Arc;
 
 
 pub struct BackupRepository {
+    layout: Arc<RepositoryLayout>,
     repo: Repository
 }
 
 impl BackupRepository {
     pub fn create<P: AsRef<Path>, R: AsRef<Path>>(path: P, config: &Config, remote: R) -> Result<Self, RepositoryError> {
+        let layout = Arc::new(RepositoryLayout::new(path.as_ref()));
         Ok(BackupRepository {
-            repo: try!(Repository::create(path, config, remote))
+            layout: layout.clone(),
+            repo: try!(Repository::create(layout, config, remote))
         })
     }
 
     #[allow(unknown_lints, useless_let_if_seq)]
     pub fn open<P: AsRef<Path>>(path: P, online: bool) -> Result<Self, RepositoryError> {
+        let layout = Arc::new(RepositoryLayout::new(path.as_ref()));
         Ok(BackupRepository {
-            repo: try!(Repository::open(path, online))
+            layout: layout.clone(),
+            repo: try!(Repository::open(layout, online))
         })
     }
 
     pub fn import<P: AsRef<Path>, R: AsRef<Path>>(path: P, remote: R, key_files: Vec<String>) -> Result<Self, RepositoryError> {
+        let layout = Arc::new(RepositoryLayout::new(path.as_ref()));
         Ok(BackupRepository {
-            repo: try!(Repository::import(path, remote, key_files))
+            layout: layout.clone(),
+            repo: try!(Repository::import(layout, remote, key_files))
         })
     }
 
@@ -77,7 +85,7 @@ impl BackupRepository {
     }
 
     pub fn get_layout(&self) -> &RepositoryLayout {
-        &self.repo.layout
+        &self.layout
     }
 
     pub fn create_backup_recursively<P: AsRef<Path>>(&mut self, path: P, reference: Option<&Backup>, options: &BackupOptions) -> Result<Backup, RepositoryError> {

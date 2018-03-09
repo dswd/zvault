@@ -31,7 +31,7 @@ pub use self::backup::{BackupError, BackupOptions, DiffType};
 pub use self::backup_file::{Backup, BackupFileError};
 pub use self::integrity::IntegrityError;
 pub use self::info::{RepositoryInfo, BundleAnalysis, RepositoryStatistics};
-pub use self::layout::RepositoryLayout;
+pub use self::layout::{RepositoryLayout, ChunkRepositoryLayout};
 use self::bundle_map::BundleMap;
 
 
@@ -74,7 +74,7 @@ impl index::Key for Hash {
 }
 
 pub struct Repository {
-    pub layout: RepositoryLayout,
+    pub layout: Arc<ChunkRepositoryLayout>,
     pub config: Config,
     index: Index<Hash, Location>,
     crypto: Arc<Mutex<Crypto>>,
@@ -93,12 +93,11 @@ pub struct Repository {
 
 
 impl Repository {
-    pub fn create<P: AsRef<Path>, R: AsRef<Path>>(
-        path: P,
+    pub fn create<R: AsRef<Path>>(
+        layout: Arc<ChunkRepositoryLayout>,
         config: &Config,
         remote: R,
     ) -> Result<Self, RepositoryError> {
-        let layout = RepositoryLayout::new(path.as_ref().to_path_buf());
         try!(fs::create_dir(layout.base_path()));
         try!(File::create(layout.excludes_path()).and_then(|mut f| {
             f.write_all(DEFAULT_EXCLUDES)
@@ -113,7 +112,7 @@ impl Repository {
         ));
         try!(fs::create_dir_all(layout.remote_locks_path()));
         try!(config.save(layout.config_path()));
-        try!(BundleDb::create(&layout));
+        try!(BundleDb::create(layout.clone()));
         try!(Index::<Hash, Location>::create(
             layout.index_path(),
             &INDEX_MAGIC,
@@ -121,12 +120,11 @@ impl Repository {
         ));
         try!(BundleMap::create().save(layout.bundle_map_path()));
         try!(fs::create_dir_all(layout.backups_path()));
-        Self::open(path, true)
+        Self::open(layout, true)
     }
 
     #[allow(unknown_lints, useless_let_if_seq)]
-    pub fn open<P: AsRef<Path>>(path: P, online: bool) -> Result<Self, RepositoryError> {
-        let layout = RepositoryLayout::new(path.as_ref().to_path_buf());
+    pub fn open(layout: Arc<ChunkRepositoryLayout>, online: bool) -> Result<Self, RepositoryError> {
         if !layout.remote_exists() {
             return Err(RepositoryError::NoRemote);
         }
@@ -220,17 +218,16 @@ impl Repository {
         Ok(repo)
     }
 
-    pub fn import<P: AsRef<Path>, R: AsRef<Path>>(
-        path: P,
+    pub fn import<R: AsRef<Path>>(
+        layout: Arc<ChunkRepositoryLayout>,
         remote: R,
         key_files: Vec<String>,
     ) -> Result<Self, RepositoryError> {
-        let path = path.as_ref();
-        let mut repo = try!(Repository::create(path, &Config::default(), remote));
+        let mut repo = try!(Repository::create(layout.clone(), &Config::default(), remote));
         for file in key_files {
             try!(repo.crypto.lock().unwrap().register_keyfile(file));
         }
-        repo = try!(Repository::open(path, true));
+        repo = try!(Repository::open(layout, true));
         let mut backups: Vec<(String, Backup)> = try!(repo.get_all_backups()).into_iter().collect();
         backups.sort_by_key(|&(_, ref b)| b.timestamp);
         if let Some((name, backup)) = backups.pop() {
