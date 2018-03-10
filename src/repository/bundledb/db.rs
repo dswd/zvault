@@ -117,7 +117,7 @@ fn load_bundles(
 
 
 pub struct BundleDb {
-    pub layout: Arc<ChunkRepositoryLayout>,
+    layout: Arc<ChunkRepositoryLayout>,
     uploader: Option<Arc<BundleUploader>>,
     crypto: Arc<Crypto>,
     local_bundles: HashMap<BundleId, StoredBundle>,
@@ -284,6 +284,7 @@ impl BundleDb {
         encryption: Option<Encryption>,
     ) -> Result<BundleWriter, BundleDbError> {
         Ok(try!(BundleWriter::new(
+            self.layout.clone(),
             mode,
             hash_method,
             compression,
@@ -346,7 +347,7 @@ impl BundleDb {
     }
 
     pub fn add_bundle(&mut self, bundle: BundleWriter) -> Result<BundleInfo, BundleDbError> {
-        let mut bundle = try!(bundle.finish(self));
+        let mut bundle = try!(bundle.finish());
         if bundle.info.mode == BundleMode::Meta {
             try!(self.copy_remote_bundle_to_cache(&bundle))
         }

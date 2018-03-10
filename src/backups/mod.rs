@@ -77,11 +77,11 @@ impl BackupRepository {
     }
 
     pub fn get_config(&self) -> &Config {
-        &self.repo.config
+        self.repo.get_config()
     }
 
     pub fn set_config(&mut self, config: Config) {
-        self.repo.config = config;
+        self.repo.set_config(config);
     }
 
     pub fn get_layout(&self) -> &RepositoryLayout {

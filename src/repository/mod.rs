@@ -75,7 +75,7 @@ impl index::Key for Hash {
 
 pub struct Repository {
     layout: Arc<ChunkRepositoryLayout>,
-    pub config: Config,
+    config: Config,
     index: Index<Hash, Location>,
     crypto: Arc<Crypto>,
     bundle_map: BundleMap,
@@ -398,6 +398,14 @@ impl Repository {
     #[inline]
     pub fn set_clean(&mut self) {
         self.dirty = false;
+    }
+
+    pub fn get_config(&self) -> &Config {
+        &self.config
+    }
+
+    pub fn set_config(&mut self, config: Config) {
+        self.config = config;
     }
 }
 
