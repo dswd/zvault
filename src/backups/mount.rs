@@ -197,7 +197,7 @@ impl<'a> FuseFilesystem<'a> {
 
     pub fn from_backup(
         repository: &'a mut BackupRepository,
-        backup: Backup,
+        backup: BackupFile,
     ) -> Result<Self, RepositoryError> {
         let inode = try!(repository.get_inode(&backup.root));
         let mut fs = try!(FuseFilesystem::new(repository));
@@ -207,7 +207,7 @@ impl<'a> FuseFilesystem<'a> {
 
     pub fn from_inode(
         repository: &'a mut BackupRepository,
-        backup: Backup,
+        backup: BackupFile,
         inode: Inode,
     ) -> Result<Self, RepositoryError> {
         let mut fs = try!(FuseFilesystem::new(repository));

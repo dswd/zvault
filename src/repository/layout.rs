@@ -23,7 +23,6 @@ pub trait ChunkRepositoryLayout {
 
 
     fn config_path(&self) -> PathBuf;
-    fn keys_path(&self) -> PathBuf;
     fn excludes_path(&self) -> PathBuf;
     fn backups_path(&self) -> PathBuf;
     fn backup_path(&self, name: &str) -> PathBuf;
@@ -180,11 +179,6 @@ impl ChunkRepositoryLayout for RepositoryLayout {
     #[inline]
     fn config_path(&self) -> PathBuf {
         self.0.join("config.yaml")
-    }
-
-    #[inline]
-    fn keys_path(&self) -> PathBuf {
-        self.0.join("keys")
     }
 
     #[inline]

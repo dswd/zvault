@@ -4,11 +4,8 @@ mod integrity;
 mod basic_io;
 mod info;
 mod metadata;
-mod backup;
 mod error;
 mod vacuum;
-mod backup_file;
-mod tarfile;
 mod layout;
 pub mod bundledb;
 pub mod index;
@@ -26,9 +23,6 @@ use std::io::Write;
 
 pub use self::error::RepositoryError;
 pub use self::config::Config;
-pub use self::metadata::{Inode, FileType, FileData, InodeError};
-pub use self::backup::{BackupError, BackupOptions, DiffType};
-pub use self::backup_file::{Backup, BackupFileError};
 pub use self::integrity::IntegrityError;
 pub use self::info::{RepositoryInfo, BundleAnalysis, RepositoryStatistics};
 pub use self::layout::{RepositoryLayout, ChunkRepositoryLayout};
@@ -36,7 +30,6 @@ use self::bundle_map::BundleMap;
 
 
 const REPOSITORY_README: &[u8] = include_bytes!("../../docs/repository_readme.md");
-const DEFAULT_EXCLUDES: &[u8] = include_bytes!("../../docs/excludes.default");
 
 const INDEX_MAGIC: [u8; 7] = *b"zvault\x02";
 const INDEX_VERSION: u8 = 1;
@@ -96,13 +89,9 @@ impl Repository {
     pub fn create<R: AsRef<Path>>(
         layout: Arc<ChunkRepositoryLayout>,
         config: &Config,
+        crypto: Arc<Crypto>,
         remote: R,
     ) -> Result<Self, RepositoryError> {
-        try!(fs::create_dir(layout.base_path()));
-        try!(File::create(layout.excludes_path()).and_then(|mut f| {
-            f.write_all(DEFAULT_EXCLUDES)
-        }));
-        try!(fs::create_dir(layout.keys_path()));
         try!(fs::create_dir(layout.local_locks_path()));
         try!(symlink(remote, layout.remote_path()));
         try!(File::create(layout.remote_readme_path()).and_then(
@@ -120,11 +109,11 @@ impl Repository {
         ));
         try!(BundleMap::create().save(layout.bundle_map_path()));
         try!(fs::create_dir_all(layout.backups_path()));
-        Self::open(layout, true)
+        Self::open(layout, crypto, true)
     }
 
     #[allow(unknown_lints, useless_let_if_seq)]
-    pub fn open(layout: Arc<ChunkRepositoryLayout>, online: bool) -> Result<Self, RepositoryError> {
+    pub fn open(layout: Arc<ChunkRepositoryLayout>, crypto: Arc<Crypto>, online: bool) -> Result<Self, RepositoryError> {
         if !layout.remote_exists() {
             return Err(RepositoryError::NoRemote);
         }
@@ -133,7 +122,6 @@ impl Repository {
         try!(fs::create_dir_all(layout.local_locks_path())); // Added after v0.1.0
         let local_locks = LockFolder::new(layout.local_locks_path());
         let lock = try!(local_locks.lock(false));
-        let crypto = Arc::new(try!(Crypto::open(layout.keys_path())));
         let (bundles, new, gone) = try!(BundleDb::open(layout.clone(), crypto.clone(), online));
         let (index, mut rebuild_index) =
             match unsafe { Index::open(layout.index_path(), &INDEX_MAGIC, INDEX_VERSION) } {
@@ -218,44 +206,6 @@ impl Repository {
         Ok(repo)
     }
 
-    pub fn import<R: AsRef<Path>>(
-        layout: Arc<ChunkRepositoryLayout>,
-        remote: R,
-        key_files: Vec<String>,
-    ) -> Result<Self, RepositoryError> {
-        let mut repo = try!(Repository::create(layout.clone(), &Config::default(), remote));
-        for file in key_files {
-            try!(repo.crypto.register_keyfile(file));
-        }
-        repo = try!(Repository::open(layout, true));
-        let mut backups: Vec<(String, Backup)> = try!(repo.get_all_backups()).into_iter().collect();
-        backups.sort_by_key(|&(_, ref b)| b.timestamp);
-        if let Some((name, backup)) = backups.pop() {
-            tr_info!("Taking configuration from the last backup '{}'", name);
-            repo.config = backup.config;
-            try!(repo.save_config())
-        } else {
-            tr_warn!(
-                "No backup found in the repository to take configuration from, please set the configuration manually."
-            );
-        }
-        Ok(repo)
-    }
-
-    #[inline]
-    pub fn register_key(
-        &mut self,
-        public: PublicKey,
-        secret: SecretKey,
-    ) -> Result<(), RepositoryError> {
-        try!(self.write_mode());
-        try!(self.crypto.register_secret_key(
-            public,
-            secret
-        ));
-        Ok(())
-    }
-
     #[inline]
     pub fn save_config(&mut self) -> Result<(), RepositoryError> {
         try!(self.write_mode());
@@ -278,7 +228,7 @@ impl Repository {
     }
 
     #[inline]
-    fn save_bundle_map(&self) -> Result<(), RepositoryError> {
+    pub fn save_bundle_map(&self) -> Result<(), RepositoryError> {
         try!(self.bundle_map.save(self.layout.bundle_map_path()));
         Ok(())
     }
@@ -385,14 +335,22 @@ impl Repository {
     }
 
     #[inline]
-    fn write_mode(&mut self) -> Result<(), RepositoryError> {
+    pub fn write_mode(&mut self) -> Result<(), RepositoryError> {
         try!(self.local_locks.upgrade(&mut self.lock));
         Ok(())
     }
 
     #[inline]
-    fn lock(&self, exclusive: bool) -> Result<LockHandle, RepositoryError> {
+    pub fn lock(&self, exclusive: bool) -> Result<LockHandle, RepositoryError> {
         Ok(try!(self.remote_locks.lock(exclusive)))
+    }
+
+    pub fn is_dirty(&self) -> bool {
+        self.dirty
+    }
+
+    pub fn get_chunk_location(&self, chunk: Hash) -> Option<Location> {
+        self.index.get(&chunk)
     }
 
     #[inline]

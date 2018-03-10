@@ -14,7 +14,7 @@ quick_error!{
     #[derive(Debug)]
     #[allow(unknown_lints,large_enum_variant)]
     pub enum BackupError {
-        FailedPaths(backup: Backup, failed: Vec<PathBuf>) {
+        FailedPaths(backup: BackupFile, failed: Vec<PathBuf>) {
             description(tr!("Some paths could not be backed up"))
             display("{}", tr_format!("Backup error: some paths could not be backed up"))
         }
@@ -39,9 +39,9 @@ pub enum DiffType {
 }
 
 
-impl Repository {
-    pub fn get_all_backups(&self) -> Result<HashMap<String, Backup>, RepositoryError> {
-        Ok(try!(Backup::get_all_from(
+impl BackupRepository {
+    pub fn get_all_backups(&self) -> Result<HashMap<String, BackupFile>, RepositoryError> {
+        Ok(try!(BackupFile::get_all_from(
             &self.crypto,
             self.layout.backups_path()
         )))
@@ -50,8 +50,8 @@ impl Repository {
     pub fn get_backups<P: AsRef<Path>>(
         &self,
         path: P,
-    ) -> Result<HashMap<String, Backup>, RepositoryError> {
-        Ok(try!(Backup::get_all_from(
+    ) -> Result<HashMap<String, BackupFile>, RepositoryError> {
+        Ok(try!(BackupFile::get_all_from(
             &self.crypto,
             self.layout.backups_path().join(path)
         )))
@@ -62,27 +62,27 @@ impl Repository {
         self.layout.backup_path(name).exists()
     }
 
-    pub fn get_backup(&self, name: &str) -> Result<Backup, RepositoryError> {
-        Ok(try!(Backup::read_from(
+    pub fn get_backup(&self, name: &str) -> Result<BackupFile, RepositoryError> {
+        Ok(try!(BackupFile::read_from(
             &self.crypto,
             self.layout.backup_path(name)
         )))
     }
 
-    pub fn save_backup(&mut self, backup: &Backup, name: &str) -> Result<(), RepositoryError> {
-        try!(self.write_mode());
+    pub fn save_backup(&mut self, backup: &BackupFile, name: &str) -> Result<(), RepositoryError> {
+        try!(self.repo.write_mode());
         let path = self.layout.backup_path(name);
         try!(fs::create_dir_all(path.parent().unwrap()));
         try!(backup.save_to(
             &self.crypto,
-            self.config.encryption.clone(),
+            self.get_config().encryption.clone(),
             path
         ));
         Ok(())
     }
 
     pub fn delete_backup(&mut self, name: &str) -> Result<(), RepositoryError> {
-        try!(self.write_mode());
+        try!(self.repo.write_mode());
         let mut path = self.layout.backup_path(name);
         try!(fs::remove_file(&path));
         loop {
@@ -104,7 +104,7 @@ impl Repository {
         yearly: usize,
         force: bool,
     ) -> Result<(), RepositoryError> {
-        try!(self.write_mode());
+        try!(self.repo.write_mode());
         let mut backups = Vec::new();
         let backup_map = match self.get_all_backups() {
             Ok(backup_map) => backup_map,
@@ -125,7 +125,7 @@ impl Repository {
         let mut keep = Bitmap::new(backups.len());
 
         fn mark_needed<K: Eq, F: Fn(&DateTime<Local>) -> K>(
-            backups: &[(String, DateTime<Local>, Backup)],
+            backups: &[(String, DateTime<Local>, BackupFile)],
             keep: &mut Bitmap,
             max: usize,
             keyfn: F,
@@ -183,11 +183,11 @@ impl Repository {
 
     pub fn restore_inode_tree<P: AsRef<Path>>(
         &mut self,
-        backup: &Backup,
+        backup: &BackupFile,
         inode: Inode,
         path: P,
     ) -> Result<(), RepositoryError> {
-        let _lock = try!(self.lock(false));
+        let _lock = try!(self.repo.lock(false));
         let mut queue = VecDeque::new();
         queue.push_back((path.as_ref().to_owned(), inode));
         let cache = users::UsersCache::new();
@@ -204,7 +204,7 @@ impl Repository {
                         inode.group = group.gid();
                     }
                 }
-                try!(self.save_inode_at(&inode, &path));
+                try!(self.repo.save_inode_at(&inode, &path));
             }
             if inode.file_type == FileType::Directory {
                 let path = if is_root {
@@ -227,11 +227,11 @@ impl Repository {
         path: P,
         reference: Option<&Inode>,
         options: &BackupOptions,
-        backup: &mut Backup,
+        backup: &mut BackupFile,
         failed_paths: &mut Vec<PathBuf>,
     ) -> Result<Inode, RepositoryError> {
         let path = path.as_ref();
-        let mut inode = try!(self.create_inode(path, reference));
+        let mut inode = try!(self.repo.create_inode(path, reference));
         if !backup.user_names.contains_key(&inode.user) {
             if let Some(user) = users::get_user_by_uid(inode.user) {
                 backup.user_names.insert(
@@ -296,7 +296,7 @@ impl Repository {
                     }
                     Err(err) => return Err(err),
                 };
-                let chunks = try!(self.put_inode(&child_inode));
+                let chunks = try!(self.repo.put_inode(&child_inode));
                 inode.cum_size += child_inode.cum_size;
                 for &(_, len) in chunks.iter() {
                     meta_size += u64::from(len);
@@ -328,18 +328,18 @@ impl Repository {
     pub fn create_backup_recursively<P: AsRef<Path>>(
         &mut self,
         path: P,
-        reference: Option<&Backup>,
+        reference: Option<&BackupFile>,
         options: &BackupOptions,
-    ) -> Result<Backup, RepositoryError> {
-        try!(self.write_mode());
-        let _lock = try!(self.lock(false));
-        if self.dirty {
+    ) -> Result<BackupFile, RepositoryError> {
+        try!(self.repo.write_mode());
+        let _lock = try!(self.repo.lock(false));
+        if self.repo.is_dirty() {
             return Err(RepositoryError::Dirty);
         }
-        try!(self.set_dirty());
+        try!(self.repo.set_dirty());
         let reference_inode = reference.and_then(|b| self.get_inode(&b.root).ok());
-        let mut backup = Backup::default();
-        backup.config = self.config.clone();
+        let mut backup = BackupFile::default();
+        backup.config = self.get_config().clone();
         backup.host = get_hostname().unwrap_or_else(|_| "".to_string());
         backup.path = path.as_ref().to_string_lossy().to_string();
         let info_before = self.info();
@@ -352,8 +352,8 @@ impl Repository {
             &mut backup,
             &mut failed_paths
         ));
-        backup.root = try!(self.put_inode(&root_inode));
-        try!(self.flush());
+        backup.root = try!(self.repo.put_inode(&root_inode));
+        try!(self.repo.flush());
         let elapsed = Local::now().signed_duration_since(start);
         backup.timestamp = start.timestamp();
         backup.total_data_size = root_inode.cum_size;
@@ -369,7 +369,7 @@ impl Repository {
         backup.bundle_count = info_after.bundle_count - info_before.bundle_count;
         backup.chunk_count = info_after.chunk_count - info_before.chunk_count;
         backup.avg_chunk_size = backup.deduplicated_data_size as f32 / backup.chunk_count as f32;
-        self.dirty = false;
+        self.repo.set_clean();
         if failed_paths.is_empty() {
             Ok(backup)
         } else {
@@ -379,11 +379,11 @@ impl Repository {
 
     pub fn remove_backup_path<P: AsRef<Path>>(
         &mut self,
-        backup: &mut Backup,
+        backup: &mut BackupFile,
         path: P,
     ) -> Result<(), RepositoryError> {
-        try!(self.write_mode());
-        let _lock = try!(self.lock(false));
+        try!(self.repo.write_mode());
+        let _lock = try!(self.repo.lock(false));
         let mut inodes = try!(self.get_backup_path(backup, path));
         let to_remove = inodes.pop().unwrap();
         let mut remove_from = match inodes.pop() {
@@ -393,14 +393,14 @@ impl Repository {
         remove_from.children.as_mut().unwrap().remove(
             &to_remove.name
         );
-        let mut last_inode_chunks = try!(self.put_inode(&remove_from));
+        let mut last_inode_chunks = try!(self.repo.put_inode(&remove_from));
         let mut last_inode_name = remove_from.name;
         while let Some(mut inode) = inodes.pop() {
             inode.children.as_mut().unwrap().insert(
                 last_inode_name,
                 last_inode_chunks
             );
-            last_inode_chunks = try!(self.put_inode(&inode));
+            last_inode_chunks = try!(self.repo.put_inode(&inode));
             last_inode_name = inode.name;
         }
         backup.root = last_inode_chunks;
@@ -410,7 +410,7 @@ impl Repository {
 
     pub fn get_backup_path<P: AsRef<Path>>(
         &mut self,
-        backup: &Backup,
+        backup: &BackupFile,
         path: P,
     ) -> Result<Vec<Inode>, RepositoryError> {
         let mut inodes = vec![];
@@ -444,7 +444,7 @@ impl Repository {
     #[inline]
     pub fn get_backup_inode<P: AsRef<Path>>(
         &mut self,
-        backup: &Backup,
+        backup: &BackupFile,
         path: P,
     ) -> Result<Inode, RepositoryError> {
         self.get_backup_path(backup, path).map(|mut inodes| {

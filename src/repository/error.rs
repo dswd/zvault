@@ -3,11 +3,8 @@ use prelude::*;
 use std::io;
 use std::path::PathBuf;
 
-use super::backup_file::BackupFileError;
-use super::backup::BackupError;
 use super::bundle_map::BundleMapError;
 use super::config::ConfigError;
-use super::metadata::InodeError;
 
 
 quick_error!{
@@ -72,6 +69,12 @@ quick_error!{
             description(tr!("Bundle map error"))
             display("{}", tr_format!("Repository error: bundle map error\n\tcaused by: {}", err))
         }
+        InodeIntegrity(err: InodeIntegrityError) {
+            from()
+            cause(err)
+            description(tr!("Integrity error"))
+            display("{}", tr_format!("Repository error: integrity error\n\tcaused by: {}", err))
+        }
         Integrity(err: IntegrityError) {
             from()
             cause(err)
@@ -101,7 +104,7 @@ quick_error!{
             description(tr!("IO error"))
             display("{}", tr_format!("IO error: {}", err))
         }
-        NoSuchFileInBackup(backup: Backup, path: PathBuf) {
+        NoSuchFileInBackup(backup: BackupFile, path: PathBuf) {
             description(tr!("No such file in backup"))
             display("{}", tr_format!("The backup does not contain the file {:?}", path))
         }

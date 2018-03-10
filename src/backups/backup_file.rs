@@ -55,24 +55,25 @@ quick_error!{
             description(tr!("Encryption failed"))
             display("{}", tr_format!("Backup file error: encryption failed\n\tcaused by: {}", err))
         }
-        PartialBackupsList(partial: HashMap<String, Backup>, failed: Vec<PathBuf>) {
+        PartialBackupsList(partial: HashMap<String, BackupFile>, failed: Vec<PathBuf>) {
             description(tr!("Some backups could not be loaded"))
             display("{}", tr_format!("Backup file error: some backups could not be loaded: {:?}", failed))
         }
     }
 }
 
+
 #[derive(Default, Debug, Clone)]
-struct BackupHeader {
+struct BackupFileHeader {
     pub encryption: Option<Encryption>
 }
-serde_impl!(BackupHeader(u8) {
+serde_impl!(BackupFileHeader(u8) {
     encryption: Option<Encryption> => 0
 });
 
 
 #[derive(Default, Debug, Clone)]
-pub struct Backup {
+pub struct BackupFile {
     pub root: ChunkList,
     pub total_data_size: u64, // Sum of all raw sizes of all entities
     pub changed_data_size: u64, // Sum of all raw sizes of all entities actively stored
@@ -92,7 +93,7 @@ pub struct Backup {
     pub user_names: HashMap<u32, String>,
     pub group_names: HashMap<u32, String>
 }
-serde_impl!(Backup(u8?) {
+serde_impl!(BackupFile(u8?) {
     root: ChunkList => 0,
     total_data_size: u64 => 1,
     changed_data_size: u64 => 2,
@@ -113,7 +114,7 @@ serde_impl!(Backup(u8?) {
     group_names: HashMap<u32, String> => 17
 });
 
-impl Backup {
+impl BackupFile {
     pub fn read_from<P: AsRef<Path>>(crypto: &Crypto, path: P) -> Result<Self, BackupFileError> {
         let path = path.as_ref();
         let mut file = BufReader::new(try!(File::open(path).map_err(|err| {
@@ -133,7 +134,7 @@ impl Backup {
                 version
             ));
         }
-        let header: BackupHeader = try!(msgpack::decode_from_stream(&mut file).context(path));
+        let header: BackupFileHeader = try!(msgpack::decode_from_stream(&mut file).context(path));
         let mut data = Vec::new();
         try!(file.read_to_end(&mut data).map_err(|err| {
             BackupFileError::Read(err, path.to_path_buf())
@@ -164,7 +165,7 @@ impl Backup {
         try!(file.write_all(&[HEADER_VERSION]).map_err(|err| {
             BackupFileError::Write(err, path.to_path_buf())
         }));
-        let header = BackupHeader { encryption };
+        let header = BackupFileHeader { encryption };
         try!(msgpack::encode_to_stream(&header, &mut file).context(path));
         try!(file.write_all(&data).map_err(|err| {
             BackupFileError::Write(err, path.to_path_buf())
@@ -175,7 +176,7 @@ impl Backup {
     pub fn get_all_from<P: AsRef<Path>>(
         crypto: &Crypto,
         path: P,
-    ) -> Result<HashMap<String, Backup>, BackupFileError> {
+    ) -> Result<HashMap<String, BackupFile>, BackupFileError> {
         let mut backups = HashMap::new();
         let base_path = path.as_ref();
         let path = path.as_ref();
@@ -203,7 +204,7 @@ impl Backup {
                         .with_file_name(relpath.file_stem().unwrap())
                         .to_string_lossy()
                         .to_string();
-                    if let Ok(backup) = Backup::read_from(crypto, &path) {
+                    if let Ok(backup) = BackupFile::read_from(crypto, &path) {
                         backups.insert(name, backup);
                     } else {
                         failed_paths.push(path.clone());

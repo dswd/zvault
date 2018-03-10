@@ -123,7 +123,7 @@ fn open_repository(path: &Path, online: bool) -> Result<BackupRepository, ErrorC
     ))
 }
 
-fn get_backup(repo: &BackupRepository, backup_name: &str) -> Result<Backup, ErrorCode> {
+fn get_backup(repo: &BackupRepository, backup_name: &str) -> Result<BackupFile, ErrorCode> {
     if !repo.has_backup(backup_name) {
         tr_error!("A backup with that name does not exist");
         return Err(ErrorCode::NoSuchBackup);
@@ -135,7 +135,7 @@ fn get_backup(repo: &BackupRepository, backup_name: &str) -> Result<Backup, Erro
     ))
 }
 
-fn get_inode(repo: &mut BackupRepository, backup: &Backup, inode: Option<&String>) -> Result<Inode, ErrorCode> {
+fn get_inode(repo: &mut BackupRepository, backup: &BackupFile, inode: Option<&String>) -> Result<Inode, ErrorCode> {
     Ok(if let Some(inode) = inode {
         checked!(
                     repo.get_backup_inode(backup, &inode),
@@ -154,7 +154,7 @@ fn get_inode(repo: &mut BackupRepository, backup: &Backup, inode: Option<&String
 fn find_reference_backup(
     repo: &BackupRepository,
     path: &str,
-) -> Result<Option<(String, Backup)>, ErrorCode> {
+) -> Result<Option<(String, BackupFile)>, ErrorCode> {
     let mut matching = Vec::new();
     let hostname = match get_hostname() {
         Ok(hostname) => hostname,
@@ -181,7 +181,7 @@ fn find_reference_backup(
     Ok(matching.pop())
 }
 
-fn print_backup(backup: &Backup) {
+fn print_backup(backup: &BackupFile) {
     if backup.modified {
         tr_warn!("This backup has been modified");
     }
@@ -299,7 +299,7 @@ fn print_inode(inode: &Inode) {
     }
 }
 
-fn print_backups(backup_map: &HashMap<String, Backup>) {
+fn print_backups(backup_map: &HashMap<String, BackupFile>) {
     let mut backups: Vec<_> = backup_map.into_iter().collect();
     backups.sort_by_key(|b| b.0);
     for (name, backup) in backups {
