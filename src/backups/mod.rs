@@ -5,6 +5,7 @@ mod tarfile;
 mod backup;
 mod integrity;
 mod vacuum;
+mod metadata;
 
 pub use self::backup::{BackupOptions, BackupError, DiffType};
 pub use self::backup_file::{BackupFile, BackupFileError};
@@ -37,6 +38,7 @@ impl BackupRepository {
         try!(File::create(layout.excludes_path()).and_then(|mut f| {
             f.write_all(DEFAULT_EXCLUDES)
         }));
+        try!(fs::create_dir_all(layout.backups_path()));
         try!(fs::create_dir(layout.keys_path()));
         let crypto = Arc::new(try!(Crypto::open(layout.keys_path())));
         Ok(BackupRepository {
@@ -94,11 +96,6 @@ impl BackupRepository {
     #[inline]
     pub fn set_encryption(&mut self, public: Option<&PublicKey>) {
         self.repo.set_encryption(public)
-    }
-
-    #[inline]
-    pub fn get_inode(&mut self, chunks: &[Chunk]) -> Result<Inode, RepositoryError> {
-        self.repo.get_inode(chunks)
     }
 
     pub fn get_config(&self) -> &Config {

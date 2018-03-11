@@ -106,7 +106,7 @@ impl BackupRepository {
             }
         }
         if modified {
-            Ok(Some(try!(self.repo.put_inode(&inode))))
+            Ok(Some(try!(self.put_inode(&inode))))
         } else {
             try!(self.repo.check_chunks(checked, chunks, true));
             Ok(None)
@@ -242,11 +242,11 @@ impl BackupRepository {
                 children.remove(&name);
             }
         }
-        let mut chunks = try!(self.repo.put_inode(&inode));
+        let mut chunks = try!(self.put_inode(&inode));
         while let Some(mut parent) = inodes.pop() {
             parent.children.as_mut().unwrap().insert(inode.name, chunks);
             inode = parent;
-            chunks = try!(self.repo.put_inode(&inode));
+            chunks = try!(self.put_inode(&inode));
         }
         if modified {
             try!(self.repo.flush());

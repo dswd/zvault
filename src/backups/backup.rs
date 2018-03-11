@@ -204,7 +204,7 @@ impl BackupRepository {
                         inode.group = group.gid();
                     }
                 }
-                try!(self.repo.save_inode_at(&inode, &path));
+                try!(self.save_inode_at(&inode, &path));
             }
             if inode.file_type == FileType::Directory {
                 let path = if is_root {
@@ -231,7 +231,7 @@ impl BackupRepository {
         failed_paths: &mut Vec<PathBuf>,
     ) -> Result<Inode, RepositoryError> {
         let path = path.as_ref();
-        let mut inode = try!(self.repo.create_inode(path, reference));
+        let mut inode = try!(self.create_inode(path, reference));
         if !backup.user_names.contains_key(&inode.user) {
             if let Some(user) = users::get_user_by_uid(inode.user) {
                 backup.user_names.insert(
@@ -296,7 +296,7 @@ impl BackupRepository {
                     }
                     Err(err) => return Err(err),
                 };
-                let chunks = try!(self.repo.put_inode(&child_inode));
+                let chunks = try!(self.put_inode(&child_inode));
                 inode.cum_size += child_inode.cum_size;
                 for &(_, len) in chunks.iter() {
                     meta_size += u64::from(len);
@@ -352,7 +352,7 @@ impl BackupRepository {
             &mut backup,
             &mut failed_paths
         ));
-        backup.root = try!(self.repo.put_inode(&root_inode));
+        backup.root = try!(self.put_inode(&root_inode));
         try!(self.repo.flush());
         let elapsed = Local::now().signed_duration_since(start);
         backup.timestamp = start.timestamp();
@@ -393,14 +393,14 @@ impl BackupRepository {
         remove_from.children.as_mut().unwrap().remove(
             &to_remove.name
         );
-        let mut last_inode_chunks = try!(self.repo.put_inode(&remove_from));
+        let mut last_inode_chunks = try!(self.put_inode(&remove_from));
         let mut last_inode_name = remove_from.name;
         while let Some(mut inode) = inodes.pop() {
             inode.children.as_mut().unwrap().insert(
                 last_inode_name,
                 last_inode_chunks
             );
-            last_inode_chunks = try!(self.repo.put_inode(&inode));
+            last_inode_chunks = try!(self.put_inode(&inode));
             last_inode_name = inode.name;
         }
         backup.root = last_inode_chunks;

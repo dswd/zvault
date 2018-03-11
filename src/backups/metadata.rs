@@ -4,8 +4,10 @@ use std::path::Path;
 use std::fs::File;
 use std::io::{Read, Write};
 
+use super::*;
 
-impl Repository {
+
+impl BackupRepository {
     pub fn create_inode<P: AsRef<Path>>(
         &mut self,
         path: P,
@@ -25,13 +27,13 @@ impl Repository {
                 try!(file.read_to_end(&mut data));
                 inode.data = Some(FileData::Inline(data.into()));
             } else {
-                let mut chunks = try!(self.put_stream(BundleMode::Data, &mut file));
+                let mut chunks = try!(self.repo.put_stream(BundleMode::Data, &mut file));
                 if chunks.len() < 10 {
                     inode.data = Some(FileData::ChunkedDirect(chunks));
                 } else {
                     let mut chunk_data = Vec::with_capacity(chunks.encoded_size());
                     chunks.write_to(&mut chunk_data).unwrap();
-                    chunks = try!(self.put_data(BundleMode::Meta, &chunk_data));
+                    chunks = try!(self.repo.put_data(BundleMode::Meta, &chunk_data));
                     inode.data = Some(FileData::ChunkedIndirect(chunks));
                 }
             }
@@ -41,7 +43,7 @@ impl Repository {
 
     #[inline]
     pub fn put_inode(&mut self, inode: &Inode) -> Result<ChunkList, RepositoryError> {
-        self.put_data(BundleMode::Meta, &try!(inode.encode()))
+        self.repo.put_data(BundleMode::Meta, &try!(inode.encode()))
     }
 
     #[inline]
@@ -61,12 +63,12 @@ impl Repository {
                         try!(file.write_all(data));
                     }
                     FileData::ChunkedDirect(ref chunks) => {
-                        try!(self.get_stream(chunks, &mut file));
+                        try!(self.repo.get_stream(chunks, &mut file));
                     }
                     FileData::ChunkedIndirect(ref chunks) => {
                         let chunk_data = try!(self.get_data(chunks));
                         let chunks = ChunkList::read_from(&chunk_data);
-                        try!(self.get_stream(&chunks, &mut file));
+                        try!(self.repo.get_stream(&chunks, &mut file));
                     }
                 }
             }

@@ -219,7 +219,7 @@ impl BackupRepository {
             }
             for path in childless {
                 let (inode, _) = inodes.remove(&path).unwrap();
-                let chunks = try!(self.repo.put_inode(&inode));
+                let chunks = try!(self.put_inode(&inode));
                 if let Some(parent_path) = path.parent() {
                     if let Some(&mut (ref mut parent_inode, ref mut children)) =
                         inodes.get_mut(parent_path)
@@ -265,7 +265,7 @@ impl BackupRepository {
                 children.insert(inode.name, chunks);
             }
             root_inode.children = Some(children);
-            let chunks = try!(self.repo.put_inode(&root_inode));
+            let chunks = try!(self.put_inode(&root_inode));
             Ok((root_inode, chunks))
         }
     }

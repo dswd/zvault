@@ -3,7 +3,6 @@ mod bundle_map;
 mod integrity;
 mod basic_io;
 mod info;
-mod metadata;
 mod error;
 mod vacuum;
 mod layout;
@@ -108,7 +107,6 @@ impl Repository {
             INDEX_VERSION
         ));
         try!(BundleMap::create().save(layout.bundle_map_path()));
-        try!(fs::create_dir_all(layout.backups_path()));
         Self::open(layout, crypto, true)
     }
 
