@@ -1,9 +1,9 @@
 use prelude::*;
 
 use super::*;
+use super::super::bundle_map::BundleMap;
 
 use std::time::Duration;
-
 use pbr::ProgressBar;
 
 
@@ -36,7 +36,7 @@ quick_error!{
 }
 
 
-impl Repository {
+impl RepositoryInner {
     pub fn get_chunk_marker(&self) -> Bitmap {
         Bitmap::new(self.index.capacity())
     }

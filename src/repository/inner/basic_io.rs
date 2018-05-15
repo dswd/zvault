@@ -10,11 +10,11 @@ pub struct ChunkReader<'a> {
     chunks: VecDeque<Chunk>,
     data: Vec<u8>,
     pos: usize,
-    repo: &'a mut Repository
+    repo: &'a mut RepositoryInner
 }
 
 impl<'a> ChunkReader<'a> {
-    pub fn new(repo: &'a mut Repository, chunks: ChunkList) -> Self {
+    pub fn new(repo: &'a mut RepositoryInner, chunks: ChunkList) -> Self {
         ChunkReader {
             repo,
             chunks: chunks.into_inner().into(),
@@ -58,7 +58,7 @@ impl<'a> Read for ChunkReader<'a> {
 }
 
 
-impl Repository {
+impl RepositoryInner {
     #[inline]
     pub fn get_bundle_id(&self, id: u32) -> Result<BundleId, RepositoryError> {
         self.bundle_map.get(id).ok_or_else(|| {

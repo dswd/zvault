@@ -3,7 +3,7 @@ use prelude::*;
 use std::collections::HashMap;
 
 
-impl Repository {
+impl RepositoryInner {
     pub fn delete_bundle(&mut self, id: u32) -> Result<(), RepositoryError> {
         if let Some(bundle) = self.bundle_map.remove(id) {
             try!(self.bundles.delete_bundle(&bundle));

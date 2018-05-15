@@ -114,6 +114,7 @@ impl BundleWriter {
         let encoded_size = self.data.len();
         let mut chunk_data = Vec::with_capacity(self.chunks.encoded_size());
         self.chunks.write_to(&mut chunk_data).unwrap();
+        //TODO: use random value as bundle id and store hash value in another field
         let id = BundleId(self.hash_method.hash(&chunk_data));
         if let Some(ref encryption) = self.encryption {
             chunk_data = try!(self.crypto.encrypt(encryption, &chunk_data));
