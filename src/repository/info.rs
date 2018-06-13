@@ -46,7 +46,7 @@ pub struct RepositoryStatistics {
 }
 
 
-impl RepositoryInner {
+impl Repository {
     #[inline]
     pub fn list_bundles(&self) -> Vec<&BundleInfo> {
         self.bundles.list_bundles()

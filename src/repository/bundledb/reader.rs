@@ -253,13 +253,7 @@ impl BundleReader {
                 tr!("Chunk list size does not match chunk count")
             ));
         }
-        if self.chunks
-            .as_ref()
-            .unwrap()
-            .iter()
-            .map(|c| c.1 as usize)
-            .sum::<usize>() != self.info.raw_size
-        {
+        if self.chunks.as_ref().unwrap().iter().map(|c| c.1 as usize).sum::<usize>() != self.info.raw_size {
             return Err(BundleReaderError::Integrity(
                 self.id(),
                 tr!("Individual chunk sizes do not add up to total size")

@@ -28,7 +28,7 @@ const DEFAULT_EXCLUDES: &[u8] = include_bytes!("../../docs/excludes.default");
 pub struct BackupRepository {
     layout: Arc<RepositoryLayout>,
     crypto: Arc<Crypto>,
-    repo: RepositoryInner
+    repo: Repository
 }
 
 impl BackupRepository {
@@ -44,7 +44,7 @@ impl BackupRepository {
         Ok(BackupRepository {
             crypto: crypto.clone(),
             layout: layout.clone(),
-            repo: try!(RepositoryInner::create(layout, config, crypto, remote))
+            repo: try!(Repository::create(layout, config, crypto, remote))
         })
     }
 
@@ -55,7 +55,7 @@ impl BackupRepository {
         Ok(BackupRepository {
             crypto: crypto.clone(),
             layout: layout.clone(),
-            repo: try!(RepositoryInner::open(layout, crypto, online))
+            repo: try!(Repository::open(layout, crypto, online))
         })
     }
 

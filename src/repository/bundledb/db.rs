@@ -62,7 +62,7 @@ fn load_bundles(
     path: &Path,
     base: &Path,
     bundles: &mut HashMap<BundleId, StoredBundle>,
-    crypto: Arc<Crypto>,
+    crypto: Arc<Crypto>
 ) -> Result<(Vec<StoredBundle>, Vec<StoredBundle>), BundleDbError> {
     let mut paths = vec![path.to_path_buf()];
     let mut bundle_paths = HashSet::new();
@@ -138,10 +138,10 @@ impl BundleDb {
         }
     }
 
-    fn load_bundle_list(
+    fn load_local_bundle_list(
         &mut self,
-        online: bool
-    ) -> Result<(Vec<StoredBundle>, Vec<StoredBundle>), BundleDbError> {
+        _lock: &ReadonlyMode
+    ) -> Result<(), BundleDbError> {
         if let Ok(list) = StoredBundle::read_list_from(&self.layout.local_bundle_cache_path()) {
             for bundle in list {
                 self.local_bundles.insert(bundle.id(), bundle);
@@ -170,9 +170,15 @@ impl BundleDb {
                 &self.layout.local_bundle_cache_path()
             ));
         }
-        if !online {
-            return Ok((vec![], vec![]))
-        }
+        Ok(())
+    }
+
+    fn load_remote_bundle_list(
+        &mut self,
+        lock: &OnlineMode
+    ) -> Result<(Vec<StoredBundle>, Vec<StoredBundle>), BundleDbError> {
+        try!(self.load_local_bundle_list(lock.as_readonly()));
+        let base_path = self.layout.base_path();
         let (new, gone) = try!(load_bundles(
             &self.layout.remote_bundles_path(),
             base_path,
@@ -189,11 +195,11 @@ impl BundleDb {
         Ok((new, gone))
     }
 
-    pub fn flush(&mut self) -> Result<(), BundleDbError> {
-        self.finish_uploads().and_then(|()| self.save_cache())
+    pub fn flush(&mut self, lock: &BackupMode) -> Result<(), BundleDbError> {
+        self.finish_uploads(lock).and_then(|()| self.save_cache(lock.as_localwrite()))
     }
 
-    fn save_cache(&self) -> Result<(), BundleDbError> {
+    fn save_cache(&self, _lock: &LocalWriteMode) -> Result<(), BundleDbError> {
         let bundles: Vec<_> = self.local_bundles.values().cloned().collect();
         try!(StoredBundle::save_list_to(
             &bundles,
@@ -207,7 +213,8 @@ impl BundleDb {
         Ok(())
     }
 
-    fn update_cache(&mut self) -> Result<(), BundleDbError> {
+    pub fn synchronize(&mut self, lock: &OnlineMode) -> Result<(Vec<BundleInfo>, Vec<BundleInfo>), BundleDbError> {
+        let (new, gone) = try!(self.load_remote_bundle_list(lock));
         let mut meta_bundles = HashSet::new();
         for (id, bundle) in &self.remote_bundles {
             if bundle.info.mode == BundleMode::Meta {
@@ -224,7 +231,7 @@ impl BundleDb {
             if !self.local_bundles.contains_key(&id) {
                 let bundle = self.remote_bundles[&id].clone();
                 tr_debug!("Copying new meta bundle to local cache: {}", bundle.info.id);
-                try!(self.copy_remote_bundle_to_cache(&bundle));
+                try!(self.copy_remote_bundle_to_cache(&bundle, lock));
             }
         }
         let base_path = self.layout.base_path();
@@ -235,20 +242,19 @@ impl BundleDb {
                 }))
             }
         }
-        Ok(())
+        let new = new.into_iter().map(|s| s.info).collect();
+        let gone = gone.into_iter().map(|s| s.info).collect();
+        Ok((new, gone))
     }
 
     pub fn open(
         layout: Arc<ChunkRepositoryLayout>,
         crypto: Arc<Crypto>,
-        online: bool
-    ) -> Result<(Self, Vec<BundleInfo>, Vec<BundleInfo>), BundleDbError> {
+        lock: &ReadonlyMode
+    ) -> Result<Self, BundleDbError> {
         let mut self_ = Self::new(layout, crypto);
-        let (new, gone) = try!(self_.load_bundle_list(online));
-        try!(self_.update_cache());
-        let new = new.into_iter().map(|s| s.info).collect();
-        let gone = gone.into_iter().map(|s| s.info).collect();
-        Ok((self_, new, gone))
+        try!(self_.load_local_bundle_list(lock));
+        Ok(self_)
     }
 
     pub fn create(layout: Arc<ChunkRepositoryLayout>) -> Result<(), BundleDbError> {
@@ -282,6 +288,7 @@ impl BundleDb {
         hash_method: HashMethod,
         compression: Option<Compression>,
         encryption: Option<Encryption>,
+        lock: &BackupMode
     ) -> Result<BundleWriter, BundleDbError> {
         Ok(try!(BundleWriter::new(
             self.layout.clone(),
@@ -305,7 +312,7 @@ impl BundleDb {
     }
 
     #[inline]
-    fn get_bundle(&self, stored: &StoredBundle) -> Result<BundleReader, BundleDbError> {
+    fn get_bundle(&self, stored: &StoredBundle, _lock: &OnlineMode) -> Result<BundleReader, BundleDbError> {
         let base_path = self.layout.base_path();
         Ok(try!(BundleReader::load(
             base_path.join(&stored.path),
@@ -313,7 +320,7 @@ impl BundleDb {
         )))
     }
 
-    pub fn get_chunk(&mut self, bundle_id: &BundleId, id: usize) -> Result<Vec<u8>, BundleDbError> {
+    pub fn get_chunk(&mut self, bundle_id: &BundleId, id: usize, lock: &OnlineMode) -> Result<Vec<u8>, BundleDbError> {
         if let Some(&mut (ref mut bundle, ref data)) = self.bundle_cache.get_mut(bundle_id) {
             let (pos, len) = try!(bundle.get_chunk_position(id));
             let mut chunk = Vec::with_capacity(len);
@@ -321,7 +328,7 @@ impl BundleDb {
             return Ok(chunk);
         }
         let mut bundle = try!(self.get_stored_bundle(bundle_id).and_then(
-            |s| self.get_bundle(s)
+            |s| self.get_bundle(s, lock)
         ));
         let (pos, len) = try!(bundle.get_chunk_position(id));
         let mut chunk = Vec::with_capacity(len);
@@ -331,7 +338,7 @@ impl BundleDb {
         Ok(chunk)
     }
 
-    fn copy_remote_bundle_to_cache(&mut self, bundle: &StoredBundle) -> Result<(), BundleDbError> {
+    fn copy_remote_bundle_to_cache(&mut self, bundle: &StoredBundle, _lock: &OnlineMode) -> Result<(), BundleDbError> {
         let id = bundle.id();
         let dst_path = self.layout.local_bundle_path(&id, self.local_bundles.len());
         {
@@ -346,10 +353,10 @@ impl BundleDb {
         Ok(())
     }
 
-    pub fn add_bundle(&mut self, bundle: BundleWriter) -> Result<BundleInfo, BundleDbError> {
+    pub fn add_bundle(&mut self, bundle: BundleWriter, lock: &BackupMode) -> Result<BundleInfo, BundleDbError> {
         let mut bundle = try!(bundle.finish());
         if bundle.info.mode == BundleMode::Meta {
-            try!(self.copy_remote_bundle_to_cache(&bundle))
+            try!(self.copy_remote_bundle_to_cache(&bundle, lock.as_online()))
         }
         let dst_path = self.layout.remote_bundle_path(&bundle.id(),self.remote_bundles.len());
         let src_path = self.layout.base_path().join(bundle.path);
@@ -365,7 +372,7 @@ impl BundleDb {
         Ok(bundle.info)
     }
 
-    fn finish_uploads(&mut self) -> Result<(), BundleDbError> {
+    fn finish_uploads(&mut self, _lock: &BackupMode) -> Result<(), BundleDbError> {
         let mut uploader = None;
         mem::swap(&mut self.uploader, &mut uploader);
         if let Some(uploader) = uploader {
@@ -375,9 +382,9 @@ impl BundleDb {
         }
     }
 
-    pub fn get_chunk_list(&self, bundle: &BundleId) -> Result<ChunkList, BundleDbError> {
+    pub fn get_chunk_list(&self, bundle: &BundleId, lock: &OnlineMode) -> Result<ChunkList, BundleDbError> {
         let mut bundle = try!(self.get_stored_bundle(bundle).and_then(|stored| {
-            self.get_bundle(stored)
+            self.get_bundle(stored, lock)
         }));
         Ok(try!(bundle.get_chunk_list()).clone())
     }
@@ -392,7 +399,7 @@ impl BundleDb {
         self.remote_bundles.values().map(|b| &b.info).collect()
     }
 
-    pub fn delete_local_bundle(&mut self, bundle: &BundleId) -> Result<(), BundleDbError> {
+    pub fn delete_local_bundle(&mut self, bundle: &BundleId, _lock: &LocalWriteMode) -> Result<(), BundleDbError> {
         if let Some(bundle) = self.local_bundles.remove(bundle) {
             let path = self.layout.base_path().join(&bundle.path);
             try!(fs::remove_file(path).map_err(|e| {
@@ -402,8 +409,8 @@ impl BundleDb {
         Ok(())
     }
 
-    pub fn delete_bundle(&mut self, bundle: &BundleId) -> Result<(), BundleDbError> {
-        try!(self.delete_local_bundle(bundle));
+    pub fn delete_bundle(&mut self, bundle: &BundleId, lock: &VacuumMode) -> Result<(), BundleDbError> {
+        try!(self.delete_local_bundle(bundle, lock.as_localwrite()));
         if let Some(bundle) = self.remote_bundles.remove(bundle) {
             let path = self.layout.base_path().join(&bundle.path);
             fs::remove_file(path).map_err(|e| BundleDbError::Remove(e, bundle.id()))
@@ -412,44 +419,38 @@ impl BundleDb {
         }
     }
 
-    pub fn check(&mut self, full: bool, repair: bool) -> Result<bool, BundleDbError> {
-        let mut to_repair = vec![];
+    pub fn check(&mut self, full: bool, lock: &OnlineMode) -> HashMap<BundleId, BundleDbError> {
+        let mut errors = HashMap::new();
         for (id, stored) in ProgressIter::new(
             tr!("checking bundles"),
             self.remote_bundles.len(),
             self.remote_bundles.iter()
         )
         {
-            let mut bundle = match self.get_bundle(stored) {
+            let mut bundle = match self.get_bundle(stored, lock) {
                 Ok(bundle) => bundle,
                 Err(err) => {
-                    if repair {
-                        to_repair.push(id.clone());
-                        continue;
-                    } else {
-                        return Err(err);
-                    }
+                    errors.insert(id.clone(), err);
+                    continue;
                 }
             };
             if let Err(err) = bundle.check(full) {
-                if repair {
-                    to_repair.push(id.clone());
-                    continue;
-                } else {
-                    return Err(err.into());
-                }
+                errors.insert(id.clone(), err.into());
+                continue;
             }
         }
-        if !to_repair.is_empty() {
-            for id in ProgressIter::new(tr!("repairing bundles"), to_repair.len(), to_repair.iter()) {
-                try!(self.repair_bundle(id));
-            }
-            try!(self.flush());
-        }
-        Ok(!to_repair.is_empty())
+        errors
     }
 
-    fn evacuate_broken_bundle(&mut self, mut bundle: StoredBundle) -> Result<(), BundleDbError> {
+    pub fn repair(&mut self, lock: &VacuumMode, bundles: &[BundleId]) -> Result<(), BundleDbError> {
+        for id in ProgressIter::new(tr!("repairing bundles"), bundles.len(), bundles.iter()) {
+            try!(self.repair_bundle(id, lock));
+        }
+        try!(self.flush(lock.as_backup()));
+        Ok(())
+    }
+
+    fn evacuate_broken_bundle(&mut self, mut bundle: StoredBundle, _lock: &VacuumMode) -> Result<(), BundleDbError> {
         let src = self.layout.base_path().join(&bundle.path);
         let mut dst = src.with_extension("bundle.broken");
         let mut num = 1;
@@ -463,9 +464,9 @@ impl BundleDb {
         Ok(())
     }
 
-    fn repair_bundle(&mut self, id: &BundleId) -> Result<(), BundleDbError> {
+    fn repair_bundle(&mut self, id: &BundleId, lock: &VacuumMode) -> Result<(), BundleDbError> {
         let stored = self.remote_bundles[id].clone();
-        let mut bundle = match self.get_bundle(&stored) {
+        let mut bundle = match self.get_bundle(&stored, lock.as_online()) {
             Ok(bundle) => bundle,
             Err(err) => {
                 tr_warn!(
@@ -473,7 +474,7 @@ impl BundleDb {
                     id,
                     err
                 );
-                return self.evacuate_broken_bundle(stored);
+                return self.evacuate_broken_bundle(stored, lock);
             }
         };
         let chunks = match bundle.get_chunk_list() {
@@ -484,7 +485,7 @@ impl BundleDb {
                     id,
                     err
                 );
-                return self.evacuate_broken_bundle(stored);
+                return self.evacuate_broken_bundle(stored, lock);
             }
         };
         let data = match bundle.load_contents() {
@@ -495,7 +496,7 @@ impl BundleDb {
                     id,
                     err
                 );
-                return self.evacuate_broken_bundle(stored);
+                return self.evacuate_broken_bundle(stored, lock);
             }
         };
         tr_warn!("Problem detected: bundle data was truncated: {}", id);
@@ -505,7 +506,8 @@ impl BundleDb {
             info.mode,
             info.hash_method,
             info.compression,
-            info.encryption
+            info.encryption,
+            lock.as_backup()
         ));
         let mut pos = 0;
         for (hash, mut len) in chunks.into_inner() {
@@ -516,9 +518,9 @@ impl BundleDb {
             try!(new_bundle.add(&data[pos..pos + len as usize], hash));
             pos += len as usize;
         }
-        let bundle = try!(self.add_bundle(new_bundle));
+        let bundle = try!(self.add_bundle(new_bundle, lock.as_backup()));
         tr_info!("New bundle id is {}", bundle.id);
-        self.evacuate_broken_bundle(stored)
+        self.evacuate_broken_bundle(stored, lock)
     }
 
     #[inline]

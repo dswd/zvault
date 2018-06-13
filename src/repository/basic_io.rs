@@ -10,16 +10,18 @@ pub struct ChunkReader<'a> {
     chunks: VecDeque<Chunk>,
     data: Vec<u8>,
     pos: usize,
-    repo: &'a mut RepositoryInner
+    repo: &'a mut Repository,
+    lock: &'a OnlineMode
 }
 
 impl<'a> ChunkReader<'a> {
-    pub fn new(repo: &'a mut RepositoryInner, chunks: ChunkList) -> Self {
+    pub fn new(repo: &'a mut Repository, chunks: ChunkList, lock: &'a OnlineMode) -> Self {
         ChunkReader {
             repo,
             chunks: chunks.into_inner().into(),
             data: vec![],
-            pos: 0
+            pos: 0,
+            lock
         }
     }
 }
@@ -33,7 +35,7 @@ impl<'a> Read for ChunkReader<'a> {
             }
             if self.data.len() == self.pos {
                 if let Some(chunk) = self.chunks.pop_front() {
-                    self.data = match self.repo.get_chunk(chunk.0) {
+                    self.data = match self.repo.get_chunk(chunk.0, self.lock) {
                         Ok(Some(data)) => data,
                         Ok(None) => {
                             return Err(io::Error::new(
@@ -58,7 +60,7 @@ impl<'a> Read for ChunkReader<'a> {
 }
 
 
-impl RepositoryInner {
+impl Repository {
     #[inline]
     pub fn get_bundle_id(&self, id: u32) -> Result<BundleId, RepositoryError> {
         self.bundle_map.get(id).ok_or_else(|| {
@@ -66,7 +68,7 @@ impl RepositoryInner {
         })
     }
 
-    pub fn get_chunk(&mut self, hash: Hash) -> Result<Option<Vec<u8>>, RepositoryError> {
+    pub fn get_chunk(&mut self, hash: Hash, lock: &OnlineMode) -> Result<Option<Vec<u8>>, RepositoryError> {
         // Find bundle and chunk id in index
         let found = if let Some(found) = self.index.get(&hash) {
             found
@@ -77,7 +79,7 @@ impl RepositoryInner {
         let bundle_id = try!(self.get_bundle_id(found.bundle));
         // Get chunk from bundle
         Ok(Some(try!(
-            self.bundles.get_chunk(&bundle_id, found.chunk as usize)
+            self.bundles.get_chunk(&bundle_id, found.chunk as usize, lock)
         )))
     }
 
@@ -87,12 +89,13 @@ impl RepositoryInner {
         mode: BundleMode,
         hash: Hash,
         data: &[u8],
+        lock: &BackupMode
     ) -> Result<(), RepositoryError> {
         // If this chunk is in the index, ignore it
         if self.index.contains(&hash) {
             return Ok(());
         }
-        self.put_chunk_override(mode, hash, data)
+        self.put_chunk_override(mode, hash, data, lock)
     }
 
     fn write_chunk_to_bundle_and_index(
@@ -100,6 +103,7 @@ impl RepositoryInner {
         mode: BundleMode,
         hash: Hash,
         data: &[u8],
+        lock: &BackupMode
     ) -> Result<(), RepositoryError> {
         let writer = match mode {
             BundleMode::Data => &mut self.data_bundle,
@@ -111,7 +115,8 @@ impl RepositoryInner {
                 mode,
                 self.config.hash,
                 self.config.compression.clone(),
-                self.config.encryption.clone()
+                self.config.encryption.clone(),
+                lock
             )));
         }
         debug_assert!(writer.is_some());
@@ -130,7 +135,7 @@ impl RepositoryInner {
         Ok(())
     }
 
-    fn finish_bundle(&mut self, mode: BundleMode) -> Result<(), RepositoryError> {
+    fn finish_bundle(&mut self, mode: BundleMode, lock: &BackupMode) -> Result<(), RepositoryError> {
         // Calculate the next free bundle id now (late lifetime prevents this)
         let next_free_bundle_id = self.next_free_bundle_id();
         let writer = match mode {
@@ -146,8 +151,8 @@ impl RepositoryInner {
         };
         let mut finished = None;
         mem::swap(writer, &mut finished);
-        let bundle = try!(self.bundles.add_bundle(finished.unwrap()));
-        self.bundle_map.set(bundle_id, bundle.id.clone());
+        let bundle = try!(self.bundles.add_bundle(finished.unwrap(), lock));
+        self.bundle_map.set(bundle_id, bundle.id.clone(), lock.as_localwrite());
         if self.next_meta_bundle == bundle_id {
             self.next_meta_bundle = next_free_bundle_id
         }
@@ -157,7 +162,7 @@ impl RepositoryInner {
         Ok(())
     }
 
-    fn finish_bundle_if_needed(&mut self, mode: BundleMode) -> Result<(), RepositoryError> {
+    fn finish_bundle_if_needed(&mut self, mode: BundleMode, lock: &BackupMode) -> Result<(), RepositoryError> {
         let (size, raw_size) = {
             let writer = match mode {
                 BundleMode::Data => &mut self.data_bundle,
@@ -171,10 +176,10 @@ impl RepositoryInner {
         };
         if size >= self.config.bundle_size || raw_size >= 4 * self.config.bundle_size {
             if mode == BundleMode::Meta {
-                //First store the current data bundle as meta referrs to those chunks
-                try!(self.finish_bundle(BundleMode::Data))
+                //First store the current data bundle as meta refers to those chunks
+                try!(self.finish_bundle(BundleMode::Data, lock))
             }
-            try!(self.finish_bundle(mode))
+            try!(self.finish_bundle(mode, lock))
         }
         Ok(())
     }
@@ -185,9 +190,10 @@ impl RepositoryInner {
         mode: BundleMode,
         hash: Hash,
         data: &[u8],
+        lock: &BackupMode
     ) -> Result<(), RepositoryError> {
-        try!(self.write_chunk_to_bundle_and_index(mode, hash, data));
-        self.finish_bundle_if_needed(mode)
+        try!(self.write_chunk_to_bundle_and_index(mode, hash, data, lock));
+        self.finish_bundle_if_needed(mode, lock)
     }
 
     #[inline]
@@ -195,15 +201,17 @@ impl RepositoryInner {
         &mut self,
         mode: BundleMode,
         data: &[u8],
+        lock: &BackupMode
     ) -> Result<ChunkList, RepositoryError> {
         let mut input = Cursor::new(data);
-        self.put_stream(mode, &mut input)
+        self.put_stream(mode, &mut input, lock)
     }
 
     pub fn put_stream<R: Read>(
         &mut self,
         mode: BundleMode,
         data: &mut R,
+        lock: &BackupMode
     ) -> Result<ChunkList, RepositoryError> {
         let avg_size = self.config.chunker.avg_size();
         let mut chunks = Vec::new();
@@ -214,7 +222,7 @@ impl RepositoryInner {
             let res = try!(self.chunker.chunk(data, &mut output));
             chunk = output.into_inner();
             let hash = self.config.hash.hash(&chunk);
-            try!(self.put_chunk(mode, hash, &chunk));
+            try!(self.put_chunk(mode, hash, &chunk, lock));
             chunks.push((hash, chunk.len() as u32));
             if res == ChunkerStatus::Finished {
                 break;
@@ -223,25 +231,26 @@ impl RepositoryInner {
         Ok(chunks.into())
     }
 
-    pub fn get_data(&mut self, chunks: &[Chunk]) -> Result<Vec<u8>, RepositoryError> {
+    pub fn get_data(&mut self, chunks: &[Chunk], lock: &OnlineMode) -> Result<Vec<u8>, RepositoryError> {
         let mut data =
             Vec::with_capacity(chunks.iter().map(|&(_, size)| size).sum::<u32>() as usize);
-        try!(self.get_stream(chunks, &mut data));
+        try!(self.get_stream(chunks, &mut data, lock));
         Ok(data)
     }
 
     #[inline]
-    pub fn get_reader(&mut self, chunks: ChunkList) -> ChunkReader {
-        ChunkReader::new(self, chunks)
+    pub fn get_reader<'a>(&'a mut self, chunks: ChunkList, lock: &'a OnlineMode) -> ChunkReader<'a> {
+        ChunkReader::new(self, chunks, lock)
     }
 
     pub fn get_stream<W: Write>(
         &mut self,
         chunks: &[Chunk],
         w: &mut W,
+        lock: &OnlineMode
     ) -> Result<(), RepositoryError> {
         for &(ref hash, len) in chunks {
-            let data = try!(try!(self.get_chunk(*hash)).ok_or_else(|| {
+            let data = try!(try!(self.get_chunk(*hash, lock)).ok_or_else(|| {
                 IntegrityError::MissingChunk(*hash)
             }));
             debug_assert_eq!(data.len() as u32, len);

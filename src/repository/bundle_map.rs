@@ -46,7 +46,7 @@ impl BundleMap {
         BundleMap(Default::default())
     }
 
-    pub fn load<P: AsRef<Path>>(path: P) -> Result<Self, BundleMapError> {
+    pub fn load<P: AsRef<Path>>(path: P, _lock: &ReadonlyMode) -> Result<Self, BundleMapError> {
         let mut file = BufReader::new(try!(File::open(path.as_ref())));
         let mut header = [0u8; 8];
         try!(file.read_exact(&mut header));
@@ -60,7 +60,7 @@ impl BundleMap {
         Ok(BundleMap(try!(msgpack::decode_from_stream(&mut file))))
     }
 
-    pub fn save<P: AsRef<Path>>(&self, path: P) -> Result<(), BundleMapError> {
+    pub fn save<P: AsRef<Path>>(&self, path: P, _lock: &LocalWriteMode) -> Result<(), BundleMapError> {
         let mut file = BufWriter::new(try!(File::create(path)));
         try!(file.write_all(&HEADER_STRING));
         try!(file.write_all(&[HEADER_VERSION]));
@@ -73,7 +73,7 @@ impl BundleMap {
     }
 
     #[inline]
-    pub fn remove(&mut self, id: u32) -> Option<BundleId> {
+    pub fn remove(&mut self, id: u32, _lock: &LocalWriteMode) -> Option<BundleId> {
         self.0.remove(&id)
     }
 
@@ -87,7 +87,7 @@ impl BundleMap {
     }
 
     #[inline]
-    pub fn set(&mut self, id: u32, bundle: BundleId) {
+    pub fn set(&mut self, id: u32, bundle: BundleId, _lock: &LocalWriteMode) {
         self.0.insert(id, bundle);
     }
 

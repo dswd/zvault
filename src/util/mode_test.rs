@@ -23,202 +23,95 @@ VacuumMode
 **/
 
 
-pub enum RepositoryError {
-    Error
+pub struct Repository {
+
 }
 
-enum LockMode {
-    None, Shared, Exclusive
-}
-
-
-
-struct RepositoryInner {
-}
-
-
-impl RepositoryInner {
-    fn set_local_lock(&mut self, mode: LockMode) -> Result<(), RepositoryError> {
-        Ok(())
+impl Repository {
+    pub fn readonly_mode<R, F: FnOnce(&mut Repository, &ReadonlyMode) -> R> (&mut self, f: F) -> R {
+        f(self, &Lock)
     }
 
-    fn set_remote_lock(&mut self, mode: LockMode) -> Result<(), RepositoryError> {
-        Ok(())
+    pub fn localwrite_mode<R, F: FnOnce(&mut Repository, &LocalWriteMode) -> R> (&mut self, f: F) -> R {
+        f(self, &Lock)
     }
 
-    fn set_dirty(&mut self, dirty: bool) -> Result<(), RepositoryError> {
-        Ok(())
+    pub fn online_mode<R, F: FnOnce(&mut Repository, &OnlineMode) -> R> (&mut self, f: F) -> R {
+        f(self, &Lock)
     }
 
-}
+    pub fn backup_mode<R, F: FnOnce(&mut Repository, &BackupMode) -> R> (&mut self, f: F) -> R {
+        f(self, &Lock)
+    }
 
-pub trait ReadonlyMode {
-    fn func1(&self) -> Result<(), RepositoryError>;
-}
-
-impl ReadonlyMode for RepositoryInner {
-    fn func1(&self) -> Result<(), RepositoryError> {
-        Ok(())
+    pub fn vacuum_mode<R, F: FnOnce(&mut Repository, &VacuumMode) -> R> (&mut self, f: F) -> R {
+        f(self, &Lock)
     }
 }
+
+
+struct Lock;
+
+pub trait ReadonlyMode {}
+
+impl ReadonlyMode for Lock {}
 
 
 pub trait LocalWriteMode: ReadonlyMode {
-    fn func2(&self) -> Result<(), RepositoryError>;
+    fn as_readonly(&self) -> &ReadonlyMode;
 }
 
-impl LocalWriteMode for RepositoryInner {
-    fn func2(&self) -> Result<(), RepositoryError> {
-        Ok(())
+impl LocalWriteMode for Lock {
+    fn as_readonly(&self) -> &ReadonlyMode {
+        self
     }
 }
 
 
 pub trait OnlineMode: LocalWriteMode {
-
+    fn as_localwrite(&self) -> &LocalWriteMode;
 }
 
-impl OnlineMode for RepositoryInner {
-
+impl OnlineMode for Lock {
+    fn as_localwrite(&self) -> &LocalWriteMode {
+        self
+    }
 }
 
 
 pub trait BackupMode: OnlineMode {
-
+    fn as_online(&self) -> &OnlineMode;
 }
 
-impl BackupMode for RepositoryInner {
-
+impl BackupMode for Lock {
+    fn as_online(&self) -> &OnlineMode {
+        self
+    }
 }
 
 
 pub trait VacuumMode: BackupMode {
-
+    fn as_backup(&self) -> &BackupMode;
 }
 
-impl VacuumMode for RepositoryInner {
-
-}
-
-
-
-pub trait UpgradeToLocalWriteMode {
-    fn in_local_write_mode<R, E: From<RepositoryError>, F: FnOnce(&mut LocalWriteMode) -> Result<R, E>>(&mut self, f: F) -> Result<R, E>;
-}
-
-impl UpgradeToLocalWriteMode for RepositoryInner {
-    fn in_local_write_mode<R, E: From<RepositoryError>, F: FnOnce(&mut LocalWriteMode) -> Result<R, E>>(&mut self, f: F) -> Result<R, E> {
-        try!(self.set_local_lock(LockMode::Exclusive));
-        try!(self.set_dirty(true));
-        let res = f(self);
-        if res.is_ok() {
-            try!(self.set_dirty(false));
-        }
-        try!(self.set_local_lock(LockMode::Shared));
-        res
-    }
-}
-
-
-pub trait UpgradeToOnlineMode {
-    fn in_online_mode<R, E: From<RepositoryError>, F: FnOnce(&mut OnlineMode) -> Result<R, E>>(&mut self, f: F) -> Result<R, E>;
-}
-
-impl UpgradeToOnlineMode for RepositoryInner {
-    fn in_online_mode<R, E: From<RepositoryError>, F: FnOnce(&mut OnlineMode) -> Result<R, E>>(&mut self, f: F) -> Result<R, E> {
-        try!(self.set_local_lock(LockMode::Exclusive));
-        try!(self.set_remote_lock(LockMode::Shared));
-        try!(self.set_dirty(true));
-        let res = f(self);
-        if res.is_ok() {
-            try!(self.set_dirty(false));
-        }
-        try!(self.set_remote_lock(LockMode::None));
-        try!(self.set_local_lock(LockMode::Shared));
-        res
-    }
-}
-
-
-pub trait UpgradeToBackupMode {
-    fn in_backup_mode<R, E: From<RepositoryError>, F: FnOnce(&mut BackupMode) -> Result<R, E>>(&mut self, f: F) -> Result<R, E>;
-}
-
-impl UpgradeToBackupMode for RepositoryInner {
-    fn in_backup_mode<R, E: From<RepositoryError>, F: FnOnce(&mut BackupMode) -> Result<R, E>>(&mut self, f: F) -> Result<R, E> {
-        try!(self.set_local_lock(LockMode::Exclusive));
-        try!(self.set_remote_lock(LockMode::Shared));
-        try!(self.set_dirty(true));
-        let res = f(self);
-        if res.is_ok() {
-            try!(self.set_dirty(false));
-        }
-        try!(self.set_remote_lock(LockMode::None));
-        try!(self.set_local_lock(LockMode::Shared));
-        res
-    }
-}
-
-
-pub trait UpgradeToVacuumMode {
-    fn in_vacuum_mode<R, E: From<RepositoryError>, F: FnOnce(&mut VacuumMode) -> Result<R, E>>(&mut self, f: F) -> Result<R, E>;
-}
-
-impl UpgradeToVacuumMode for RepositoryInner {
-    fn in_vacuum_mode<R, E: From<RepositoryError>, F: FnOnce(&mut VacuumMode) -> Result<R, E>>(&mut self, f: F) -> Result<R, E> {
-        try!(self.set_local_lock(LockMode::Exclusive));
-        try!(self.set_remote_lock(LockMode::Exclusive));
-        try!(self.set_dirty(true));
-        let res = f(self);
-        if res.is_ok() {
-            try!(self.set_dirty(false));
-        }
-        try!(self.set_remote_lock(LockMode::None));
-        try!(self.set_local_lock(LockMode::Shared));
-        res
-    }
-}
-
-
-pub struct Repository(RepositoryInner);
-
-impl ReadonlyMode for Repository {
-    fn func1(&self) -> Result<(), RepositoryError> {
-        self.0.func1()
-    }
-}
-
-impl UpgradeToLocalWriteMode for Repository {
-    fn in_local_write_mode<R, E: From<RepositoryError>, F: FnOnce(&mut LocalWriteMode) -> Result<R, E>>(&mut self, f: F) -> Result<R, E> {
-        self.0.in_local_write_mode(f)
-    }
-}
-
-impl UpgradeToOnlineMode for Repository {
-    fn in_online_mode<R, E: From<RepositoryError>, F: FnOnce(&mut OnlineMode) -> Result<R, E>>(&mut self, f: F) -> Result<R, E> {
-        self.0.in_online_mode(f)
-    }
-}
-
-impl UpgradeToBackupMode for Repository {
-    fn in_backup_mode<R, E: From<RepositoryError>, F: FnOnce(&mut BackupMode) -> Result<R, E>>(&mut self, f: F) -> Result<R, E> {
-        self.0.in_backup_mode(f)
-    }
-}
-
-impl UpgradeToVacuumMode for Repository {
-    fn in_vacuum_mode<R, E: From<RepositoryError>, F: FnOnce(&mut VacuumMode) -> Result<R, E>>(&mut self, f: F) -> Result<R, E> {
-        self.0.in_vacuum_mode(f)
+impl VacuumMode for Lock {
+    fn as_backup(&self) -> &BackupMode {
+        self
     }
 }
 
 
 impl Repository {
+    fn write<W: ::std::io::Write>(&mut self, w: W, lock: &LocalWriteMode) {
 
-}
+    }
 
-
-fn test_it(mut repo: Repository) {
-    repo.func1();
-    repo.in_local_write_mode(|repo| repo.func2());
+    fn test(&mut self) {
+        self.localwrite_mode(|repo, lock| {
+            repo.write(&mut Vec::new(), lock)
+        });
+        self.online_mode(|repo, lock| {
+            repo.write(&mut Vec::new(), lock.as_localwrite())
+        });
+    }
 }

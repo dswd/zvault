@@ -31,14 +31,14 @@ impl BackupRepository {
             None |
             Some(FileData::Inline(_)) => (),
             Some(FileData::ChunkedDirect(ref chunks)) => {
-                try!(self.repo.check_chunks(checked, chunks, true));
+                try!(self.repo.mark_chunks(checked, chunks, true));
             }
             Some(FileData::ChunkedIndirect(ref chunks)) => {
-                if try!(self.repo.check_chunks(checked, chunks, false)) {
+                if try!(self.repo.mark_chunks(checked, chunks, false)) {
                     let chunk_data = try!(self.get_data(chunks));
                     let chunks2 = ChunkList::read_from(&chunk_data);
-                    try!(self.repo.check_chunks(checked, &chunks2, true));
-                    try!(self.repo.check_chunks(checked, chunks, true));
+                    try!(self.repo.mark_chunks(checked, &chunks2, true));
+                    try!(self.repo.mark_chunks(checked, chunks, true));
                 }
             }
         }
@@ -53,7 +53,7 @@ impl BackupRepository {
         repair: bool,
     ) -> Result<Option<ChunkList>, RepositoryError> {
         let mut modified = false;
-        match self.repo.check_chunks(checked, chunks, false) {
+        match self.repo.mark_chunks(checked, chunks, false) {
             Ok(false) => return Ok(None),
             Ok(true) => (),
             Err(err) => return Err(InodeIntegrityError::BrokenInode(path, Box::new(err)).into()),
@@ -108,7 +108,7 @@ impl BackupRepository {
         if modified {
             Ok(Some(try!(self.put_inode(&inode))))
         } else {
-            try!(self.repo.check_chunks(checked, chunks, true));
+            try!(self.repo.mark_chunks(checked, chunks, true));
             Ok(None)
         }
     }

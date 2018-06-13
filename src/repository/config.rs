@@ -222,7 +222,7 @@ impl Config {
         Config::from_yaml(config)
     }
 
-    pub fn save<P: AsRef<Path>>(&self, path: P) -> Result<(), ConfigError> {
+    pub fn save<P: AsRef<Path>>(&self, path: P, _lock: &LocalWriteMode) -> Result<(), ConfigError> {
         let mut f = try!(File::create(path));
         try!(serde_yaml::to_writer(&mut f, &self.to_yaml()));
         Ok(())

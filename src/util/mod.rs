@@ -10,6 +10,7 @@ mod hostname;
 mod fs;
 mod lock;
 mod statistics;
+mod mode_test;
 
 pub mod msgpack;
 

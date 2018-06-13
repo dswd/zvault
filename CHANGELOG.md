@@ -5,6 +5,8 @@ This project follows [semantic versioning](http://semver.org).
 
 ### UNRELEASED
 * [added] Translation infrastructure (**requires nightly rust**)
+* [added] Internal refactoring of lock levels
+* [added] Internal refactoring of check ans repair
 * [added] Checking hashes of chunks in check --bundle-data
 * [added] Debian packet for libsodium23
 * [modified] Updated dependencies

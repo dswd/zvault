@@ -2,7 +2,7 @@ pub use util::*;
 pub use repository::bundledb::{BundleReader, BundleMode, BundleWriter, BundleInfo, BundleId, BundleDbError,
                    BundleDb, BundleWriterError, StoredBundle, BundleStatistics};
 pub use repository::chunking::{ChunkerType, Chunker, ChunkerStatus, ChunkerError};
-pub use repository::{RepositoryInner, Config, RepositoryError, RepositoryInfo,
+pub use repository::{Repository, Config, RepositoryError, RepositoryInfo,
                      IntegrityError, BundleAnalysis, RepositoryLayout, Location,
                      RepositoryStatistics, ChunkRepositoryLayout};
 pub use repository::*;

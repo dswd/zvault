@@ -227,7 +227,7 @@ impl<K: Key, V: Value> Index<K, V> {
             data,
             header
         };
-        debug_assert!(index.check().is_ok(), tr!("Inconsistent after creation"));
+        debug_assert!(index.check().is_empty(), tr!("Inconsistent after creation"));
         Ok(index)
     }
 
@@ -325,7 +325,8 @@ impl<K: Key, V: Value> Index<K, V> {
         Ok(true)
     }
 
-    pub fn check(&self) -> Result<(), IndexError> {
+    pub fn check(&self) -> Vec<IndexError> {
+        let mut errors = vec![];
         let mut entries = 0;
         for pos in 0..self.capacity {
             let entry = &self.data[pos];
@@ -334,14 +335,14 @@ impl<K: Key, V: Value> Index<K, V> {
             }
             entries += 1;
             match self.locate(entry.get_key()) {
-                LocateResult::Found(p) if p == pos => true,
-                found => return Err(IndexError::WrongPosition(pos, found))
+                LocateResult::Found(p) if p == pos => (),
+                found => errors.push(IndexError::WrongPosition(pos, found))
             };
         }
         if entries != self.entries {
-            return Err(IndexError::WrongEntryCount(self.entries, entries));
+            errors.push(IndexError::WrongEntryCount(self.entries, entries));
         }
-        Ok(())
+        errors
     }
 
     #[inline]
@@ -467,7 +468,7 @@ impl<K: Key, V: Value> Index<K, V> {
 
     #[inline]
     pub fn contains(&self, key: &K) -> bool {
-        debug_assert!(self.check().is_ok(), tr!("Inconsistent before get"));
+        debug_assert!(self.check().is_empty(), tr!("Inconsistent before get"));
         match self.locate(key) {
             LocateResult::Found(_) => true,
             _ => false
@@ -476,7 +477,7 @@ impl<K: Key, V: Value> Index<K, V> {
 
     #[inline]
     pub fn pos(&self, key: &K) -> Option<usize> {
-        debug_assert!(self.check().is_ok(), tr!("Inconsistent before get"));
+        debug_assert!(self.check().is_empty(), tr!("Inconsistent before get"));
         match self.locate(key) {
             LocateResult::Found(pos) => Some(pos),
             _ => None
@@ -485,7 +486,7 @@ impl<K: Key, V: Value> Index<K, V> {
 
     #[inline]
     pub fn get(&self, key: &K) -> Option<V> {
-        debug_assert!(self.check().is_ok(), tr!("Inconsistent before get"));
+        debug_assert!(self.check().is_empty(), tr!("Inconsistent before get"));
         match self.locate(key) {
             LocateResult::Found(pos) => Some(self.data[pos].data),
             _ => None
@@ -495,7 +496,7 @@ impl<K: Key, V: Value> Index<K, V> {
     #[inline]
     #[allow(dead_code)]
     pub fn modify<F>(&mut self, key: &K, mut f: F) -> bool where F: FnMut(&mut V) {
-        debug_assert!(self.check().is_ok(), tr!("Inconsistent before get"));
+        debug_assert!(self.check().is_empty(), tr!("Inconsistent before get"));
         match self.locate(key) {
             LocateResult::Found(pos) => {
                 f(self.data[pos].get_mut_data());
