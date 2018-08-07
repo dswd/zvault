@@ -144,7 +144,7 @@ fn get_inode(repo: &mut BackupRepository, backup: &BackupFile, inode: Option<&St
                 )
     } else {
         checked!(
-                    repo.get_inode(&backup.root),
+                    repo.get_root_inode(&backup),
                     "load root inode",
                     ErrorCode::LoadInode
                 )
@@ -655,7 +655,7 @@ pub fn run() -> Result<(), ErrorCode> {
             let result = if tar {
                 repo.import_tarfile(&src_path)
             } else {
-                repo.create_backup_recursively(&src_path, reference_backup.as_ref(), &options)
+                repo.create_backup(&src_path, &backup_name, reference_backup.as_ref(), &options)
             };
             let backup = match result {
                 Ok(backup) => {
@@ -671,11 +671,6 @@ pub fn run() -> Result<(), ErrorCode> {
                     return Err(ErrorCode::BackupRun);
                 }
             };
-            checked!(
-                repo.save_backup(&backup, &backup_name),
-                "save backup file",
-                ErrorCode::SaveBackup
-            );
             print_backup(&backup);
         }
         Arguments::Restore {
@@ -719,11 +714,7 @@ pub fn run() -> Result<(), ErrorCode> {
                 return Err(ErrorCode::BackupAlreadyExists);
             }
             let backup = try!(get_backup(&repo, &backup_name_src));
-            checked!(
-                repo.save_backup(&backup, &backup_name_dst),
-                "save backup file",
-                ErrorCode::SaveBackup
-            );
+            //TODO: implement
         }
         Arguments::Remove {
             repo_path,
@@ -738,11 +729,6 @@ pub fn run() -> Result<(), ErrorCode> {
                     repo.remove_backup_path(&mut backup, inode),
                     "remove backup subpath",
                     ErrorCode::RemoveRun
-                );
-                checked!(
-                    repo.save_backup(&backup, &backup_name),
-                    "save backup file",
-                    ErrorCode::SaveBackup
                 );
                 tr_info!("The backup subpath has been deleted, run vacuum to reclaim space");
             } else if repo.get_layout().backups_path().join(&backup_name).is_dir() {
@@ -830,44 +816,21 @@ pub fn run() -> Result<(), ErrorCode> {
             repair
         } => {
             let mut repo = try!(open_repository(&repo_path, true));
+            let mut options = CheckOptions::new();
+            options.index(index).bundle_data(bundle_data).bundles(bundles).repair(repair);
+            if let Some(backup_name) = backup_name {
+                options.single_backup(&backup_name);
+                if let Some(inode) = inode {
+                    options.subpath(Path::new(&inode));
+                }
+            } else {
+                options.all_backups();
+            }
             checked!(
-                repo.check_repository(repair),
+                repo.check(options),
                 "check repository",
                 ErrorCode::CheckRun
             );
-            if bundles {
-                checked!(
-                    repo.check_bundles(bundle_data, repair),
-                    "check bundles",
-                    ErrorCode::CheckRun
-                );
-            }
-            if index {
-                checked!(repo.check_index(repair), "check index", ErrorCode::CheckRun);
-            }
-            if let Some(backup_name) = backup_name {
-                let mut backup = try!(get_backup(&repo, &backup_name));
-                if let Some(path) = inode {
-                    checked!(
-                        repo.check_backup_inode(&backup_name, &mut backup, Path::new(&path), repair),
-                        "check inode",
-                        ErrorCode::CheckRun
-                    )
-                } else {
-                    checked!(
-                        repo.check_backup(&backup_name, &mut backup, repair),
-                        "check backup",
-                        ErrorCode::CheckRun
-                    )
-                }
-            } else {
-                checked!(
-                    repo.check_backups(repair),
-                    "check repository",
-                    ErrorCode::CheckRun
-                )
-            }
-            repo.set_clean();
             tr_info!("Integrity verified")
         }
         Arguments::List {
@@ -890,15 +853,8 @@ pub fn run() -> Result<(), ErrorCode> {
                         ErrorCode::LoadInode
                     );
                     println!("{}", format_inode_one_line(&inode));
-                    if let Some(children) = inode.children {
-                        for chunks in children.values() {
-                            let inode = checked!(
-                                repo.get_inode(chunks),
-                                "load child inode",
-                                ErrorCode::LoadInode
-                            );
-                            println!("- {}", format_inode_one_line(&inode));
-                        }
+                    for ch in checked!(repo.get_inode_children(&inode), "load inodes", ErrorCode::LoadInode) {
+                        println!("- {}", format_inode_one_line(&ch));
                     }
                     return Ok(());
                 }
@@ -969,10 +925,15 @@ pub fn run() -> Result<(), ErrorCode> {
             mount_point
         } => {
             let mut repo = try!(open_repository(&repo_path, true));
-            let fs = if let Some(backup_name) = backup_name {
+            tr_info!("Mounting the filesystem...");
+            tr_info!(
+                "Please unmount the filesystem via 'fusermount -u {}' when done.",
+                mount_point
+            );
+            if let Some(backup_name) = backup_name {
                 if repo.get_layout().backups_path().join(&backup_name).is_dir() {
                     checked!(
-                        FuseFilesystem::from_repository(&mut repo, Some(&backup_name)),
+                        repo.mount_repository(Some(&backup_name), mount_point),
                         "create fuse filesystem",
                         ErrorCode::FuseMount
                     )
@@ -985,13 +946,13 @@ pub fn run() -> Result<(), ErrorCode> {
                             ErrorCode::LoadInode
                         );
                         checked!(
-                            FuseFilesystem::from_inode(&mut repo, backup, inode),
+                            repo.mount_inode(backup, inode, mount_point),
                             "create fuse filesystem",
                             ErrorCode::FuseMount
                         )
                     } else {
                         checked!(
-                            FuseFilesystem::from_backup(&mut repo, backup),
+                            repo.mount_backup(backup, mount_point),
                             "create fuse filesystem",
                             ErrorCode::FuseMount
                         )
@@ -999,21 +960,11 @@ pub fn run() -> Result<(), ErrorCode> {
                 }
             } else {
                 checked!(
-                    FuseFilesystem::from_repository(&mut repo, None),
+                    repo.mount_repository(None, mount_point),
                     "create fuse filesystem",
                     ErrorCode::FuseMount
                 )
-            };
-            tr_info!("Mounting the filesystem...");
-            tr_info!(
-                "Please unmount the filesystem via 'fusermount -u {}' when done.",
-                mount_point
-            );
-            checked!(
-                fs.mount(&mount_point),
-                "mount filesystem",
-                ErrorCode::FuseMount
-            );
+            }
         }
         Arguments::Analyze { repo_path } => {
             let mut repo = try!(open_repository(&repo_path, true));

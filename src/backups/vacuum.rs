@@ -5,15 +5,23 @@ use super::*;
 use std::collections::{VecDeque, HashSet};
 
 
-impl BackupRepository {
-    fn mark_used(
-        &self,
-        bundles: &mut HashMap<u32, BundleAnalysis>,
-        chunks: &[Chunk],
+pub trait RepositoryVacuumIO {
+    fn mark_used(&self, bundles: &mut HashMap<u32, BundleAnalysis>, chunks: &[Chunk],
+        lock: &OnlineMode
+    ) -> Result<bool, RepositoryError>;
+    fn analyze_usage(&mut self, lock: &OnlineMode
+    ) -> Result<HashMap<u32, BundleAnalysis>, RepositoryError>;
+    fn vacuum(&mut self, ratio: f32, combine: bool, force: bool, lock: &VacuumMode
+    ) -> Result<(), RepositoryError>;
+}
+
+impl RepositoryVacuumIO for Repository {
+    fn mark_used(&self, bundles: &mut HashMap<u32, BundleAnalysis>, chunks: &[Chunk],
+        lock: &OnlineMode
     ) -> Result<bool, RepositoryError> {
         let mut new = false;
         for &(hash, len) in chunks {
-            if let Some(pos) = self.repo.get_chunk_location(hash) {
+            if let Some(pos) = self.get_chunk_location(hash) {
                 let bundle = pos.bundle;
                 if let Some(bundle) = bundles.get_mut(&bundle) {
                     if !bundle.chunk_usage.get(pos.chunk as usize) {
@@ -31,13 +39,10 @@ impl BackupRepository {
         Ok(new)
     }
 
-    pub fn analyze_usage(&mut self) -> Result<HashMap<u32, BundleAnalysis>, RepositoryError> {
-        if self.repo.is_dirty() {
-            return Err(RepositoryError::Dirty);
-        }
-        try!(self.repo.set_dirty());
+    fn analyze_usage(&mut self, lock: &OnlineMode
+    ) -> Result<HashMap<u32, BundleAnalysis>, RepositoryError> {
         let mut usage = HashMap::new();
-        for (id, bundle) in try!(self.repo.get_bundle_map()) {
+        for (id, bundle) in try!(self.get_bundle_map()) {
             usage.insert(
                 id,
                 BundleAnalysis {
@@ -53,22 +58,22 @@ impl BackupRepository {
             todo.push_back(backup.root);
         }
         while let Some(chunks) = todo.pop_back() {
-            if !try!(self.mark_used(&mut usage, &chunks)) {
+            if !try!(self.mark_used(&mut usage, &chunks, lock)) {
                 continue;
             }
-            let inode = try!(self.get_inode(&chunks));
+            let inode = try!(self.get_inode(&chunks, lock));
             // Mark the content chunks as used
             match inode.data {
                 None |
                 Some(FileData::Inline(_)) => (),
                 Some(FileData::ChunkedDirect(chunks)) => {
-                    try!(self.mark_used(&mut usage, &chunks));
+                    try!(self.mark_used(&mut usage, &chunks, lock));
                 }
                 Some(FileData::ChunkedIndirect(chunks)) => {
-                    if try!(self.mark_used(&mut usage, &chunks)) {
-                        let chunk_data = try!(self.get_data(&chunks));
+                    if try!(self.mark_used(&mut usage, &chunks, lock)) {
+                        let chunk_data = try!(self.get_data(&chunks, lock));
                         let chunks = ChunkList::read_from(&chunk_data);
-                        try!(self.mark_used(&mut usage, &chunks));
+                        try!(self.mark_used(&mut usage, &chunks, lock));
                     }
                 }
             }
@@ -79,23 +84,14 @@ impl BackupRepository {
                 }
             }
         }
-        self.repo.set_clean();
         Ok(usage)
     }
 
-    pub fn vacuum(
-        &mut self,
-        ratio: f32,
-        combine: bool,
-        force: bool,
+    fn vacuum(&mut self, ratio: f32, combine: bool, force: bool, lock: &VacuumMode
     ) -> Result<(), RepositoryError> {
-        try!(self.repo.flush());
-        tr_info!("Locking repository");
-        try!(self.repo.write_mode());
-        let _lock = try!(self.repo.lock(true));
-        // analyze_usage will set the dirty flag
+        try!(self.flush(lock.as_backup()));
         tr_info!("Analyzing chunk usage");
-        let usage = try!(self.analyze_usage());
+        let usage = try!(self.analyze_usage(lock.as_online()));
         let mut data_total = 0;
         let mut data_used = 0;
         for bundle in usage.values() {
@@ -122,7 +118,7 @@ impl BackupRepository {
             let mut small_meta = vec![];
             let mut small_data = vec![];
             for (id, bundle) in &usage {
-                if bundle.info.encoded_size * 4 < self.repo.get_config().bundle_size {
+                if bundle.info.encoded_size * 4 < self.get_config().bundle_size {
                     match bundle.info.mode {
                         BundleMode::Meta => small_meta.push(*id),
                         BundleMode::Data => small_data.push(*id),
@@ -147,12 +143,10 @@ impl BackupRepository {
             to_file_size(rewrite_data as u64)
         );
         if !force {
-            self.repo.set_clean();
             return Ok(());
         }
         let rewrite_bundles: Vec<_> = rewrite_bundles.into_iter().collect();
-        try!(self.repo.rewrite_bundles(&rewrite_bundles, &usage));
-        self.repo.set_clean();
+        try!(self.rewrite_bundles(&rewrite_bundles, &usage, lock));
         Ok(())
     }
 }

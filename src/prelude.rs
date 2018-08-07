@@ -3,13 +3,14 @@ pub use repository::bundledb::{BundleReader, BundleMode, BundleWriter, BundleInf
                    BundleDb, BundleWriterError, StoredBundle, BundleStatistics};
 pub use repository::chunking::{ChunkerType, Chunker, ChunkerStatus, ChunkerError};
 pub use repository::{Repository, Config, RepositoryError, RepositoryInfo,
-                     IntegrityError, BundleAnalysis, RepositoryLayout, Location,
+                     IntegrityError, BundleAnalysis, Location,
                      RepositoryStatistics, ChunkRepositoryLayout};
 pub use repository::*;
 pub use repository::index::{Index, IndexError, IndexStatistics};
 pub use backups::mount::FuseFilesystem;
 pub use backups::{BackupFile, BackupFileError, Inode, FileType, FileData, InodeError, BackupError,
-                  BackupOptions, DiffType, InodeIntegrityError};
+                  BackupOptions, DiffType, InodeIntegrityError, BackupRepositoryLayout,
+                  RepositoryBackupIO, RepositoryMetadataIO, CheckOptions};
 pub use translation::CowStr;
 pub use backups::BackupRepository;
 

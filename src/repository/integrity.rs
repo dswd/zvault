@@ -63,30 +63,24 @@ pub struct ChunkMarker<'a> {
     repo: &'a Repository
 }
 
-impl<'a> ChunkMarker<'a> {
-    pub fn mark_chunks(&mut self, chunks: &[Chunk], set_marked: bool) -> Result<bool, RepositoryError> {
+impl Repository {
+    pub fn get_chunk_marker(&self) -> Bitmap {
+        Bitmap::new(self.index.capacity())
+    }
+
+    pub fn mark_chunks(&mut self, bitmap: &mut Bitmap, chunks: &[Chunk], set_marked: bool) -> Result<bool, RepositoryError> {
         let mut new = false;
         for &(hash, _len) in chunks {
-            if let Some(pos) = self.repo.index.pos(&hash) {
-                new |= !self.marked.get(pos);
+            if let Some(pos) = self.index.pos(&hash) {
+                new |= !bitmap.get(pos);
                 if set_marked {
-                    self.marked.set(pos);
+                    bitmap.set(pos);
                 }
             } else {
                 return Err(IntegrityError::MissingChunk(hash).into());
             }
         }
         Ok(new)
-    }
-}
-
-
-impl Repository {
-    pub fn get_chunk_marker(&self) -> ChunkMarker {
-        ChunkMarker {
-            marked: Bitmap::new( self.index.capacity()),
-            repo: self
-        }
     }
 
     pub fn check_bundle_map(&mut self) -> ModuleIntegrityReport {
@@ -212,7 +206,7 @@ impl Repository {
         let mut errors = vec![];
         let mut bundles = vec![];
         for (id, err) in self.bundles.check(full, lock) {
-            bundles.push(id);
+            bundles.push(id.clone());
             errors.push(IntegrityError::BundleIntegrity(id, err));
         }
         (ModuleIntegrityReport { errors_fixed: vec![], errors_unfixed: errors }, bundles)

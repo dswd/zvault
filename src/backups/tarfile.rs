@@ -134,10 +134,27 @@ fn inode_from_entry<R: Read>(entry: &mut tar::Entry<R>) -> Result<Inode, Reposit
 }
 
 
-impl BackupRepository {
-    fn import_tar_entry<R: Read>(
-        &mut self,
-        entry: &mut tar::Entry<R>,
+pub trait RepositoryTarfileIO {
+    fn import_tar_entry<R: Read>(&mut self, entry: &mut tar::Entry<R>, lock: &BackupMode
+    ) -> Result<Inode, RepositoryError>;
+    fn import_tarfile_as_inode<R: Read>(&mut self, backup: &mut BackupFile, input: R,
+        failed_paths: &mut Vec<PathBuf>, lock: &BackupMode
+    ) -> Result<(Inode, ChunkList), RepositoryError>;
+    fn import_tarfile<P: AsRef<Path>>(&mut self, tarfile: P, lock: &BackupMode
+    ) -> Result<BackupFile, RepositoryError>;
+    fn export_xattrs<W: Write>(&mut self, inode: &Inode, tarfile: &mut tar::Builder<W>,
+        lock: &OnlineMode
+    ) -> Result<(), RepositoryError>;
+    fn export_tarfile_recurse<W: Write>(&mut self, backup: &BackupFile, path: &Path,
+        inode: Inode, tarfile: &mut tar::Builder<W>, skip_root: bool, lock: &OnlineMode
+    ) -> Result<(), RepositoryError>;
+    fn export_tarfile<P: AsRef<Path>>(&mut self, backup: &BackupFile, inode: Inode,
+        tarfile: P, lock: &OnlineMode
+    ) -> Result<(), RepositoryError>;
+}
+
+impl RepositoryTarfileIO for Repository {
+    fn import_tar_entry<R: Read>(&mut self, entry: &mut tar::Entry<R>, lock: &BackupMode
     ) -> Result<Inode, RepositoryError> {
         let mut inode = try!(inode_from_entry(entry));
         if inode.size < 100 {
@@ -145,24 +162,21 @@ impl BackupRepository {
             try!(entry.read_to_end(&mut data));
             inode.data = Some(FileData::Inline(data.into()));
         } else {
-            let mut chunks = try!(self.repo.put_stream(BundleMode::Data, entry));
+            let mut chunks = try!(self.put_stream(BundleMode::Data, entry, lock));
             if chunks.len() < 10 {
                 inode.data = Some(FileData::ChunkedDirect(chunks));
             } else {
                 let mut chunk_data = Vec::with_capacity(chunks.encoded_size());
                 chunks.write_to(&mut chunk_data).unwrap();
-                chunks = try!(self.repo.put_data(BundleMode::Meta, &chunk_data));
+                chunks = try!(self.put_data(BundleMode::Meta, &chunk_data, lock));
                 inode.data = Some(FileData::ChunkedIndirect(chunks));
             }
         }
         Ok(inode)
     }
 
-    fn import_tarfile_as_inode<R: Read>(
-        &mut self,
-        backup: &mut BackupFile,
-        input: R,
-        failed_paths: &mut Vec<PathBuf>,
+    fn import_tarfile_as_inode<R: Read>(&mut self, backup: &mut BackupFile, input: R,
+        failed_paths: &mut Vec<PathBuf>, lock: &BackupMode
     ) -> Result<(Inode, ChunkList), RepositoryError> {
         let mut tarfile = tar::Archive::new(input);
         // Step 1: create inodes for all entries
@@ -170,7 +184,7 @@ impl BackupRepository {
         for entry in try!(tarfile.entries()) {
             let mut entry = try!(entry);
             let path = try!(entry.path()).to_path_buf();
-            match self.import_tar_entry(&mut entry) {
+            match self.import_tar_entry(&mut entry, lock) {
                 Ok(mut inode) => {
                     inode.cum_size = inode.size;
                     if inode.file_type == FileType::Directory {
@@ -219,7 +233,7 @@ impl BackupRepository {
             }
             for path in childless {
                 let (inode, _) = inodes.remove(&path).unwrap();
-                let chunks = try!(self.put_inode(&inode));
+                let chunks = try!(self.put_inode(&inode, lock));
                 if let Some(parent_path) = path.parent() {
                     if let Some(&mut (ref mut parent_inode, ref mut children)) =
                         inodes.get_mut(parent_path)
@@ -265,23 +279,15 @@ impl BackupRepository {
                 children.insert(inode.name, chunks);
             }
             root_inode.children = Some(children);
-            let chunks = try!(self.put_inode(&root_inode));
+            let chunks = try!(self.put_inode(&root_inode, lock));
             Ok((root_inode, chunks))
         }
     }
 
-    pub fn import_tarfile<P: AsRef<Path>>(
-        &mut self,
-        tarfile: P,
+    fn import_tarfile<P: AsRef<Path>>(&mut self, tarfile: P, lock: &BackupMode
     ) -> Result<BackupFile, RepositoryError> {
-        try!(self.repo.write_mode());
-        let _lock = try!(self.repo.lock(false));
-        if self.repo.is_dirty() {
-            return Err(RepositoryError::Dirty);
-        }
-        try!(self.repo.set_dirty());
         let mut backup = BackupFile::default();
-        backup.config = self.repo.get_config().clone();
+        backup.config = self.get_config().clone();
         backup.host = get_hostname().unwrap_or_else(|_| "".to_string());
         backup.path = tarfile.as_ref().to_string_lossy().to_string();
         let info_before = self.info();
@@ -292,17 +298,19 @@ impl BackupRepository {
             try!(self.import_tarfile_as_inode(
                 &mut backup,
                 io::stdin(),
-                &mut failed_paths
+                &mut failed_paths,
+                lock
             ))
         } else {
             try!(self.import_tarfile_as_inode(
                 &mut backup,
                 try!(File::open(tarfile)),
-                &mut failed_paths
+                &mut failed_paths,
+                lock
             ))
         };
         backup.root = chunks;
-        try!(self.repo.flush());
+        try!(self.flush(lock));
         let elapsed = Local::now().signed_duration_since(start);
         backup.timestamp = start.timestamp();
         backup.total_data_size = root_inode.cum_size;
@@ -315,7 +323,6 @@ impl BackupRepository {
         backup.bundle_count = info_after.bundle_count - info_before.bundle_count;
         backup.chunk_count = info_after.chunk_count - info_before.chunk_count;
         backup.avg_chunk_size = backup.deduplicated_data_size as f32 / backup.chunk_count as f32;
-        self.repo.set_clean();
         if failed_paths.is_empty() {
             Ok(backup)
         } else {
@@ -323,10 +330,8 @@ impl BackupRepository {
         }
     }
 
-    fn export_xattrs<W: Write>(
-        &mut self,
-        inode: &Inode,
-        tarfile: &mut tar::Builder<W>,
+    fn export_xattrs<W: Write>(&mut self, inode: &Inode, tarfile: &mut tar::Builder<W>,
+        lock: &OnlineMode
     ) -> Result<(), RepositoryError> {
         let mut pax = PaxBuilder::new();
         for (key, value) in &inode.xattrs {
@@ -339,13 +344,8 @@ impl BackupRepository {
         Ok(())
     }
 
-    fn export_tarfile_recurse<W: Write>(
-        &mut self,
-        backup: &BackupFile,
-        path: &Path,
-        inode: Inode,
-        tarfile: &mut tar::Builder<W>,
-        skip_root: bool,
+    fn export_tarfile_recurse<W: Write>(&mut self, backup: &BackupFile, path: &Path, inode: Inode,
+        tarfile: &mut tar::Builder<W>, skip_root: bool, lock: &OnlineMode
     ) -> Result<(), RepositoryError> {
         let path = if skip_root {
             path.to_path_buf()
@@ -354,7 +354,7 @@ impl BackupRepository {
         };
         if inode.file_type != FileType::Directory || !skip_root {
             if !inode.xattrs.is_empty() {
-                try!(self.export_xattrs(&inode, tarfile));
+                try!(self.export_xattrs(&inode, tarfile, lock));
             }
             let mut header = tar::Header::new_gnu();
             header.set_size(inode.size);
@@ -397,34 +397,32 @@ impl BackupRepository {
                 None => try!(tarfile.append(&header, Cursor::new(&[]))),
                 Some(FileData::Inline(data)) => try!(tarfile.append(&header, Cursor::new(data))),
                 Some(FileData::ChunkedDirect(chunks)) => {
-                    try!(tarfile.append(&header, self.repo.get_reader(chunks)))
+                    try!(tarfile.append(&header, self.get_reader(chunks, lock)))
                 }
                 Some(FileData::ChunkedIndirect(chunks)) => {
-                    let chunks = ChunkList::read_from(&try!(self.get_data(&chunks)));
-                    try!(tarfile.append(&header, self.repo.get_reader(chunks)))
+                    let chunks = ChunkList::read_from(&try!(self.get_data(&chunks, lock)));
+                    try!(tarfile.append(&header, self.get_reader(chunks, lock)))
                 }
             }
         }
         if let Some(children) = inode.children {
             for chunks in children.values() {
-                let inode = try!(self.get_inode(chunks));
+                let inode = try!(self.get_inode(chunks, lock));
                 try!(self.export_tarfile_recurse(
                     backup,
                     &path,
                     inode,
                     tarfile,
-                    false
+                    false,
+                    lock
                 ));
             }
         }
         Ok(())
     }
 
-    pub fn export_tarfile<P: AsRef<Path>>(
-        &mut self,
-        backup: &BackupFile,
-        inode: Inode,
-        tarfile: P,
+    fn export_tarfile<P: AsRef<Path>>(&mut self, backup: &BackupFile, inode: Inode, tarfile: P,
+        lock: &OnlineMode
     ) -> Result<(), RepositoryError> {
         let tarfile = tarfile.as_ref();
         if tarfile == Path::new("-") {
@@ -434,7 +432,8 @@ impl BackupRepository {
                 Path::new(""),
                 inode,
                 &mut tarfile,
-                true
+                true,
+                lock
             ));
             try!(tarfile.finish());
         } else {
@@ -444,7 +443,8 @@ impl BackupRepository {
                 Path::new(""),
                 inode,
                 &mut tarfile,
-                true
+                true,
+                lock
             ));
             try!(tarfile.finish());
         }

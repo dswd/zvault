@@ -150,21 +150,24 @@ impl FuseInode {
 
 pub struct FuseFilesystem<'a> {
     next_id: u64,
-    repository: &'a mut BackupRepository,
-    inodes: HashMap<u64, FuseInodeRef>
+    lock: &'a OnlineMode,
+    repository: &'a mut Repository,
+    inodes: HashMap<u64, FuseInodeRef>,
 }
 
 impl<'a> FuseFilesystem<'a> {
-    pub fn new(repository: &'a mut BackupRepository) -> Result<Self, RepositoryError> {
+    pub fn new(repository: &'a mut Repository, lock: &'a OnlineMode) -> Result<Self, RepositoryError> {
         Ok(FuseFilesystem {
             next_id: 1,
+            lock,
             repository,
             inodes: HashMap::new()
         })
     }
 
     pub fn from_repository(
-        repository: &'a mut BackupRepository,
+        repository: &'a mut Repository,
+        lock: &'a OnlineMode,
         path: Option<&str>,
     ) -> Result<Self, RepositoryError> {
         let mut backups = vec![];
@@ -173,10 +176,10 @@ impl<'a> FuseFilesystem<'a> {
             None => try!(repository.get_all_backups()),
         };
         for (name, backup) in backup_map {
-            let inode = try!(repository.get_inode(&backup.root));
+            let inode = try!(repository.get_inode(&backup.root, lock));
             backups.push((name, backup, inode));
         }
-        let mut fs = try!(FuseFilesystem::new(repository));
+        let mut fs = try!(FuseFilesystem::new(repository, lock));
         let root = fs.add_virtual_directory("".to_string(), None);
         for (name, backup, mut inode) in backups {
             let mut parent = root.clone();
@@ -196,21 +199,23 @@ impl<'a> FuseFilesystem<'a> {
     }
 
     pub fn from_backup(
-        repository: &'a mut BackupRepository,
+        repository: &'a mut Repository,
+        lock: &'a OnlineMode,
         backup: BackupFile,
     ) -> Result<Self, RepositoryError> {
-        let inode = try!(repository.get_inode(&backup.root));
-        let mut fs = try!(FuseFilesystem::new(repository));
+        let inode = try!(repository.get_inode(&backup.root, lock));
+        let mut fs = try!(FuseFilesystem::new(repository, lock));
         fs.add_inode(inode, None, backup.user_names, backup.group_names);
         Ok(fs)
     }
 
     pub fn from_inode(
-        repository: &'a mut BackupRepository,
+        repository: &'a mut Repository,
+        lock: &'a OnlineMode,
         backup: BackupFile,
         inode: Inode,
     ) -> Result<Self, RepositoryError> {
-        let mut fs = try!(FuseFilesystem::new(repository));
+        let mut fs = try!(FuseFilesystem::new(repository, lock));
         fs.add_inode(inode, None, backup.user_names, backup.group_names);
         Ok(fs)
     }
@@ -290,7 +295,7 @@ impl<'a> FuseFilesystem<'a> {
         if let Some(chunks) = parent_mut.inode.children.as_ref().and_then(|c| c.get(name)) {
             child = Rc::new(RefCell::new(FuseInode {
                 num: self.next_id,
-                inode: try!(self.repository.get_inode(chunks)),
+                inode: try!(self.repository.get_inode(chunks, self.lock)),
                 parent: Some(parent.clone()),
                 children: HashMap::new(),
                 chunks: None,
@@ -316,7 +321,7 @@ impl<'a> FuseFilesystem<'a> {
                 if !parent_mut.children.contains_key(name) {
                     let child = Rc::new(RefCell::new(FuseInode {
                         num: self.next_id,
-                        inode: try!(self.repository.get_inode(chunks)),
+                        inode: try!(self.repository.get_inode(chunks, self.lock)),
                         parent: Some(parent.clone()),
                         children: HashMap::new(),
                         chunks: None,
@@ -344,7 +349,7 @@ impl<'a> FuseFilesystem<'a> {
                 chunks = Some(c.clone());
             }
             Some(FileData::ChunkedIndirect(ref c)) => {
-                let chunk_data = try!(self.repository.get_data(c));
+                let chunk_data = try!(self.repository.get_data(c, self.lock));
                 chunks = Some(ChunkList::read_from(&chunk_data));
             }
         }
@@ -556,7 +561,7 @@ impl<'a> fuse::Filesystem for FuseFilesystem<'a> {
                     offset -= i64::from(len);
                     continue;
                 }
-                let chunk = match fuse_try!(self.repository.get_chunk(hash), reply) {
+                let chunk = match fuse_try!(self.repository.get_chunk(hash, self.lock), reply) {
                     Some(chunk) => chunk,
                     None => return reply.error(libc::EIO),
                 };

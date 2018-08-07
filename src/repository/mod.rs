@@ -22,9 +22,9 @@ use std::io::Write;
 
 pub use self::error::RepositoryError;
 pub use self::config::Config;
-pub use self::layout::{RepositoryLayout, ChunkRepositoryLayout};
+pub use self::layout::ChunkRepositoryLayout;
 use self::bundle_map::BundleMap;
-pub use self::integrity::IntegrityError;
+pub use self::integrity::{IntegrityError, ModuleIntegrityReport, IntegrityReport};
 pub use self::info::{BundleAnalysis, RepositoryInfo, RepositoryStatistics};
 
 const REPOSITORY_README: &[u8] = include_bytes!("../../docs/repository_readme.md");
@@ -318,6 +318,14 @@ impl Repository {
 
     pub fn set_config(&mut self, config: Config) {
         self.config = config;
+    }
+
+    pub fn get_crypto(&self) -> Arc<Crypto> {
+        self.crypto.clone()
+    }
+
+    pub fn get_layout(&self) -> Arc<ChunkRepositoryLayout> {
+        self.layout.clone()
     }
 }
 
