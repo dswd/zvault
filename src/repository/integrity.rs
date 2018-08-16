@@ -46,15 +46,15 @@ quick_error!{
 }
 
 
-pub struct ModuleIntegrityReport {
-    pub errors_fixed: Vec<IntegrityError>,
-    pub errors_unfixed: Vec<IntegrityError>
+pub struct ModuleIntegrityReport<T> {
+    pub errors_fixed: Vec<T>,
+    pub errors_unfixed: Vec<T>
 }
 
 pub struct IntegrityReport {
-    pub bundle_map: Option<ModuleIntegrityReport>,
-    pub index: Option<ModuleIntegrityReport>,
-    pub bundles: Option<ModuleIntegrityReport>
+    pub bundle_map: Option<ModuleIntegrityReport<IntegrityError>>,
+    pub index: Option<ModuleIntegrityReport<IntegrityError>>,
+    pub bundles: Option<ModuleIntegrityReport<IntegrityError>>
 }
 
 
@@ -83,7 +83,7 @@ impl Repository {
         Ok(new)
     }
 
-    pub fn check_bundle_map(&mut self) -> ModuleIntegrityReport {
+    pub fn check_bundle_map(&mut self) -> ModuleIntegrityReport<IntegrityError> {
         tr_info!("Checking bundle map...");
         let mut errors = vec![];
         for (_id, bundle_id) in self.bundle_map.bundles() {
@@ -120,7 +120,7 @@ impl Repository {
         self.save_bundle_map(lock.as_localwrite())
     }
 
-    pub fn check_and_repair_bundle_map(&mut self, lock: &OnlineMode) -> Result<ModuleIntegrityReport, RepositoryError> {
+    pub fn check_and_repair_bundle_map(&mut self, lock: &OnlineMode) -> Result<ModuleIntegrityReport<IntegrityError>, RepositoryError> {
         let mut report = self.check_bundle_map();
         if !report.errors_unfixed.is_empty() {
             try!(self.rebuild_bundle_map(lock));
@@ -183,7 +183,7 @@ impl Repository {
     }
 
     #[inline]
-    pub fn check_index(&mut self, lock: &ReadonlyMode) -> ModuleIntegrityReport {
+    pub fn check_index(&mut self, lock: &ReadonlyMode) -> ModuleIntegrityReport<IntegrityError> {
         tr_info!("Checking index integrity...");
         let mut errors: Vec<IntegrityError> = self.index.check().into_iter().map(IntegrityError::Index).collect();
         tr_info!("Checking index entries...");
@@ -191,7 +191,7 @@ impl Repository {
         ModuleIntegrityReport { errors_fixed: vec![], errors_unfixed: errors }
     }
 
-    pub fn check_and_repair_index(&mut self, lock: &OnlineMode) -> Result<ModuleIntegrityReport, RepositoryError> {
+    pub fn check_and_repair_index(&mut self, lock: &OnlineMode) -> Result<ModuleIntegrityReport<IntegrityError>, RepositoryError> {
         let mut report = self.check_index(lock.as_readonly());
         if !report.errors_unfixed.is_empty() {
             try!(self.rebuild_index(lock));
@@ -201,7 +201,7 @@ impl Repository {
     }
 
     #[inline]
-    fn check_bundles_internal(&mut self, full: bool, lock: &OnlineMode) -> (ModuleIntegrityReport, Vec<BundleId>) {
+    fn check_bundles_internal(&mut self, full: bool, lock: &OnlineMode) -> (ModuleIntegrityReport<IntegrityError>, Vec<BundleId>) {
         tr_info!("Checking bundle integrity...");
         let mut errors = vec![];
         let mut bundles = vec![];
@@ -213,11 +213,11 @@ impl Repository {
     }
 
     #[inline]
-    pub fn check_bundles(&mut self, full: bool, lock: &OnlineMode) -> ModuleIntegrityReport {
+    pub fn check_bundles(&mut self, full: bool, lock: &OnlineMode) -> ModuleIntegrityReport<IntegrityError> {
         self.check_bundles_internal(full, lock).0
     }
 
-    pub fn check_and_repair_bundles(&mut self, full: bool, lock: &VacuumMode) -> Result<ModuleIntegrityReport, RepositoryError> {
+    pub fn check_and_repair_bundles(&mut self, full: bool, lock: &VacuumMode) -> Result<ModuleIntegrityReport<IntegrityError>, RepositoryError> {
         let (mut report, bundles) = self.check_bundles_internal(full, lock.as_online());
         if !report.errors_unfixed.is_empty() {
             try!(self.bundles.repair(lock, &bundles));

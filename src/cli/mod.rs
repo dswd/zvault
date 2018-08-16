@@ -827,7 +827,7 @@ pub fn run() -> Result<(), ErrorCode> {
                 options.all_backups();
             }
             checked!(
-                repo.check(options),
+                repo.check(&options),
                 "check repository",
                 ErrorCode::CheckRun
             );

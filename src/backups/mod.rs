@@ -321,7 +321,11 @@ impl BackupRepository {
         })
     }
 
-    pub fn check(&mut self, options: CheckOptions) -> Result<(), RepositoryError> {
+    pub fn check(&mut self, options: &CheckOptions) -> Result<(), RepositoryError> {
+        self.0.online_mode(|r, l| {
+            r.check(options.index, options.bundles, options.bundle_data, l);
+            Ok(())
+        });
         unimplemented!()
         //TODO: implement
     }
