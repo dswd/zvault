@@ -5,7 +5,7 @@ use std::sync::{Mutex, Condvar, Arc};
 use std::{mem, fs, thread};
 use std::path::{Path, PathBuf};
 
-use crossbeam::sync::MsQueue;
+use crossbeam::queue::MsQueue;
 
 
 pub struct BundleUploader {

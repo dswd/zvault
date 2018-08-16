@@ -289,7 +289,7 @@ impl Inode {
                 }
             }
         }
-        let time = FileTime::from_seconds_since_1970(self.timestamp as u64, 0);
+        let time = FileTime::from_unix_time(self.timestamp, 0);
         if let Err(err) = filetime::set_file_times(&full_path, time, time) {
             tr_warn!("Failed to set file time on {:?}: {}", full_path, err);
         }

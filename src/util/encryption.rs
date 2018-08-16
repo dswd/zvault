@@ -7,10 +7,10 @@ use std::sync::{RwLock, Once, ONCE_INIT};
 use serde_yaml;
 use serde_bytes::ByteBuf;
 
-use libsodium_sys;
 use sodiumoxide;
 use sodiumoxide::crypto::sealedbox;
 use sodiumoxide::crypto::box_;
+use sodiumoxide::crypto::box_::curve25519xsalsa20poly1305::{keypair_from_seed, Seed};
 use sodiumoxide::crypto::pwhash;
 pub use sodiumoxide::crypto::box_::{SecretKey, PublicKey};
 
@@ -20,7 +20,7 @@ use util::*;
 static INIT: Once = ONCE_INIT;
 
 fn sodium_init() {
-    INIT.call_once(|| if !sodiumoxide::init() {
+    INIT.call_once(|| if sodiumoxide::init().is_err() {
         tr_panic!("Failed to initialize sodiumoxide");
     });
 }
@@ -277,20 +277,12 @@ impl Crypto {
             pwhash::OPSLIMIT_INTERACTIVE,
             pwhash::MEMLIMIT_INTERACTIVE
         ).unwrap();
-        let mut seed = [0u8; 32];
-        let offset = key.len() - seed.len();
-        for (i, b) in seed.iter_mut().enumerate() {
-            *b = key[i + offset];
-        }
-        let mut pk = [0u8; 32];
-        let mut sk = [0u8; 32];
-        if unsafe { libsodium_sys::crypto_box_seed_keypair(&mut pk, &mut sk, &seed) } != 0 {
-            tr_panic!("Libsodium failed");
-        }
-        (
-            PublicKey::from_slice(&pk).unwrap(),
-            SecretKey::from_slice(&sk).unwrap()
-        )
+        let seed = if let Some(seed) = Seed::from_slice(&key[key.len()-32..]) {
+            seed
+        } else {
+            tr_panic!("Seed failed");
+        };
+        keypair_from_seed(&seed)
     }
 }
 
