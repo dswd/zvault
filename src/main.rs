@@ -39,6 +39,7 @@ extern crate tar;
 extern crate runtime_fmt;
 extern crate locale_config;
 extern crate mmap;
+extern crate dirs;
 
 #[macro_use] mod translation;
 pub mod util;

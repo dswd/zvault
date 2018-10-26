@@ -11,7 +11,7 @@ mod layout;
 pub use self::backup::{BackupOptions, BackupError, DiffType, RepositoryBackupIO};
 pub use self::backup_file::{BackupFile, BackupFileError};
 pub use self::inode::{Inode, FileData, FileType, InodeError};
-pub use self::integrity::{InodeIntegrityError, RepositoryIntegrityIO};
+pub use self::integrity::{InodeIntegrityError, RepositoryIntegrityIO, CheckOptions, IntegrityReport};
 pub use self::layout::BackupRepositoryLayout;
 pub use self::metadata::RepositoryMetadataIO;
 pub use self::vacuum::RepositoryVacuumIO;
@@ -27,71 +27,6 @@ use std::io::Write;
 
 
 const DEFAULT_EXCLUDES: &[u8] = include_bytes!("../../docs/excludes.default");
-
-
-pub struct CheckOptions {
-    all_backups: bool,
-    single_backup: Option<String>,
-    subpath: Option<PathBuf>,
-    index: bool,
-    bundles: bool,
-    bundle_data: bool,
-    repair: bool
-}
-
-impl CheckOptions {
-    pub fn new() -> CheckOptions {
-        CheckOptions {
-            all_backups: false,
-            single_backup: None,
-            subpath: None,
-            index: false,
-            bundles: false,
-            bundle_data: false,
-            repair: false
-        }
-    }
-
-    pub fn all_backups(&mut self) -> &mut Self {
-        self.all_backups = true;
-        self.single_backup = None;
-        self.subpath = None;
-        self
-    }
-
-    pub fn single_backup(&mut self, backup: &str) -> &mut Self {
-        self.all_backups = false;
-        self.single_backup = Some(backup.to_string());
-        self
-    }
-
-    pub fn subpath(&mut self, subpath: &Path) -> &mut Self {
-        self.subpath = Some(subpath.to_path_buf());
-        self
-    }
-
-    pub fn index(&mut self, index: bool) -> &mut Self {
-        self.index = index;
-        self
-    }
-
-    pub fn bundles(&mut self, bundles: bool) -> &mut Self {
-        self.bundles = bundles;
-        self.bundle_data &= bundles;
-        self
-    }
-
-    pub fn bundle_data(&mut self, bundle_data: bool) -> &mut Self {
-        self.bundle_data = bundle_data;
-        self.bundles |= bundle_data;
-        self
-    }
-
-    pub fn repair(&mut self, repair: bool) -> &mut Self {
-        self.repair = repair;
-        self
-    }
-}
 
 
 pub struct BackupRepository(Repository);
@@ -185,16 +120,6 @@ impl BackupRepository {
     }
 
     #[inline]
-    pub fn check_repo(&mut self, index: bool, bundles: bool, bundle_data: bool) -> Result<IntegrityReport, RepositoryError> {
-        self.0.online_mode(|r, l| Ok(r.check(index, bundles, bundle_data, l)))
-    }
-
-    #[inline]
-    pub fn check_and_repair_repo(&mut self, index: bool, bundles: bool, bundle_data: bool) -> Result<IntegrityReport, RepositoryError> {
-        self.0.vacuum_mode(|r, l| r.check_and_repair(index, bundles, bundle_data, l))
-    }
-
-    #[inline]
     pub fn statistics(&self) -> RepositoryStatistics {
         self.0.statistics()
     }
@@ -225,6 +150,11 @@ impl BackupRepository {
     }
 
     #[inline]
+    pub fn save_backup(&mut self, backup: &BackupFile, name: &str) -> Result<(), RepositoryError> {
+        self.0.backup_mode(|r, l| r.save_backup(backup, name, l))
+    }
+
+    #[inline]
     pub fn prune_backups(&mut self, prefix: &str, daily: usize, weekly: usize, monthly: usize,
         yearly: usize, force: bool) -> Result<(), RepositoryError>
     {
@@ -241,7 +171,7 @@ impl BackupRepository {
         self.0.online_mode(|r, l| r.get_inode_children(inode, l))
     }
 
-        #[inline]
+    #[inline]
     pub fn restore_inode_tree<P: AsRef<Path>>(&mut self, backup: &BackupFile, inode: Inode, path: P) -> Result<(), RepositoryError> {
         self.0.online_mode(|r, l| r.restore_inode_tree(backup, inode, path, l))
     }
@@ -254,12 +184,13 @@ impl BackupRepository {
     }
 
     #[inline]
-    pub fn remove_backup_path<P: AsRef<Path>>(&mut self, backup: &mut BackupFile, path: P
+    pub fn remove_backup_path<P: AsRef<Path>>(&mut self, backup: &mut BackupFile, name: &str, path: P
     ) -> Result<(), RepositoryError> {
-        self.0.backup_mode(|r, l| r.remove_backup_path(backup, path, l))
+        self.0.backup_mode(|r, l| r.remove_backup_path(backup, name, path, l))
     }
 
     #[inline]
+    #[allow(dead_code)]
     pub fn get_backup_path<P: AsRef<Path>>(&mut self, backup: &BackupFile, path: P) -> Result<Vec<Inode>, RepositoryError> {
         self.0.online_mode(|r, l| r.get_backup_path(backup, path, l))
     }
@@ -321,13 +252,16 @@ impl BackupRepository {
         })
     }
 
-    pub fn check(&mut self, options: &CheckOptions) -> Result<(), RepositoryError> {
-        self.0.online_mode(|r, l| {
-            r.check(options.index, options.bundles, options.bundle_data, l);
-            Ok(())
-        });
-        unimplemented!()
-        //TODO: implement
+    pub fn check(&mut self, options: CheckOptions) -> Result<IntegrityReport, RepositoryError> {
+        if options.get_repair() {
+            self.0.vacuum_mode(|r, l| {
+                r.check_and_repair(options, l)
+            })
+        } else {
+            self.0.online_mode(|r, l| {
+                Ok(r.check(options, l))
+            })
+        }
     }
 
     #[inline]

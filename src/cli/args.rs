@@ -723,6 +723,7 @@ pub fn parse() -> Result<(log::Level, Arguments), ErrorCode> {
                 yearly: parse_num(args.value_of("yearly").unwrap()).unwrap() as usize
             }
         }
+        //TODO: add new parameter scrub that sets ratio to 101, disallow values outside 0..100
         ("vacuum", Some(args)) => {
             let (repository, _backup, _inode) = parse_repo_path(
                 args.value_of("REPO").unwrap(),

@@ -10,9 +10,9 @@ use regex::{self, RegexSet};
 use std::collections::HashMap;
 use std::io::{BufReader, BufRead};
 use std::fs::File;
-use std::env;
 use std::str;
 use std::path::{Path, PathBuf};
+use std::error::Error;
 
 use self::args::Arguments;
 
@@ -99,7 +99,7 @@ pub const DEFAULT_VACUUM_RATIO_STR: &str = "0";
 pub const DEFAULT_DUPLICATES_MIN_SIZE_STR: &str = "1b";
 lazy_static! {
     pub static ref ZVAULT_FOLDER: PathBuf = {
-        env::home_dir().unwrap().join(".zvault")
+        dirs::home_dir().unwrap().join(".zvault")
     };
 }
 
@@ -499,6 +499,38 @@ fn print_duplicates(dups: Vec<(Vec<PathBuf>, u64)>) {
     }
 }
 
+fn print_integrity_report_module<T: Error>(name: &str, module: &ModuleIntegrityReport<T>) -> usize {
+    let found = module.errors_fixed.len() + module.errors_unfixed.len();
+    let fixed = module.errors_fixed.len();
+    tr_println!("{}: {} errors found, {} corrected:", name, found, fixed);
+    for e in &module.errors_fixed {
+        println!("{}", e);
+    }
+    for e in &module.errors_unfixed {
+        println!("{}", e);
+    }
+    found - fixed
+}
+
+fn print_integrity_report(report: &IntegrityReport) {
+    let mut unfixed = 0;
+    if let Some(ref module) = report.bundle_map {
+        unfixed += print_integrity_report_module("Bundle map", module);
+    }
+    if let Some(ref module) = report.index {
+        unfixed += print_integrity_report_module("Index", module);
+    }
+    if let Some(ref module) = report.bundles {
+        unfixed += print_integrity_report_module("Bundles", module);
+    }
+    if let Some(ref module) = report.backups {
+        unfixed += print_integrity_report_module("Backups", module);
+    }
+    if unfixed == 0 {
+        tr_info!("Integrity verified")
+    }
+}
+
 
 
 #[allow(unknown_lints, cyclomatic_complexity)]
@@ -714,7 +746,11 @@ pub fn run() -> Result<(), ErrorCode> {
                 return Err(ErrorCode::BackupAlreadyExists);
             }
             let backup = try!(get_backup(&repo, &backup_name_src));
-            //TODO: implement
+            checked!(
+                repo.save_backup(&backup, &backup_name_dst),
+                "save backup",
+                ErrorCode::SaveBackup
+            );
         }
         Arguments::Remove {
             repo_path,
@@ -726,7 +762,7 @@ pub fn run() -> Result<(), ErrorCode> {
             if let Some(inode) = inode {
                 let mut backup = try!(get_backup(&repo, &backup_name));
                 checked!(
-                    repo.remove_backup_path(&mut backup, inode),
+                    repo.remove_backup_path(&mut backup, &backup_name, inode),
                     "remove backup subpath",
                     ErrorCode::RemoveRun
                 );
@@ -819,19 +855,25 @@ pub fn run() -> Result<(), ErrorCode> {
             let mut options = CheckOptions::new();
             options.index(index).bundle_data(bundle_data).bundles(bundles).repair(repair);
             if let Some(backup_name) = backup_name {
-                options.single_backup(&backup_name);
-                if let Some(inode) = inode {
-                    options.subpath(Path::new(&inode));
+                let backup = try!(get_backup(&repo, &backup_name));
+                if let Some(inode_name) = inode {
+                    let inode = checked!(
+                        repo.get_backup_inode(&backup, &inode_name),
+                        "load subpath inode",
+                        ErrorCode::LoadInode
+                    );
+                    options.subpath(Path::new(&inode_name), inode);
                 }
+                options.single_backup(&backup_name, backup);
             } else {
                 options.all_backups();
             }
-            checked!(
-                repo.check(&options),
+            let report = checked!(
+                repo.check(options),
                 "check repository",
                 ErrorCode::CheckRun
             );
-            tr_info!("Integrity verified")
+            print_integrity_report(&report);
         }
         Arguments::List {
             repo_path,

@@ -331,7 +331,7 @@ impl RepositoryTarfileIO for Repository {
     }
 
     fn export_xattrs<W: Write>(&mut self, inode: &Inode, tarfile: &mut tar::Builder<W>,
-        lock: &OnlineMode
+        _lock: &OnlineMode
     ) -> Result<(), RepositoryError> {
         let mut pax = PaxBuilder::new();
         for (key, value) in &inode.xattrs {

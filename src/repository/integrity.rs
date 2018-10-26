@@ -51,13 +51,9 @@ pub struct ModuleIntegrityReport<T> {
     pub errors_unfixed: Vec<T>
 }
 
-pub struct IntegrityReport {
-    pub bundle_map: Option<ModuleIntegrityReport<IntegrityError>>,
-    pub index: Option<ModuleIntegrityReport<IntegrityError>>,
-    pub bundles: Option<ModuleIntegrityReport<IntegrityError>>
-}
 
-
+//FIXME: use or remove
+#[allow(dead_code)]
 pub struct ChunkMarker<'a> {
     marked: Bitmap,
     repo: &'a Repository
@@ -183,7 +179,7 @@ impl Repository {
     }
 
     #[inline]
-    pub fn check_index(&mut self, lock: &ReadonlyMode) -> ModuleIntegrityReport<IntegrityError> {
+    pub fn check_index(&mut self, _lock: &ReadonlyMode) -> ModuleIntegrityReport<IntegrityError> {
         tr_info!("Checking index integrity...");
         let mut errors: Vec<IntegrityError> = self.index.check().into_iter().map(IntegrityError::Index).collect();
         tr_info!("Checking index entries...");
@@ -226,42 +222,6 @@ impl Repository {
             tr_warn!("Some bundles have been rewritten, please remove the broken bundles manually.");
             try!(self.rebuild_bundle_map(lock.as_online()));
             try!(self.rebuild_index(lock.as_online()));
-        }
-        Ok(report)
-    }
-
-    pub fn check(&mut self, index: bool, bundles: bool, bundle_data: bool, lock: &OnlineMode) -> IntegrityReport {
-        let mut report = IntegrityReport {
-            bundle_map: None,
-            index: None,
-            bundles: None
-        };
-        report.bundle_map = Some(self.check_bundle_map());
-        if index {
-            report.index = Some(self.check_index(lock.as_readonly()));
-        }
-        if bundles {
-            report.bundles = Some(self.check_bundles(bundle_data, lock));
-        }
-        report
-    }
-
-    pub fn check_and_repair(&mut self, index: bool, bundles: bool, bundle_data: bool, lock: &VacuumMode) -> Result<IntegrityReport, RepositoryError> {
-        let mut report = IntegrityReport {
-            bundle_map: None,
-            index: None,
-            bundles: None
-        };
-        let bundle_map = try!(self.check_and_repair_bundle_map(lock.as_online()));
-        if !bundle_map.errors_fixed.is_empty() {
-            try!(self.rebuild_index(lock.as_online()));
-        }
-        report.bundle_map = Some(bundle_map);
-        if index {
-            report.index = Some(try!(self.check_and_repair_index(lock.as_online())));
-        }
-        if bundles {
-            report.bundles = Some(try!(self.check_and_repair_bundles(bundle_data, lock)));
         }
         Ok(report)
     }

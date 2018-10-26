@@ -10,7 +10,7 @@ pub use repository::index::{Index, IndexError, IndexStatistics};
 pub use backups::mount::FuseFilesystem;
 pub use backups::{BackupFile, BackupFileError, Inode, FileType, FileData, InodeError, BackupError,
                   BackupOptions, DiffType, InodeIntegrityError, BackupRepositoryLayout,
-                  RepositoryBackupIO, RepositoryMetadataIO, CheckOptions};
+                  RepositoryBackupIO, RepositoryMetadataIO, CheckOptions, IntegrityReport};
 pub use translation::CowStr;
 pub use backups::BackupRepository;
 

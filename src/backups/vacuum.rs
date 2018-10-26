@@ -17,7 +17,7 @@ pub trait RepositoryVacuumIO {
 
 impl RepositoryVacuumIO for Repository {
     fn mark_used(&self, bundles: &mut HashMap<u32, BundleAnalysis>, chunks: &[Chunk],
-        lock: &OnlineMode
+        _lock: &OnlineMode
     ) -> Result<bool, RepositoryError> {
         let mut new = false;
         for &(hash, len) in chunks {
@@ -108,6 +108,9 @@ impl RepositoryVacuumIO for Repository {
         let mut reclaim_space = 0;
         let mut rewrite_data = 0;
         for (id, bundle) in &usage {
+            //TODO: make this
+            //  bundle.get_usage_ratio() < ratio || bundle.get_usage_ratio() == 0.0
+            //  to avoid rewriting completely full bundles, also
             if bundle.get_usage_ratio() <= ratio {
                 rewrite_bundles.insert(*id);
                 reclaim_space += bundle.get_unused_size();

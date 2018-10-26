@@ -24,7 +24,7 @@ pub use self::error::RepositoryError;
 pub use self::config::Config;
 pub use self::layout::ChunkRepositoryLayout;
 use self::bundle_map::BundleMap;
-pub use self::integrity::{IntegrityError, ModuleIntegrityReport, IntegrityReport};
+pub use self::integrity::{IntegrityError, ModuleIntegrityReport};
 pub use self::info::{BundleAnalysis, RepositoryInfo, RepositoryStatistics};
 
 const REPOSITORY_README: &[u8] = include_bytes!("../../docs/repository_readme.md");
@@ -118,11 +118,12 @@ impl Repository {
         let remote_locks = LockFolder::new(layout.remote_locks_path());
         try!(fs::create_dir_all(layout.local_locks_path())); // Added after v0.1.0
         let local_locks = LockFolder::new(layout.local_locks_path());
-        let lock = try!(local_locks.lock(false));
+        let _lock = try!(local_locks.lock(false));
         let mock_lock = Lock;
         let bundles = try!(BundleDb::open(layout.clone(), crypto.clone(), &mock_lock));
         let mut rebuild_index = false;
-        let mut rebuild_bundle_map = false;
+        //FIXME: why is this never set?
+        let /*mut*/ rebuild_bundle_map = false;
         let index = match unsafe { Index::open(layout.index_path(), &INDEX_MAGIC, INDEX_VERSION) } {
             Ok(index) => index,
             Err(err) => {
@@ -170,6 +171,8 @@ impl Repository {
         Ok(repo)
     }
 
+    //FIXME: use or remove
+    #[allow(dead_code)]
     pub fn synchronize(&mut self, lock: &OnlineMode) -> Result<(), RepositoryError> {
         let (new, gone) = try!(self.bundles.synchronize(lock));
         let mut save_bundle_map = false;
@@ -421,6 +424,8 @@ impl Repository {
         Ok(())
     }
 
+    //FIXME: use or remove
+    #[allow(dead_code)]
     pub fn readonly_mode<R, F: FnOnce(&mut Repository, &ReadonlyMode) -> Result<R, RepositoryError>> (&mut self, f: F) -> Result<R, RepositoryError> {
         let _local_lock = try!(self.local_locks.lock(false));
         f(self, &Lock)

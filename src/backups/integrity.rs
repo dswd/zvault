@@ -29,6 +29,83 @@ quick_error!{
 }
 
 
+pub struct CheckOptions {
+    all_backups: bool,
+    single_backup: Option<(String, BackupFile)>,
+    subpath: Option<(PathBuf, Inode)>,
+    index: bool,
+    bundles: bool,
+    bundle_data: bool,
+    repair: bool
+}
+
+impl CheckOptions {
+    pub fn new() -> CheckOptions {
+        CheckOptions {
+            all_backups: false,
+            single_backup: None,
+            subpath: None,
+            index: false,
+            bundles: false,
+            bundle_data: false,
+            repair: false
+        }
+    }
+
+    pub fn all_backups(&mut self) -> &mut Self {
+        self.all_backups = true;
+        self.single_backup = None;
+        self.subpath = None;
+        self
+    }
+
+    pub fn single_backup(&mut self, name: &str, backup: BackupFile) -> &mut Self {
+        self.all_backups = false;
+        self.single_backup = Some((name.to_string(), backup));
+        self
+    }
+
+    pub fn subpath(&mut self, subpath: &Path, inode: Inode) -> &mut Self {
+        self.subpath = Some((subpath.to_path_buf(), inode));
+        self
+    }
+
+    pub fn index(&mut self, index: bool) -> &mut Self {
+        self.index = index;
+        self
+    }
+
+    pub fn bundles(&mut self, bundles: bool) -> &mut Self {
+        self.bundles = bundles;
+        self.bundle_data &= bundles;
+        self
+    }
+
+    pub fn bundle_data(&mut self, bundle_data: bool) -> &mut Self {
+        self.bundle_data = bundle_data;
+        self.bundles |= bundle_data;
+        self
+    }
+
+    pub fn repair(&mut self, repair: bool) -> &mut Self {
+        self.repair = repair;
+        self
+    }
+
+    pub fn get_repair(&self) -> bool {
+        self.repair
+    }
+}
+
+
+pub struct IntegrityReport {
+    pub bundle_map: Option<ModuleIntegrityReport<IntegrityError>>,
+    pub index: Option<ModuleIntegrityReport<IntegrityError>>,
+    pub bundles: Option<ModuleIntegrityReport<IntegrityError>>,
+    pub backups: Option<ModuleIntegrityReport<InodeIntegrityError>>
+}
+
+
 pub trait RepositoryIntegrityIO {
     fn check_inode_contents(&mut self, inode: &Inode, checked: &mut Bitmap, lock: &OnlineMode
     ) -> Result<(), RepositoryError>;
@@ -40,7 +117,7 @@ pub trait RepositoryIntegrityIO {
     fn check_backup_inode(&mut self, inode: &Inode, path: &Path, lock: &OnlineMode
     ) -> ModuleIntegrityReport<InodeIntegrityError>;
 
-    fn check_backup(&mut self, name: &str, backup: &mut BackupFile, lock: &OnlineMode
+    fn check_backup(&mut self, name: &str, backup: &BackupFile, lock: &OnlineMode
     ) -> ModuleIntegrityReport<InodeIntegrityError>;
 
     fn check_backups(&mut self, lock: &OnlineMode) -> ModuleIntegrityReport<InodeIntegrityError>;
@@ -60,6 +137,11 @@ pub trait RepositoryIntegrityIO {
 
     fn check_and_repair_backups(&mut self, lock: &BackupMode
     ) -> Result<ModuleIntegrityReport<InodeIntegrityError>, RepositoryError>;
+
+    fn check(&mut self, options: CheckOptions, lock: &OnlineMode) -> IntegrityReport;
+
+    fn check_and_repair(&mut self, options: CheckOptions, lock: &VacuumMode
+    ) -> Result<IntegrityReport, RepositoryError>;
 }
 
 
@@ -87,7 +169,6 @@ impl RepositoryIntegrityIO for Repository {
     fn check_subtree(&mut self, path: PathBuf, chunks: &[Chunk], checked: &mut Bitmap,
         errors: &mut Vec<InodeIntegrityError>, lock: &OnlineMode
     ) {
-        let mut modified = false;
         match self.mark_chunks(checked, chunks, false) {
             Ok(false) => return,
             Ok(true) => (),
@@ -133,7 +214,7 @@ impl RepositoryIntegrityIO for Repository {
     }
 
     #[inline]
-    fn check_backup(&mut self, name: &str, backup: &mut BackupFile, lock: &OnlineMode,
+    fn check_backup(&mut self, _name: &str, backup: &BackupFile, lock: &OnlineMode,
     ) -> ModuleIntegrityReport<InodeIntegrityError> {
         tr_info!("Checking backup...");
         let mut checked = self.get_chunk_marker();
@@ -216,7 +297,7 @@ impl RepositoryIntegrityIO for Repository {
     }
 
 
-    fn evacuate_broken_backup(&self, name: &str, lock: &BackupMode) -> Result<(), RepositoryError> {
+    fn evacuate_broken_backup(&self, name: &str, _lock: &BackupMode) -> Result<(), RepositoryError> {
         tr_warn!(
             "The backup {} was corrupted and needed to be modified.",
             name
@@ -353,4 +434,64 @@ impl RepositoryIntegrityIO for Repository {
         }
         Ok(ModuleIntegrityReport{errors_unfixed: vec![], errors_fixed: errors})
     }
+
+    fn check(&mut self, options: CheckOptions, lock: &OnlineMode) -> IntegrityReport {
+        let mut report = IntegrityReport {
+            bundle_map: None,
+            index: None,
+            bundles: None,
+            backups: None
+        };
+        report.bundle_map = Some(self.check_bundle_map());
+        if options.index {
+            report.index = Some(self.check_index(lock.as_readonly()));
+        }
+        if options.bundles {
+            report.bundles = Some(self.check_bundles(options.bundle_data, lock));
+        }
+        if let Some((name, backup)) = options.single_backup {
+            if let Some((subpath, inode)) = options.subpath {
+                report.backups = Some(self.check_backup_inode(&inode, &subpath, lock))
+            } else {
+                report.backups = Some(self.check_backup(&name, &backup, lock));
+            }
+        }
+        if options.all_backups {
+            report.backups = Some(self.check_backups(lock));
+        }
+        report
+    }
+
+    fn check_and_repair(&mut self, options: CheckOptions, lock: &VacuumMode) -> Result<IntegrityReport, RepositoryError> {
+        let mut report = IntegrityReport {
+            bundle_map: None,
+            index: None,
+            bundles: None,
+            backups: None
+        };
+        let bundle_map = try!(self.check_and_repair_bundle_map(lock.as_online()));
+        if !bundle_map.errors_fixed.is_empty() {
+            try!(self.rebuild_index(lock.as_online()));
+        }
+        report.bundle_map = Some(bundle_map);
+        if options.index {
+            report.index = Some(try!(self.check_and_repair_index(lock.as_online())));
+        }
+        if options.bundles {
+            report.bundles = Some(try!(self.check_and_repair_bundles(options.bundle_data, lock)));
+        }
+        if let Some((name, mut backup)) = options.single_backup {
+            if let Some((subpath, _inode)) = options.subpath {
+                report.backups = Some(try!(self.check_and_repair_backup_inode(&name, &mut backup, &subpath, lock.as_backup())));
+            } else {
+                report.backups = Some(try!(self.check_and_repair_backup(&name, &mut backup, lock.as_backup())));
+            }
+        }
+        if options.all_backups {
+            report.backups = Some(try!(self.check_and_repair_backups(lock.as_backup())));
+        }
+        Ok(report)
+    }
+
+
 }

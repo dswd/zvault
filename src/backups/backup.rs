@@ -59,7 +59,7 @@ pub trait RepositoryBackupIO {
     fn create_backup<P: AsRef<Path>>(&mut self, path: P, name: &str,
         reference: Option<&BackupFile>, options: &BackupOptions, lock: &BackupMode
     ) -> Result<BackupFile, RepositoryError>;
-    fn remove_backup_path<P: AsRef<Path>>(&mut self, backup: &mut BackupFile, path: P,
+    fn remove_backup_path<P: AsRef<Path>>(&mut self, backup: &mut BackupFile, name: &str, path: P,
         lock: &BackupMode) -> Result<(), RepositoryError>;
     fn get_backup_path<P: AsRef<Path>>(&mut self, backup: &BackupFile, path: P, lock: &OnlineMode
     ) -> Result<Vec<Inode>, RepositoryError>;
@@ -99,7 +99,7 @@ impl RepositoryBackupIO for Repository {
         Ok(try!(BackupFile::read_from(&self.get_crypto(), self.get_layout().backup_path(name))))
     }
 
-    fn save_backup(&mut self, backup: &BackupFile, name: &str, lock: &BackupMode) -> Result<(), RepositoryError> {
+    fn save_backup(&mut self, backup: &BackupFile, name: &str, _lock: &BackupMode) -> Result<(), RepositoryError> {
         let path = self.get_layout().backup_path(name);
         try!(fs::create_dir_all(path.parent().unwrap()));
         try!(backup.save_to(
@@ -110,7 +110,7 @@ impl RepositoryBackupIO for Repository {
         Ok(())
     }
 
-    fn delete_backup(&mut self, name: &str, lock: &BackupMode) -> Result<(), RepositoryError> {
+    fn delete_backup(&mut self, name: &str, _lock: &BackupMode) -> Result<(), RepositoryError> {
         let mut path = self.get_layout().backup_path(name);
         try!(fs::remove_file(&path));
         loop {
@@ -381,7 +381,7 @@ impl RepositoryBackupIO for Repository {
         }
     }
 
-    fn remove_backup_path<P: AsRef<Path>>(&mut self, backup: &mut BackupFile, path: P,
+    fn remove_backup_path<P: AsRef<Path>>(&mut self, backup: &mut BackupFile, name: &str, path: P,
         lock: &BackupMode
     ) -> Result<(), RepositoryError> {
         let mut inodes = try!(self.get_backup_path(backup, path, lock.as_online()));
@@ -405,8 +405,7 @@ impl RepositoryBackupIO for Repository {
         }
         backup.root = last_inode_chunks;
         backup.modified = true;
-        //TODO: save
-        Ok(())
+        self.save_backup(backup, name, lock)
     }
 
     fn get_backup_path<P: AsRef<Path>>(&mut self, backup: &BackupFile, path: P, lock: &OnlineMode

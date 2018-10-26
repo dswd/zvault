@@ -288,7 +288,7 @@ impl BundleDb {
         hash_method: HashMethod,
         compression: Option<Compression>,
         encryption: Option<Encryption>,
-        lock: &BackupMode
+        _lock: &BackupMode
     ) -> Result<BundleWriter, BundleDbError> {
         Ok(try!(BundleWriter::new(
             self.layout.clone(),
