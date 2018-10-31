@@ -87,7 +87,7 @@ impl FastCdcChunker {
 
 
 impl Chunker for FastCdcChunker {
-    #[allow(unknown_lints,explicit_counter_loop,needless_range_loop)]
+    #[allow(clippy::explicit_counter_loop,clippy::needless_range_loop)]
     fn chunk(&mut self, r: &mut Read, w: &mut Write) -> Result<ChunkerStatus, ChunkerError> {
         let mut max;
         let mut hash = 0u64;
