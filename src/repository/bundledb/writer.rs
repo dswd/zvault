@@ -59,7 +59,7 @@ pub struct BundleWriter {
 }
 
 impl BundleWriter {
-    pub fn new(
+    pub fn new_writer(
         layout: Arc<ChunkRepositoryLayout>,
         mode: BundleMode,
         hash_method: HashMethod,

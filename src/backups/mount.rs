@@ -156,7 +156,7 @@ pub struct FuseFilesystem<'a> {
 }
 
 impl<'a> FuseFilesystem<'a> {
-    pub fn new(repository: &'a mut Repository, lock: &'a OnlineMode) -> Result<Self, RepositoryError> {
+    pub fn new_filesystem(repository: &'a mut Repository, lock: &'a OnlineMode) -> Result<Self, RepositoryError> {
         Ok(FuseFilesystem {
             next_id: 1,
             lock,
@@ -179,7 +179,7 @@ impl<'a> FuseFilesystem<'a> {
             let inode = try!(repository.get_inode(&backup.root, lock));
             backups.push((name, backup, inode));
         }
-        let mut fs = try!(FuseFilesystem::new(repository, lock));
+        let mut fs = try!(FuseFilesystem::new_filesystem(repository, lock));
         let root = fs.add_virtual_directory("".to_string(), None);
         for (name, backup, mut inode) in backups {
             let mut parent = root.clone();
@@ -204,7 +204,7 @@ impl<'a> FuseFilesystem<'a> {
         backup: BackupFile,
     ) -> Result<Self, RepositoryError> {
         let inode = try!(repository.get_inode(&backup.root, lock));
-        let mut fs = try!(FuseFilesystem::new(repository, lock));
+        let mut fs = try!(FuseFilesystem::new_filesystem(repository, lock));
         fs.add_inode(inode, None, backup.user_names, backup.group_names);
         Ok(fs)
     }
@@ -215,7 +215,7 @@ impl<'a> FuseFilesystem<'a> {
         backup: BackupFile,
         inode: Inode,
     ) -> Result<Self, RepositoryError> {
-        let mut fs = try!(FuseFilesystem::new(repository, lock));
+        let mut fs = try!(FuseFilesystem::new_filesystem(repository, lock));
         fs.add_inode(inode, None, backup.user_names, backup.group_names);
         Ok(fs)
     }

@@ -15,7 +15,7 @@ pub struct ValueStats {
 }
 
 impl ValueStats {
-    pub fn from_iter<T: Iterator<Item=f32>, F: Fn() -> T>(iter: F) -> ValueStats {
+    pub fn from_sequence<T: Iterator<Item=f32>, F: Fn() -> T>(iter: F) -> ValueStats {
         let mut stats = ValueStats::default();
         stats.min = ::std::f32::INFINITY;
         let mut sum = 0.0f64;

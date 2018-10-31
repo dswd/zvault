@@ -90,7 +90,7 @@ impl BundleReader {
         self.info.id.clone()
     }
 
-    #[allow(needless_pass_by_value)]
+    #[allow(clippy::needless_pass_by_value)]
     fn load_header<P: AsRef<Path>>(
         path: P,
         crypto: Arc<Crypto>,

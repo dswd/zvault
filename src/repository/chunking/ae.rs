@@ -26,7 +26,7 @@ impl AeChunker {
 }
 
 impl Chunker for AeChunker {
-    #[allow(unknown_lints,explicit_counter_loop)]
+    #[allow(clippy::explicit_counter_loop)]
     fn chunk(&mut self, r: &mut Read, w: &mut Write) -> Result<ChunkerStatus, ChunkerError> {
         let mut max;
         let mut pos = 0;
@@ -44,7 +44,7 @@ impl Chunker for AeChunker {
                 if val <= max_val {
                     if pos == max_pos + self.window_size {
                         // Write all bytes from this chunk out to sink and store rest for next chunk
-                        try!(w.write_all(&self.buffer[..i+1]).map_err(ChunkerError::Write));
+                        try!(w.write_all(&self.buffer[..=i]).map_err(ChunkerError::Write));
                         unsafe { ptr::copy(self.buffer[i+1..].as_ptr(), self.buffer.as_mut_ptr(), max-i-1) };
                         self.buffered = max-i-1;
                         return Ok(ChunkerStatus::Continue);

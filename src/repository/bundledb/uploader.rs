@@ -18,7 +18,7 @@ pub struct BundleUploader {
 }
 
 impl BundleUploader {
-    pub fn new(capacity: usize) -> Arc<Self> {
+    pub fn new_uploader(capacity: usize) -> Arc<Self> {
         let self_ = Arc::new(BundleUploader {
             capacity,
             error_present: AtomicBool::new(false),

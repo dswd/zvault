@@ -31,7 +31,7 @@ struct MoFile<'a> {
 }
 
 impl<'a> MoFile<'a> {
-    fn new(data: &'a [u8]) -> Result<Self, ()> {
+    fn new_file(data: &'a [u8]) -> Result<Self, ()> {
         if data.len() < 20 {
             return Err(());
         }
@@ -102,7 +102,7 @@ impl Translation {
 
     pub fn from_mo_data(data: &'static[u8]) -> Self {
         let mut translation = Translation::new();
-        match MoFile::new(data) {
+        match MoFile::new_file(data) {
             Ok(mo_file) => for (orig, trans) in mo_file {
                 translation.set(orig, trans);
             }
@@ -116,7 +116,7 @@ impl Translation {
         if let Ok(mut file) = File::open(&path) {
             let mut data = vec![];
             if file.read_to_end(&mut data).is_ok() {
-                match MoFile::new(&data) {
+                match MoFile::new_file(&data) {
                     Ok(mo_file) => for (orig, trans) in mo_file {
                         translation.set(orig.to_string(), trans.to_string());
                     }

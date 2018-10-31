@@ -201,6 +201,7 @@ impl Config {
         })
     }
 
+    #[allow(clippy::trivially_copy_pass_by_ref)]
     fn to_yaml(&self) -> ConfigYaml {
         ConfigYaml {
             compression: self.compression.as_ref().map(|c| c.to_yaml()),

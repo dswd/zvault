@@ -31,6 +31,13 @@ pub struct BackupOptions {
     pub excludes: Option<RegexSet>
 }
 
+pub struct PruneOptions {
+    pub daily: usize,
+    pub weekly: usize,
+    pub monthly: usize,
+    pub yearly: usize
+}
+
 
 pub enum DiffType {
     Add,
@@ -49,8 +56,8 @@ pub trait RepositoryBackupIO {
     fn save_backup(&mut self, backup: &BackupFile, name: &str, lock: &BackupMode
     ) -> Result<(), RepositoryError>;
     fn delete_backup(&mut self, name: &str, lock: &BackupMode) -> Result<(), RepositoryError>;
-    fn prune_backups(&mut self, prefix: &str, daily: usize, weekly: usize, monthly: usize,
-        yearly: usize, force: bool, lock: &BackupMode) -> Result<(), RepositoryError>;
+    fn prune_backups(&mut self, prefix: &str, options: &PruneOptions, force: bool,
+        lock: &BackupMode) -> Result<(), RepositoryError>;
     fn restore_inode_tree<P: AsRef<Path>>(&mut self, backup: &BackupFile, inode: Inode, path: P,
         lock: &OnlineMode) -> Result<(), RepositoryError>;
     fn create_backup_recurse<P: AsRef<Path>>(&mut self, path: P, reference: Option<&Inode>,
@@ -123,8 +130,8 @@ impl RepositoryBackupIO for Repository {
     }
 
 
-    fn prune_backups(&mut self, prefix: &str, daily: usize, weekly: usize, monthly: usize,
-        yearly: usize, force: bool, lock: &BackupMode) -> Result<(), RepositoryError>
+    fn prune_backups(&mut self, prefix: &str, options: &PruneOptions, force: bool,
+        lock: &BackupMode) -> Result<(), RepositoryError>
     {
         let mut backups = Vec::new();
         let backup_map = match self.get_all_backups() {
@@ -166,23 +173,23 @@ impl RepositoryBackupIO for Repository {
                 }
             }
         }
-        if yearly > 0 {
-            mark_needed(&backups, &mut keep, yearly, |d| d.year());
+        if options.yearly > 0 {
+            mark_needed(&backups, &mut keep, options.yearly, |d| d.year());
         }
-        if monthly > 0 {
-            mark_needed(&backups, &mut keep, monthly, |d| (d.year(), d.month()));
+        if options.monthly > 0 {
+            mark_needed(&backups, &mut keep, options.monthly, |d| (d.year(), d.month()));
         }
-        if weekly > 0 {
-            mark_needed(&backups, &mut keep, weekly, |d| {
+        if options.weekly > 0 {
+            mark_needed(&backups, &mut keep, options.weekly, |d| {
                 let week = d.iso_week();
                 (week.year(), week.week())
             });
         }
-        if daily > 0 {
+        if options.daily > 0 {
             mark_needed(
                 &backups,
                 &mut keep,
-                daily,
+                options.daily,
                 |d| (d.year(), d.month(), d.day())
             );
         }
@@ -247,7 +254,7 @@ impl RepositoryBackupIO for Repository {
             if let Some(user) = users::get_user_by_uid(inode.user) {
                 backup.user_names.insert(
                     inode.user,
-                    user.name().to_string()
+                    user.name().to_string_lossy().to_string()
                 );
             } else {
                 tr_warn!("Failed to retrieve name of user {}", inode.user);
@@ -257,7 +264,7 @@ impl RepositoryBackupIO for Repository {
             if let Some(group) = users::get_group_by_gid(inode.group) {
                 backup.group_names.insert(
                     inode.group,
-                    group.name().to_string()
+                    group.name().to_string_lossy().to_string()
                 );
             } else {
                 tr_warn!("Failed to retrieve name of group {}", inode.group);
@@ -467,7 +474,7 @@ impl RepositoryBackupIO for Repository {
         Ok(versions)
     }
 
-    #[allow(needless_pass_by_value)]
+    #[allow(clippy::needless_pass_by_value)]
     fn find_differences_recurse(&mut self, inode1: &Inode, inode2: &Inode, path: PathBuf,
         diffs: &mut Vec<(DiffType, PathBuf)>, lock: &OnlineMode
     ) -> Result<(), RepositoryError> {

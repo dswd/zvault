@@ -170,7 +170,7 @@ unsafe fn mmap_as_ref<K, V>(mmap: &MemoryMap, len: usize) -> (&'static mut Heade
         tr_panic!("Memory map too small");
     }
     let header = &mut *(mmap.data() as *mut Header);
-    let ptr = mmap.data().offset(mem::size_of::<Header>() as isize) as *mut Entry<K, V>;
+    let ptr = mmap.data().add(mem::size_of::<Header>()) as *mut Entry<K, V>;
     let data = slice::from_raw_parts_mut(ptr, len);
     (header, data)
 }
@@ -188,7 +188,7 @@ pub struct Index<K: 'static, V: 'static> {
 }
 
 impl<K: Key, V: Value> Index<K, V> {
-    pub fn new(path: &Path, create: bool, magic: &[u8; 7], version: u8) -> Result<Self, IndexError> {
+    pub fn new_index(path: &Path, create: bool, magic: [u8; 7], version: u8) -> Result<Self, IndexError> {
         let fd = try!(OpenOptions::new().read(true).write(true).create(create).open(path));
         if create {
             try!(Self::resize_fd(&fd, INITIAL_SIZE));
@@ -209,7 +209,7 @@ impl<K: Key, V: Value> Index<K, V> {
                 unsafe { ptr::write(d, Entry::default()) }
             }
         }
-        if header.magic != *magic {
+        if header.magic != magic {
             return Err(IndexError::WrongMagic);
         }
         if header.version != version {
@@ -234,13 +234,13 @@ impl<K: Key, V: Value> Index<K, V> {
     /// This method is unsafe as there is no way to guarantee that the contents of the file are
     /// valid objects.
     #[inline]
-    pub unsafe fn open<P: AsRef<Path>>(path: P, magic: &[u8; 7], version: u8) -> Result<Self, IndexError> {
-        Index::new(path.as_ref(), false, magic, version)
+    pub unsafe fn open<P: AsRef<Path>>(path: P, magic: [u8; 7], version: u8) -> Result<Self, IndexError> {
+        Index::new_index(path.as_ref(), false, magic, version)
     }
 
     #[inline]
-    pub fn create<P: AsRef<Path>>(path: P, magic: &[u8; 7], version: u8) -> Result<Self, IndexError> {
-        Index::new(path.as_ref(), true, magic, version)
+    pub fn create<P: AsRef<Path>>(path: P, magic: [u8; 7], version: u8) -> Result<Self, IndexError> {
+        Index::new_index(path.as_ref(), true, magic, version)
     }
 
     #[inline]
@@ -268,7 +268,7 @@ impl<K: Key, V: Value> Index<K, V> {
         self.max_entries = (capacity as f64 * MAX_USAGE) as usize;
     }
 
-    #[allow(redundant_field_names)]
+    #[allow(clippy::redundant_field_names)]
     fn reinsert(&mut self, start: usize, end: usize) -> Result<(), IndexError> {
         for pos in start..end {
             let key;
@@ -585,7 +585,7 @@ impl<K: Key, V: Value> Index<K, V> {
             count: self.entries,
             capacity: self.capacity,
             size: self.size(),
-            displacement: ValueStats::from_iter(|| self.data.iter().enumerate().filter(
+            displacement: ValueStats::from_sequence(|| self.data.iter().enumerate().filter(
                 |&(_, entry)| entry.is_used()).map(
                 |(index, entry)| self.get_displacement(entry, index) as f32))
         }

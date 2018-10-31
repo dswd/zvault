@@ -5,7 +5,7 @@ use std::path::{Path, PathBuf};
 use log;
 use clap::{App, AppSettings, Arg, SubCommand};
 
-#[allow(option_option)]
+#[allow(clippy::option_option)]
 pub enum Arguments {
     Init {
         repo_path: PathBuf,
@@ -202,7 +202,7 @@ fn parse_repo_path(
     Ok((repo, backup, path))
 }
 
-#[allow(unknown_lints, needless_pass_by_value)]
+#[allow(clippy::needless_pass_by_value)]
 fn validate_repo_path(
     repo_path: String,
     existing: bool,
@@ -231,7 +231,7 @@ fn parse_filesize(num: &str) -> Result<u64, String> {
     Ok(num * factor)
 }
 
-#[allow(unknown_lints, needless_pass_by_value)]
+#[allow(clippy::needless_pass_by_value)]
 fn validate_filesize(val: String) -> Result<(), String> {
     parse_filesize(&val).map(|_| ())
 }
@@ -245,7 +245,7 @@ fn parse_num(num: &str) -> Result<u64, String> {
     }
 }
 
-#[allow(unknown_lints, needless_pass_by_value)]
+#[allow(clippy::needless_pass_by_value)]
 fn validate_num(val: String) -> Result<(), String> {
     parse_num(&val).map(|_| ())
 }
@@ -258,7 +258,7 @@ fn parse_chunker(val: &str) -> Result<ChunkerType, String> {
     }
 }
 
-#[allow(unknown_lints, needless_pass_by_value)]
+#[allow(clippy::needless_pass_by_value)]
 fn validate_chunker(val: String) -> Result<(), String> {
     parse_chunker(&val).map(|_| ())
 }
@@ -274,7 +274,7 @@ fn parse_compression(val: &str) -> Result<Option<Compression>, String> {
     }
 }
 
-#[allow(unknown_lints, needless_pass_by_value)]
+#[allow(clippy::needless_pass_by_value)]
 fn validate_compression(val: String) -> Result<(), String> {
     parse_compression(&val).map(|_| ())
 }
@@ -296,7 +296,7 @@ fn parse_public_key(val: &str) -> Result<Option<PublicKey>, String> {
     }
 }
 
-#[allow(unknown_lints, needless_pass_by_value)]
+#[allow(clippy::needless_pass_by_value)]
 fn validate_public_key(val: String) -> Result<(), String> {
     parse_public_key(&val).map(|_| ())
 }
@@ -309,7 +309,7 @@ fn parse_hash(val: &str) -> Result<HashMethod, String> {
     }
 }
 
-#[allow(unknown_lints, needless_pass_by_value)]
+#[allow(clippy::needless_pass_by_value)]
 fn validate_hash(val: String) -> Result<(), String> {
     parse_hash(&val).map(|_| ())
 }
@@ -323,7 +323,7 @@ fn parse_bundle_id(val: &str) -> Result<BundleId, ErrorCode> {
     }
 }
 
-#[allow(unknown_lints, needless_pass_by_value)]
+#[allow(clippy::needless_pass_by_value)]
 fn validate_existing_path(val: String) -> Result<(), String> {
     if !Path::new(&val).exists() {
         Err(tr!("Path does not exist").to_string())
@@ -332,7 +332,7 @@ fn validate_existing_path(val: String) -> Result<(), String> {
     }
 }
 
-#[allow(unknown_lints, needless_pass_by_value)]
+#[allow(clippy::needless_pass_by_value)]
 fn validate_existing_path_or_stdio(val: String) -> Result<(), String> {
     if val != "-" && !Path::new(&val).exists() {
         Err(tr!("Path does not exist").to_string())
@@ -342,7 +342,7 @@ fn validate_existing_path_or_stdio(val: String) -> Result<(), String> {
 }
 
 
-#[allow(unknown_lints, cyclomatic_complexity)]
+#[allow(clippy::cyclomatic_complexity)]
 pub fn parse() -> Result<(log::Level, Arguments), ErrorCode> {
     let args = App::new("zvault")
         .version(crate_version!())

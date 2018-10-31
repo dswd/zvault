@@ -66,7 +66,7 @@ impl RabinChunker {
 }
 
 impl Chunker for RabinChunker {
-    #[allow(unknown_lints,explicit_counter_loop)]
+    #[allow(clippy::explicit_counter_loop)]
     fn chunk(&mut self, r: &mut Read, w: &mut Write) -> Result<ChunkerStatus, ChunkerError> {
         let mut max;
         let mut hash = 0u32;
@@ -82,7 +82,7 @@ impl Chunker for RabinChunker {
             for i in 0..max {
                 let val = self.buffer[i];
                 if pos >= self.max_size {
-                    try!(w.write_all(&self.buffer[..i+1]).map_err(ChunkerError::Write));
+                    try!(w.write_all(&self.buffer[..=i]).map_err(ChunkerError::Write));
                     unsafe { ptr::copy(self.buffer[i+1..].as_ptr(), self.buffer.as_mut_ptr(), max-i-1) };
                     self.buffered = max-i-1;
                     return Ok(ChunkerStatus::Continue);
@@ -93,7 +93,7 @@ impl Chunker for RabinChunker {
                     let take = window.pop_front().unwrap();
                     hash = hash.wrapping_sub(self.table[take as usize]);
                     if pos >= self.min_size && ((hash ^ self.seed) & self.chunk_mask) == 0 {
-                        try!(w.write_all(&self.buffer[..i+1]).map_err(ChunkerError::Write));
+                        try!(w.write_all(&self.buffer[..=i]).map_err(ChunkerError::Write));
                         unsafe { ptr::copy(self.buffer[i+1..].as_ptr(), self.buffer.as_mut_ptr(), max-i-1) };
                         self.buffered = max-i-1;
                         return Ok(ChunkerStatus::Continue);

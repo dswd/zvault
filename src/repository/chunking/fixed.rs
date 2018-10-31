@@ -18,7 +18,7 @@ impl FixedChunker {
 }
 
 impl Chunker for FixedChunker {
-    #[allow(unknown_lints,explicit_counter_loop)]
+    #[allow(clippy::explicit_counter_loop)]
     fn chunk(&mut self, r: &mut Read, w: &mut Write) -> Result<ChunkerStatus, ChunkerError> {
         let mut todo = self.size;
         loop {

@@ -327,7 +327,7 @@ mod tests {
         );
     }
 
-    #[allow(dead_code, needless_range_loop)]
+    #[allow(dead_code, clippy::needless_range_loop)]
     fn test_data(n: usize) -> Vec<u8> {
         let mut input = vec![0; n];
         for i in 0..input.len() {
@@ -339,7 +339,7 @@ mod tests {
     #[allow(dead_code)]
     fn test_compression(method: &str, min_lvl: u8, max_lvl: u8) {
         let input = test_data(16 * 1024);
-        for i in min_lvl..max_lvl + 1 {
+        for i in min_lvl..=max_lvl {
             let method = Compression::from_string(&format!("{}/{}", method, i)).unwrap();
             println!("{}", method.to_string());
             let compressed = method.compress(&input).unwrap();
@@ -374,7 +374,7 @@ mod tests {
     #[allow(dead_code)]
     fn test_stream_compression(method: &str, min_lvl: u8, max_lvl: u8) {
         let input = test_data(512 * 1024);
-        for i in min_lvl..max_lvl + 1 {
+        for i in min_lvl..=max_lvl {
             let method = Compression::from_string(&format!("{}/{}", method, i)).unwrap();
             println!("{}", method.to_string());
             let mut compressor = method.compress_stream().unwrap();
@@ -426,7 +426,7 @@ mod benches {
     use test::Bencher;
 
 
-    #[allow(dead_code, needless_range_loop)]
+    #[allow(dead_code, clippy::needless_range_loop)]
     fn test_data(n: usize) -> Vec<u8> {
         let mut input = vec![0; n];
         for i in 0..input.len() {

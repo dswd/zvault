@@ -8,7 +8,7 @@ mod vacuum;
 mod metadata;
 mod layout;
 
-pub use self::backup::{BackupOptions, BackupError, DiffType, RepositoryBackupIO};
+pub use self::backup::{BackupOptions, BackupError, DiffType, RepositoryBackupIO, PruneOptions};
 pub use self::backup_file::{BackupFile, BackupFileError};
 pub use self::inode::{Inode, FileData, FileType, InodeError};
 pub use self::integrity::{InodeIntegrityError, RepositoryIntegrityIO, CheckOptions, IntegrityReport};
@@ -44,7 +44,7 @@ impl BackupRepository {
         Ok(BackupRepository(try!(Repository::create(layout, config, crypto, remote))))
     }
 
-    #[allow(unknown_lints, useless_let_if_seq)]
+    #[allow(unknown_lints, clippy::useless_let_if_seq)]
     pub fn open<P: AsRef<Path>>(path: P, online: bool) -> Result<Self, RepositoryError> {
         let layout: Arc<ChunkRepositoryLayout> = Arc::new(path.as_ref().to_owned());
         let crypto = Arc::new(try!(Crypto::open(layout.keys_path())));
@@ -155,10 +155,9 @@ impl BackupRepository {
     }
 
     #[inline]
-    pub fn prune_backups(&mut self, prefix: &str, daily: usize, weekly: usize, monthly: usize,
-        yearly: usize, force: bool) -> Result<(), RepositoryError>
+    pub fn prune_backups(&mut self, prefix: &str, options: &PruneOptions, force: bool) -> Result<(), RepositoryError>
     {
-        self.0.backup_mode(|r, l| r.prune_backups(prefix, daily, weekly, monthly, yearly, force, l))
+        self.0.backup_mode(|r, l| r.prune_backups(prefix, options, force, l))
     }
 
     #[inline]

@@ -99,17 +99,17 @@ impl Repository {
         try!(fs::create_dir_all(layout.remote_locks_path()));
         let mock_lock = Lock;
         try!(config.save(layout.config_path(), &mock_lock));
-        try!(BundleDb::create(layout.clone()));
+        try!(BundleDb::create(&layout));
         try!(Index::<Hash, Location>::create(
             layout.index_path(),
-            &INDEX_MAGIC,
+            INDEX_MAGIC,
             INDEX_VERSION
         ));
         try!(BundleMap::create().save(layout.bundle_map_path(), &mock_lock));
         Self::open(layout, crypto, true)
     }
 
-    #[allow(unknown_lints, useless_let_if_seq)]
+    #[allow(clippy::useless_let_if_seq)]
     pub fn open(layout: Arc<ChunkRepositoryLayout>, crypto: Arc<Crypto>, read_only: bool) -> Result<Self, RepositoryError> {
         if !layout.remote_exists() {
             return Err(RepositoryError::NoRemote);
@@ -124,14 +124,14 @@ impl Repository {
         let mut rebuild_index = false;
         //FIXME: why is this never set?
         let /*mut*/ rebuild_bundle_map = false;
-        let index = match unsafe { Index::open(layout.index_path(), &INDEX_MAGIC, INDEX_VERSION) } {
+        let index = match unsafe { Index::open(layout.index_path(), INDEX_MAGIC, INDEX_VERSION) } {
             Ok(index) => index,
             Err(err) => {
                 tr_error!("Failed to load local index:\n\tcaused by: {}", err);
                 if read_only {
                     return Err(err.into());
                 }
-                try!(Index::create(layout.index_path(), &INDEX_MAGIC, INDEX_VERSION))
+                try!(Index::create(layout.index_path(), INDEX_MAGIC, INDEX_VERSION))
             }
         };
         let bundle_map = match BundleMap::load(layout.bundle_map_path(), &mock_lock) {
@@ -172,7 +172,7 @@ impl Repository {
     }
 
     //FIXME: use or remove
-    #[allow(dead_code)]
+    #[allow(dead_code, clippy::useless_let_if_seq)]
     pub fn synchronize(&mut self, lock: &OnlineMode) -> Result<(), RepositoryError> {
         let (new, gone) = try!(self.bundles.synchronize(lock));
         let mut save_bundle_map = false;
@@ -439,12 +439,14 @@ impl Repository {
     pub fn online_mode<R, F: FnOnce(&mut Repository, &OnlineMode) -> Result<R, RepositoryError>> (&mut self, f: F) -> Result<R, RepositoryError> {
         let _local_lock = try!(self.local_locks.lock(true));
         let _remote_lock = try!(self.remote_locks.lock(false));
+        try!(self.synchronize(&Lock));
         f(self, &Lock)
     }
 
     pub fn backup_mode<R, F: FnOnce(&mut Repository, &BackupMode) -> Result<R, RepositoryError>> (&mut self, f: F) -> Result<R, RepositoryError> {
         let _local_lock = try!(self.local_locks.lock(true));
         let _remote_lock = try!(self.remote_locks.lock(false));
+        try!(self.synchronize(&Lock));
         try!(self.create_dirty_file());
         let res = f(self, &Lock);
         try!(self.flush(&Lock));
@@ -457,6 +459,7 @@ impl Repository {
     pub fn vacuum_mode<R, F: FnOnce(&mut Repository, &VacuumMode) -> Result<R, RepositoryError>> (&mut self, f: F) -> Result<R, RepositoryError> {
         let _local_lock = try!(self.local_locks.lock(true));
         let _remote_lock = try!(self.remote_locks.lock(true));
+        try!(self.synchronize(&Lock));
         try!(self.create_dirty_file());
         let res = f(self, &Lock);
         try!(self.flush(&Lock));

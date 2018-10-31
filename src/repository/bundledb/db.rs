@@ -57,7 +57,7 @@ quick_error!{
 }
 
 
-#[allow(needless_pass_by_value)]
+#[allow(clippy::needless_pass_by_value)]
 fn load_bundles(
     path: &Path,
     base: &Path,
@@ -257,7 +257,7 @@ impl BundleDb {
         Ok(self_)
     }
 
-    pub fn create(layout: Arc<ChunkRepositoryLayout>) -> Result<(), BundleDbError> {
+    pub fn create(layout: &Arc<ChunkRepositoryLayout>) -> Result<(), BundleDbError> {
         try!(fs::create_dir_all(layout.remote_bundles_path()).context(
             &layout.remote_bundles_path() as
                 &Path
@@ -290,7 +290,7 @@ impl BundleDb {
         encryption: Option<Encryption>,
         _lock: &BackupMode
     ) -> Result<BundleWriter, BundleDbError> {
-        Ok(try!(BundleWriter::new(
+        Ok(try!(BundleWriter::new_writer(
             self.layout.clone(),
             mode,
             hash_method,
@@ -365,7 +365,7 @@ impl BundleDb {
             .unwrap()
             .to_path_buf();
         if self.uploader.is_none() {
-            self.uploader = Some(BundleUploader::new(5));
+            self.uploader = Some(BundleUploader::new_uploader(5));
         }
         try!(self.uploader.as_ref().unwrap().queue(src_path, dst_path));
         self.remote_bundles.insert(bundle.id(), bundle.clone());
@@ -542,15 +542,15 @@ impl BundleDb {
         }
         BundleStatistics {
             hash_methods, compressions, encryptions,
-            raw_size: ValueStats::from_iter(|| bundles.iter().map(|b| b.raw_size as f32)),
-            encoded_size: ValueStats::from_iter(|| bundles.iter().map(|b| b.encoded_size as f32)),
-            chunk_count: ValueStats::from_iter(|| bundles.iter().map(|b| b.chunk_count as f32)),
-            raw_size_meta: ValueStats::from_iter(|| bundles_meta.iter().map(|b| b.raw_size as f32)),
-            encoded_size_meta: ValueStats::from_iter(|| bundles_meta.iter().map(|b| b.encoded_size as f32)),
-            chunk_count_meta: ValueStats::from_iter(|| bundles_meta.iter().map(|b| b.chunk_count as f32)),
-            raw_size_data: ValueStats::from_iter(|| bundles_data.iter().map(|b| b.raw_size as f32)),
-            encoded_size_data: ValueStats::from_iter(|| bundles_data.iter().map(|b| b.encoded_size as f32)),
-            chunk_count_data: ValueStats::from_iter(|| bundles_data.iter().map(|b| b.chunk_count as f32))
+            raw_size: ValueStats::from_sequence(|| bundles.iter().map(|b| b.raw_size as f32)),
+            encoded_size: ValueStats::from_sequence(|| bundles.iter().map(|b| b.encoded_size as f32)),
+            chunk_count: ValueStats::from_sequence(|| bundles.iter().map(|b| b.chunk_count as f32)),
+            raw_size_meta: ValueStats::from_sequence(|| bundles_meta.iter().map(|b| b.raw_size as f32)),
+            encoded_size_meta: ValueStats::from_sequence(|| bundles_meta.iter().map(|b| b.encoded_size as f32)),
+            chunk_count_meta: ValueStats::from_sequence(|| bundles_meta.iter().map(|b| b.chunk_count as f32)),
+            raw_size_data: ValueStats::from_sequence(|| bundles_data.iter().map(|b| b.raw_size as f32)),
+            encoded_size_data: ValueStats::from_sequence(|| bundles_data.iter().map(|b| b.encoded_size as f32)),
+            chunk_count_data: ValueStats::from_sequence(|| bundles_data.iter().map(|b| b.chunk_count as f32))
         }
     }
 }

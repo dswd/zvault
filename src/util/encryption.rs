@@ -56,7 +56,7 @@ quick_error!{
 
 
 #[derive(Clone, Debug, Eq, PartialEq, Hash)]
-#[allow(unknown_lints, non_camel_case_types)]
+#[allow(clippy::non_camel_case_types)]
 pub enum EncryptionMethod {
     Sodium
 }
@@ -397,7 +397,7 @@ mod benches {
     use test::Bencher;
 
 
-    #[allow(dead_code, needless_range_loop)]
+    #[allow(dead_code, clippy::needless_range_loop)]
     fn test_data(n: usize) -> Vec<u8> {
         let mut input = vec![0; n];
         for i in 0..input.len() {

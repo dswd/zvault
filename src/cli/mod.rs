@@ -461,7 +461,7 @@ fn print_analysis(analysis: &HashMap<u32, BundleAnalysis>) {
     let mut data_total = 0;
     for bundle in analysis.values() {
         data_total += bundle.info.encoded_size;
-        #[allow(unknown_lints, needless_range_loop)]
+        #[allow(clippy::needless_range_loop)]
         for i in 0..11 {
             if bundle.get_usage_ratio() <= i as f32 * 0.1 {
                 reclaim_space[i] += bundle.get_unused_size();
@@ -477,7 +477,7 @@ fn print_analysis(analysis: &HashMap<u32, BundleAnalysis>) {
         used as f32 / data_total as f32 * 100.0
     );
     tr_println!("Reclaimable space (depending on vacuum ratio)");
-    #[allow(unknown_lints, needless_range_loop)]
+    #[allow(clippy::needless_range_loop)]
     for i in 0..11 {
         tr_println!(
             "  - ratio={:3}: {:>10}, {:4.1} %, rewriting {:>10}",
@@ -502,9 +502,13 @@ fn print_duplicates(dups: Vec<(Vec<PathBuf>, u64)>) {
 fn print_integrity_report_module<T: Error>(name: &str, module: &ModuleIntegrityReport<T>) -> usize {
     let found = module.errors_fixed.len() + module.errors_unfixed.len();
     let fixed = module.errors_fixed.len();
-    tr_println!("{}: {} errors found, {} corrected:", name, found, fixed);
+    if found > 0 {
+        tr_println!("{}: {} errors found, {} corrected:", name, found, fixed);
+    } else {
+        tr_println!("{}: no errors found", name);
+    }
     for e in &module.errors_fixed {
-        println!("{}", e);
+        println!("[fixed] {}", e);
     }
     for e in &module.errors_unfixed {
         println!("{}", e);
@@ -533,7 +537,7 @@ fn print_integrity_report(report: &IntegrityReport) {
 
 
 
-#[allow(unknown_lints, cyclomatic_complexity)]
+#[allow(clippy::cyclomatic_complexity)]
 pub fn run() -> Result<(), ErrorCode> {
     let (log_level, args) = try!(args::parse());
     if let Err(err) = logger::init(log_level) {
@@ -810,8 +814,9 @@ pub fn run() -> Result<(), ErrorCode> {
                 tr_error!("This would remove all those backups");
                 return Err(ErrorCode::UnsafeArgs);
             }
+            let options = PruneOptions { daily, weekly, monthly, yearly };
             checked!(
-                repo.prune_backups(&prefix, daily, weekly, monthly, yearly, force),
+                repo.prune_backups(&prefix, &options, force),
                 "prune backups",
                 ErrorCode::PruneRun
             );

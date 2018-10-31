@@ -84,14 +84,14 @@ impl Repository {
         let mut errors = vec![];
         for (_id, bundle_id) in self.bundle_map.bundles() {
             if self.bundles.get_bundle_info(&bundle_id).is_none() {
-                errors.push(IntegrityError::MissingBundle(bundle_id).into());
+                errors.push(IntegrityError::MissingBundle(bundle_id));
             }
         }
         if self.bundle_map.len() < self.bundles.len() {
-            errors.push(IntegrityError::RemoteBundlesNotInMap.into());
+            errors.push(IntegrityError::RemoteBundlesNotInMap);
         }
         if self.bundle_map.len() > self.bundles.len() {
-            errors.push(IntegrityError::MapContainsDuplicates.into());
+            errors.push(IntegrityError::MapContainsDuplicates);
         }
         ModuleIntegrityReport { errors_fixed: vec![], errors_unfixed: errors }
     }

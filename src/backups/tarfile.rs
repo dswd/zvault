@@ -31,7 +31,7 @@ impl PaxBuilder {
             max_len *= 10;
         }
         let len = rest_len + len_len;
-        write!(&mut self.0, "{} {}={}\n", len, key, value).unwrap();
+        writeln!(&mut self.0, "{} {}={}", len, key, value).unwrap();
     }
 
     fn as_bytes(&self) -> &[u8] {
@@ -100,8 +100,8 @@ fn inode_from_entry<R: Read>(entry: &mut tar::Entry<R>) -> Result<Inode, Reposit
             symlink_target: try!(entry.link_name()).map(|s| s.to_string_lossy().to_string()),
             size: try!(header.size()),
             mode: try!(header.mode()),
-            user: try!(header.uid()),
-            group: try!(header.gid()),
+            user: try!(header.uid()) as u32,
+            group: try!(header.gid()) as u32,
             timestamp: try!(header.mtime()) as i64,
             device: match file_type {
                 FileType::BlockDevice | FileType::CharDevice => Some((
@@ -375,11 +375,11 @@ impl RepositoryTarfileIO for Repository {
                 try!(header.set_device_minor(minor));
             }
             header.set_mode(inode.mode);
-            header.set_uid(inode.user);
+            header.set_uid(u64::from(inode.user));
             if let Some(name) = backup.user_names.get(&inode.user) {
                 header.set_username(name).ok();
             }
-            header.set_gid(inode.group);
+            header.set_gid(u64::from(inode.group));
             if let Some(name) = backup.group_names.get(&inode.group) {
                 header.set_groupname(name).ok();
             }

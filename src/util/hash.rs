@@ -118,8 +118,9 @@ serde_impl!(HashMethod(u64) {
 
 impl HashMethod {
     #[inline]
-    pub fn hash(&self, data: &[u8]) -> Hash {
-        match *self {
+    #[allow(clippy::transmute_ptr_to_ptr)]
+    pub fn hash(self, data: &[u8]) -> Hash {
+        match self {
             HashMethod::Blake2 => {
                 let hash = blake2b(16, &[], data);
                 let hash =
@@ -146,8 +147,8 @@ impl HashMethod {
     }
 
     #[inline]
-    pub fn name(&self) -> &'static str {
-        match *self {
+    pub fn name(self) -> &'static str {
+        match self {
             HashMethod::Blake2 => "blake2",
             HashMethod::Murmur3 => "murmur3",
         }
@@ -210,7 +211,7 @@ mod benches {
     use test::Bencher;
 
 
-    #[allow(dead_code, needless_range_loop)]
+    #[allow(dead_code, clippy::needless_range_loop)]
     fn test_data(n: usize) -> Vec<u8> {
         let mut input = vec![0; n];
         for i in 0..input.len() {

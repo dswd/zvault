@@ -1,5 +1,5 @@
 #![recursion_limit="128"]
-#![allow(unknown_lints, float_cmp)]
+#![allow(clippy::float_cmp)]
 #![cfg_attr(feature = "bench", feature(test))]
 #[cfg(feature = "bench")]
 extern crate test;
@@ -49,6 +49,8 @@ mod prelude;
 mod backups;
 
 use std::process::exit;
+
+// TODO: functional tests
 
 fn main() {
     match cli::run() {

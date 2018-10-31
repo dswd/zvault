@@ -49,7 +49,7 @@ pub struct ProgressIter<T> {
 }
 
 impl<T> ProgressIter<T> {
-    #[allow(blacklisted_name)]
+    #[allow(clippy::blacklisted_name)]
     pub fn new(msg: &str, max: usize, inner: T) -> Self {
         let mut bar = pbr::ProgressBar::new(max as u64);
         let msg = format!("{}: ", msg);
