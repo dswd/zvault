@@ -2,6 +2,7 @@
 
 [![Build Status](https://travis-ci.org/dswd/zvault.svg?branch=master)](https://travis-ci.org/dswd/zvault)
 [![Coverage Status](https://coveralls.io/repos/dswd/zvault/badge.svg?branch=master&service=github)](https://coveralls.io/github/dswd/zvault?branch=master)
+[![FOSSA Status](https://app.fossa.com/api/projects/git%2Bgithub.com%2Fdswd%2Fzvault.svg?type=shield)](https://app.fossa.com/projects/git%2Bgithub.com%2Fdswd%2Fzvault?ref=badge_shield)
 
 zVault is a highly efficient deduplicating backup solution that supports
 client-side encryption, compression and remote storage of backup data.
@@ -173,3 +174,7 @@ this has the following implications:
 - The CLI might see breaking changes but at least it is guaranteed that calls
   that are currently non-destructive will not become destructive in the future.
   Running todays commands on a future version will not cause any harm.
+
+
+## License
+[![FOSSA Status](https://app.fossa.com/api/projects/git%2Bgithub.com%2Fdswd%2Fzvault.svg?type=large)](https://app.fossa.com/projects/git%2Bgithub.com%2Fdswd%2Fzvault?ref=badge_large)
